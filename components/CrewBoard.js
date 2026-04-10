@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { CURRENT_USER_ID } from '@/lib/constants';
+import { acknowledgeNotice, createNotice, fetchNotices, markNoticeRead } from '@/lib/notices';
 
 // ─── Data & Constants ────────────────────────────────────────────────
 const CATEGORIES = ['All', 'Safety', 'Operations', 'Guest Info', 'HR/Admin', 'Social', 'Departmental'];
@@ -318,7 +320,9 @@ function NoticeCard({ notice, currentUser, role, onClick, isPinned }) {
 export default function CrewBoard() {
   const [role, setRole] = useState('crew');
   const [tab, setTab] = useState('home');
-  const [notices, setNotices] = useState(INITIAL_NOTICES);
+  const [notices, setNotices] = useState([]);
+  const [noticesLoading, setNoticesLoading] = useState(true);
+  const [noticesError, setNoticesError] = useState(null);
   const [docs] = useState(INITIAL_DOCS);
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
   const [selectedNotice, setSelectedNotice] = useState(null);
@@ -333,31 +337,64 @@ export default function CrewBoard() {
   const [adminNoticeView, setAdminNoticeView] = useState(null);
   const [newNotice, setNewNotice] = useState({ title: '', body: '', category: 'Safety', priority: 'routine', dept: 'All', pinned: false, requireAck: false });
 
-  const currentUser = { id: 5, name: 'Tom Hayes', role: 'Deckhand', dept: 'Deck' };
+  const currentUser = { id: CURRENT_USER_ID, name: 'Tom Hayes', role: 'Deckhand', dept: 'Deck' };
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const rows = await fetchNotices();
+        if (!cancelled) {
+          setNotices(rows);
+          setNoticesError(null);
+        }
+      } catch (err) {
+        if (!cancelled) setNoticesError(err.message || 'Failed to load notices');
+      } finally {
+        if (!cancelled) setNoticesLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const unreadNotifs = notifications.filter(n => !n.read).length;
   const unreadNotices = notices.filter(n => !n.readBy.includes(currentUser.id)).length;
   const pendingAcks = notices.filter(n => n.priority === 'critical' && !n.acknowledgedBy.includes(currentUser.id)).length;
   const pendingDocAcks = docs.filter(d => d.required && !d.acknowledgedBy.includes(currentUser.id)).length;
 
-  const handleAcknowledge = (noticeId) => {
+  const handleAcknowledge = async (noticeId) => {
     setNotices(prev => prev.map(n => n.id === noticeId ? { ...n, acknowledgedBy: [...n.acknowledgedBy, currentUser.id], readBy: [...new Set([...n.readBy, currentUser.id])] } : n));
+    try {
+      await acknowledgeNotice({ noticeId, crewMemberId: currentUser.id });
+    } catch (err) {
+      console.error('acknowledge failed, reverting', err);
+      setNotices(prev => prev.map(n => n.id === noticeId ? { ...n, acknowledgedBy: n.acknowledgedBy.filter(id => id !== currentUser.id) } : n));
+    }
   };
 
-  const handleMarkRead = (noticeId) => {
+  const handleMarkRead = async (noticeId) => {
     setNotices(prev => prev.map(n => n.id === noticeId ? { ...n, readBy: [...new Set([...n.readBy, currentUser.id])] } : n));
+    try {
+      await markNoticeRead({ noticeId, crewMemberId: currentUser.id });
+    } catch (err) {
+      console.error('markRead failed', err);
+    }
   };
 
   const handleReadNotif = (id) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
   };
 
-  const handlePostNotice = () => {
+  const handlePostNotice = async () => {
     if (!newNotice.title.trim()) return;
-    const posted = { ...newNotice, id: notices.length + 1, createdAt: new Date().toISOString(), readBy: [], acknowledgedBy: [] };
-    setNotices(prev => [posted, ...prev]);
-    setNewNotice({ title: '', body: '', category: 'Safety', priority: 'routine', dept: 'All', pinned: false, requireAck: false });
-    setShowNewNotice(false);
+    try {
+      const posted = await createNotice({ ...newNotice, createdBy: currentUser.id });
+      setNotices(prev => [posted, ...prev]);
+      setNewNotice({ title: '', body: '', category: 'Safety', priority: 'routine', dept: 'All', pinned: false, requireAck: false });
+      setShowNewNotice(false);
+    } catch (err) {
+      alert(`Failed to post notice: ${err.message || err}`);
+    }
   };
 
   const resetNav = () => {
@@ -448,7 +485,9 @@ export default function CrewBoard() {
         <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {pinned.map(n => <NoticeCard key={n.id} notice={n} currentUser={currentUser} role={role} onClick={() => role === 'admin' ? setAdminNoticeView(n) : setSelectedNotice(n)} isPinned />)}
           {unpinned.map(n => <NoticeCard key={n.id} notice={n} currentUser={currentUser} role={role} onClick={() => role === 'admin' ? setAdminNoticeView(n) : setSelectedNotice(n)} />)}
-          {filtered.length === 0 && <p style={{ fontSize: 13, color: T.textMuted, textAlign: 'center', padding: 30 }}>No notices found</p>}
+          {noticesLoading && filtered.length === 0 && <p style={{ fontSize: 13, color: T.textMuted, textAlign: 'center', padding: 30 }}>Loading notices…</p>}
+          {noticesError && <p style={{ fontSize: 13, color: T.critical, textAlign: 'center', padding: 30 }}>Error loading notices: {noticesError}</p>}
+          {!noticesLoading && !noticesError && filtered.length === 0 && <p style={{ fontSize: 13, color: T.textMuted, textAlign: 'center', padding: 30 }}>No notices found</p>}
         </div>
       </div>
     );
