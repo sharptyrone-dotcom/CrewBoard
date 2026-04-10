@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { CURRENT_USER_ID } from '@/lib/constants';
+import { fetchCrew } from '@/lib/crew';
 import { acknowledgeNotice, createNotice, fetchNotices, markNoticeRead } from '@/lib/notices';
 
 // ─── Data & Constants ────────────────────────────────────────────────
@@ -9,17 +10,6 @@ const CATEGORIES = ['All', 'Safety', 'Operations', 'Guest Info', 'HR/Admin', 'So
 const PRIORITIES = { critical: '#ef4444', important: '#f59e0b', routine: '#64748b' };
 const DEPARTMENTS = ['All', 'Bridge', 'Deck', 'Engine', 'Interior', 'Safety', 'General'];
 const DOC_TYPES = ['All', 'SOPs', 'Risk Assessments', 'Manuals', 'MSDS/COSHH', 'Checklists', 'Policies'];
-
-const MOCK_CREW = [
-  { id: 1, name: 'James Ward', role: 'Bosun', dept: 'Deck', avatar: 'JW', online: true },
-  { id: 2, name: 'Sophie Laurent', role: 'Chief Stewardess', dept: 'Interior', avatar: 'SL', online: true },
-  { id: 3, name: 'Marco Rossi', role: '2nd Engineer', dept: 'Engine', avatar: 'MR', online: false },
-  { id: 4, name: 'Emily Chen', role: 'Stewardess', dept: 'Interior', avatar: 'EC', online: true },
-  { id: 5, name: 'Tom Hayes', role: 'Deckhand', dept: 'Deck', avatar: 'TH', online: true },
-  { id: 6, name: 'Ana Petrova', role: '3rd Stewardess', dept: 'Interior', avatar: 'AP', online: false },
-  { id: 7, name: "Ryan O'Brien", role: 'Junior Engineer', dept: 'Engine', avatar: 'RO', online: true },
-  { id: 8, name: 'Lisa Müller', role: 'Head Chef', dept: 'Interior', avatar: 'LM', online: true },
-];
 
 const INITIAL_NOTICES = [
   { id: 1, title: 'Man Overboard Drill — 10 April', body: 'All crew to muster at 1000hrs on the aft deck for scheduled MOB drill. Full PPE required. Tender crew to have rescue boat prepped by 0945. This is a mandatory drill — all departments must ensure coverage.', category: 'Safety', priority: 'critical', dept: 'All', pinned: true, createdAt: '2026-04-09T08:00:00', readBy: [1, 2, 5, 8], acknowledgedBy: [1, 5] },
@@ -248,8 +238,8 @@ function DocDetail({ doc, currentUser, onBack }) {
 }
 
 // ─── Admin Notice Read Receipts ──────────────────────────────────────
-function AdminNoticeDetail({ notice, onBack }) {
-  const totalCrew = MOCK_CREW.length;
+function AdminNoticeDetail({ notice, onBack, crew }) {
+  const totalCrew = crew.length;
   return (
     <div style={{ padding: 20 }}>
       <BackButton onClick={onBack} />
@@ -264,7 +254,7 @@ function AdminNoticeDetail({ notice, onBack }) {
       </div>
       <h3 style={{ fontSize: 13, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 12px' }}>Crew Status</h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {MOCK_CREW.map(cm => {
+        {crew.map(cm => {
           const hasRead = notice.readBy.includes(cm.id);
           const hasAcked = notice.acknowledgedBy.includes(cm.id);
           const status = hasAcked ? 'Acknowledged' : hasRead ? 'Read' : 'Not read';
@@ -291,7 +281,7 @@ function AdminNoticeDetail({ notice, onBack }) {
 }
 
 // ─── Notice Card ─────────────────────────────────────────────────────
-function NoticeCard({ notice, currentUser, role, onClick, isPinned }) {
+function NoticeCard({ notice, currentUser, role, onClick, isPinned, crewCount }) {
   const isRead = notice.readBy.includes(currentUser.id);
   return (
     <button onClick={onClick} className="cb-card" style={{ display: 'flex', gap: 14, padding: '18px 20px', background: T.bgCard, border: `1px solid ${isPinned ? T.gold : T.border}`, borderRadius: 16, cursor: 'pointer', textAlign: 'left', width: '100%', boxShadow: T.shadow }}>
@@ -306,7 +296,7 @@ function NoticeCard({ notice, currentUser, role, onClick, isPinned }) {
         <div style={{ fontSize: 12, color: T.textMuted }}>{new Date(notice.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</div>
         {role === 'admin' && (
           <div style={{ display: 'flex', gap: 12, marginTop: 8, fontSize: 11 }}>
-            <span style={{ color: T.accent }}>{notice.readBy.length}/{MOCK_CREW.length} read</span>
+            <span style={{ color: T.accent }}>{notice.readBy.length}/{crewCount} read</span>
             <span style={{ color: T.success }}>{notice.acknowledgedBy.length} acknowledged</span>
           </div>
         )}
@@ -323,6 +313,8 @@ export default function CrewBoard() {
   const [notices, setNotices] = useState([]);
   const [noticesLoading, setNoticesLoading] = useState(true);
   const [noticesError, setNoticesError] = useState(null);
+  const [crew, setCrew] = useState([]);
+  const [crewLoading, setCrewLoading] = useState(true);
   const [docs] = useState(INITIAL_DOCS);
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
   const [selectedNotice, setSelectedNotice] = useState(null);
@@ -352,6 +344,21 @@ export default function CrewBoard() {
         if (!cancelled) setNoticesError(err.message || 'Failed to load notices');
       } finally {
         if (!cancelled) setNoticesLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const rows = await fetchCrew();
+        if (!cancelled) setCrew(rows);
+      } catch (err) {
+        console.error('crew fetch failed', err);
+      } finally {
+        if (!cancelled) setCrewLoading(false);
       }
     })();
     return () => { cancelled = true; };
@@ -483,8 +490,8 @@ export default function CrewBoard() {
         </div>
         <FilterChips options={CATEGORIES} selected={noticeFilter} onChange={setNoticeFilter} />
         <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {pinned.map(n => <NoticeCard key={n.id} notice={n} currentUser={currentUser} role={role} onClick={() => role === 'admin' ? setAdminNoticeView(n) : setSelectedNotice(n)} isPinned />)}
-          {unpinned.map(n => <NoticeCard key={n.id} notice={n} currentUser={currentUser} role={role} onClick={() => role === 'admin' ? setAdminNoticeView(n) : setSelectedNotice(n)} />)}
+          {pinned.map(n => <NoticeCard key={n.id} notice={n} currentUser={currentUser} role={role} onClick={() => role === 'admin' ? setAdminNoticeView(n) : setSelectedNotice(n)} crewCount={crew.length} isPinned />)}
+          {unpinned.map(n => <NoticeCard key={n.id} notice={n} currentUser={currentUser} role={role} onClick={() => role === 'admin' ? setAdminNoticeView(n) : setSelectedNotice(n)} crewCount={crew.length} />)}
           {noticesLoading && filtered.length === 0 && <p style={{ fontSize: 13, color: T.textMuted, textAlign: 'center', padding: 30 }}>Loading notices…</p>}
           {noticesError && <p style={{ fontSize: 13, color: T.critical, textAlign: 'center', padding: 30 }}>Error loading notices: {noticesError}</p>}
           {!noticesLoading && !noticesError && filtered.length === 0 && <p style={{ fontSize: 13, color: T.textMuted, textAlign: 'center', padding: 30 }}>No notices found</p>}
@@ -513,7 +520,7 @@ export default function CrewBoard() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {filtered.map(d => {
             const isAcked = d.acknowledgedBy.includes(currentUser.id);
-            const ackRatio = `${d.acknowledgedBy.length}/${MOCK_CREW.length}`;
+            const ackRatio = `${d.acknowledgedBy.length}/${crew.length}`;
             return (
               <button key={d.id} onClick={() => setSelectedDoc(d)} className="cb-card" style={{ display: 'flex', gap: 14, padding: '18px 20px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 16, cursor: 'pointer', textAlign: 'left', width: '100%', boxShadow: T.shadow }}>
                 <div style={{ width: 44, height: 50, borderRadius: 10, background: T.accentTint, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.accentDark, flexShrink: 0 }}>{Icons.file}</div>
@@ -525,7 +532,7 @@ export default function CrewBoard() {
                   {role === 'admin' && (
                     <div style={{ marginTop: 8 }}>
                       <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 4 }}>Acknowledged: {ackRatio}</div>
-                      <ComplianceBar value={(d.acknowledgedBy.length / MOCK_CREW.length) * 100} />
+                      <ComplianceBar value={(d.acknowledgedBy.length / crew.length) * 100} />
                     </div>
                   )}
                 </div>
@@ -573,26 +580,26 @@ export default function CrewBoard() {
 
   // ─── Admin Dashboard ───────────────────────────────────────────────
   const AdminDashboard = () => {
-    const criticalUnacked = notices.filter(n => n.priority === 'critical').reduce((sum, n) => sum + (MOCK_CREW.length - n.acknowledgedBy.length), 0);
-    const docsUnacked = docs.filter(d => d.required).reduce((sum, d) => sum + (MOCK_CREW.length - d.acknowledgedBy.length), 0);
+    const criticalUnacked = notices.filter(n => n.priority === 'critical').reduce((sum, n) => sum + (crew.length - n.acknowledgedBy.length), 0);
+    const docsUnacked = docs.filter(d => d.required).reduce((sum, d) => sum + (crew.length - d.acknowledgedBy.length), 0);
     const overallCompliance = Math.round(
-      MOCK_CREW.reduce((sum, cm) => {
+      crew.reduce((sum, cm) => {
         const read = notices.filter(n => n.readBy.includes(cm.id)).length;
         const acked = docs.filter(d => d.required && d.acknowledgedBy.includes(cm.id)).length;
         const total = notices.length + docs.filter(d => d.required).length;
         return sum + (total > 0 ? ((read + acked) / total) * 100 : 0);
-      }, 0) / MOCK_CREW.length
+      }, 0) / crew.length
     );
 
     return (
       <div style={{ padding: 20 }}>
         <div style={{ marginBottom: 20 }}>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text, margin: 0 }}>Dashboard</h1>
-          <p style={{ fontSize: 13, color: T.textMuted, margin: '4px 0 0' }}>M/Y Serenity — {MOCK_CREW.length} crew on board</p>
+          <p style={{ fontSize: 13, color: T.textMuted, margin: '4px 0 0' }}>M/Y Serenity — {crew.length} crew on board</p>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
           <StatCard label="Active Notices" value={notices.length} icon={Icons.notices} />
-          <StatCard label="Crew Online" value={MOCK_CREW.filter(c => c.online).length} color={T.success} icon={Icons.crew} />
+          <StatCard label="Crew Online" value={crew.filter(c => c.online).length} color={T.success} icon={Icons.crew} />
           <StatCard label="Critical Unack." value={criticalUnacked} color={T.critical} icon={Icons.alert} />
           <StatCard label="Doc. Pending Ack." value={docsUnacked} color={T.gold} icon={Icons.docs} />
         </div>
@@ -613,7 +620,7 @@ export default function CrewBoard() {
           ))}
         </div>
         <h3 style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 12px' }}>Crew Compliance</h3>
-        {MOCK_CREW.map(cm => {
+        {crew.map(cm => {
           const read = notices.filter(n => n.readBy.includes(cm.id)).length;
           const acked = docs.filter(d => d.required && d.acknowledgedBy.includes(cm.id)).length;
           const total = notices.length + docs.filter(d => d.required).length;
@@ -684,10 +691,10 @@ export default function CrewBoard() {
       <div style={{ padding: 20 }}>
         <h2 style={{ fontSize: 20, fontWeight: 800, color: T.text, margin: '0 0 16px' }}>Crew Management</h2>
         <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
-          <StatCard label="On Board" value={MOCK_CREW.length} icon={Icons.crew} />
-          <StatCard label="Online" value={MOCK_CREW.filter(c => c.online).length} color={T.success} icon={Icons.checkCircle} />
+          <StatCard label="On Board" value={crew.length} icon={Icons.crew} />
+          <StatCard label="Online" value={crew.filter(c => c.online).length} color={T.success} icon={Icons.checkCircle} />
         </div>
-        {MOCK_CREW.map(cm => (
+        {crew.map(cm => (
           <button key={cm.id} onClick={() => setSelectedCrewMember(cm)} className="cb-card" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '18px 20px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 16, width: '100%', cursor: 'pointer', textAlign: 'left', marginBottom: 10, boxShadow: T.shadow }}>
             <Avatar initials={cm.avatar} online={cm.online} size={40} />
             <div style={{ flex: 1 }}>
@@ -774,7 +781,7 @@ export default function CrewBoard() {
 
   // ─── Router ────────────────────────────────────────────────────────
   const renderScreen = () => {
-    if (role === 'admin' && adminNoticeView) return <AdminNoticeDetail notice={adminNoticeView} onBack={() => setAdminNoticeView(null)} />;
+    if (role === 'admin' && adminNoticeView) return <AdminNoticeDetail notice={adminNoticeView} onBack={() => setAdminNoticeView(null)} crew={crew} />;
     if (role === 'admin') {
       switch (tab) {
         case 'home': return <AdminDashboard />;
