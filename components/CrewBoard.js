@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { CURRENT_USER_ID } from '@/lib/constants';
-import { fetchCrew } from '@/lib/crew';
+import { fetchCrew, touchLastSeen } from '@/lib/crew';
 import { acknowledgeDocument, fetchDocuments } from '@/lib/documents';
 import { acknowledgeNotice, createNotice, fetchNotices, markNoticeRead } from '@/lib/notices';
 import { createBroadcastNotification, fetchNotifications, markNotificationRead } from '@/lib/notifications';
@@ -334,9 +334,17 @@ export default function CrewBoard() {
     return () => { cancelled = true; };
   }, []);
 
+  // Online heartbeat: on mount (and every 2 minutes thereafter) write `now()`
+  // to our own `last_seen_at`, then re-fetch the crew list so the online dots
+  // for everyone else also refresh as they cross the 5-minute threshold.
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    const tick = async () => {
+      try {
+        await touchLastSeen(currentUser.id);
+      } catch (err) {
+        console.error('touchLastSeen failed (non-fatal)', err);
+      }
       try {
         const rows = await fetchCrew();
         if (!cancelled) setCrew(rows);
@@ -345,8 +353,13 @@ export default function CrewBoard() {
       } finally {
         if (!cancelled) setCrewLoading(false);
       }
-    })();
-    return () => { cancelled = true; };
+    };
+    tick();
+    const interval = setInterval(tick, 2 * 60 * 1000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, []);
 
   useEffect(() => {
