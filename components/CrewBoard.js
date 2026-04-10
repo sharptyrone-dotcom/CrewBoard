@@ -6,6 +6,7 @@ import { fetchCrew, touchLastSeen } from '@/lib/crew';
 import { acknowledgeDocument, fetchDocuments } from '@/lib/documents';
 import { acknowledgeNotice, createNotice, fetchNotices, markNoticeRead } from '@/lib/notices';
 import { createBroadcastNotification, fetchNotifications, markNotificationRead } from '@/lib/notifications';
+import { ACTIVITY_ACTIONS, fetchActivity, logActivity } from '@/lib/activity';
 
 // ─── Data & Constants ────────────────────────────────────────────────
 const CATEGORIES = ['All', 'Safety', 'Operations', 'Guest Info', 'HR/Admin', 'Social', 'Departmental'];
@@ -46,6 +47,7 @@ const Icons = {
   x: <Icon d={<><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>} />,
   arrowLeft: <Icon d={<><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></>} />,
   anchor: <Icon d={<><circle cx="12" cy="5" r="3" /><line x1="12" y1="22" x2="12" y2="8" /><path d="M5 12H2a10 10 0 0020 0h-3" /></>} />,
+  clock: <Icon d={<><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></>} />,
 };
 
 // ─── Theme ───────────────────────────────────────────────────────────
@@ -302,6 +304,8 @@ export default function CrewBoard() {
   const [docsLoading, setDocsLoading] = useState(true);
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(true);
+  const [activity, setActivity] = useState([]);
+  const [activityLoading, setActivityLoading] = useState(true);
   const [selectedNotice, setSelectedNotice] = useState(null);
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -392,15 +396,58 @@ export default function CrewBoard() {
     return () => { cancelled = true; };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const rows = await fetchActivity({ limit: 100 });
+        if (!cancelled) setActivity(rows);
+      } catch (err) {
+        console.error('activity fetch failed', err);
+      } finally {
+        if (!cancelled) setActivityLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const unreadNotifs = notifications.filter(n => !n.read).length;
   const unreadNotices = notices.filter(n => !n.readBy.includes(currentUser.id)).length;
   const pendingAcks = notices.filter(n => n.priority === 'critical' && !n.acknowledgedBy.includes(currentUser.id)).length;
   const pendingDocAcks = docs.filter(d => d.required && !d.acknowledgedBy.includes(currentUser.id)).length;
 
+  // Fire-and-forget audit writer. Inserts into activity_log via the helper
+  // and also prepends an optimistic row to local state so the admin's
+  // Activity Log screen reflects the change without a refetch.
+  const recordActivity = async ({ action, targetType, targetId, metadata }) => {
+    const optimistic = {
+      id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      crewMemberId: currentUser.id,
+      action,
+      targetType,
+      targetId,
+      metadata: metadata || null,
+      createdAt: new Date().toISOString(),
+    };
+    setActivity(prev => [optimistic, ...prev]);
+    try {
+      await logActivity({ crewMemberId: currentUser.id, action, targetType, targetId, metadata });
+    } catch (err) {
+      // helper already logs — nothing to do here.
+    }
+  };
+
   const handleAcknowledge = async (noticeId) => {
+    const notice = notices.find(n => n.id === noticeId);
     setNotices(prev => prev.map(n => n.id === noticeId ? { ...n, acknowledgedBy: [...n.acknowledgedBy, currentUser.id], readBy: [...new Set([...n.readBy, currentUser.id])] } : n));
     try {
       await acknowledgeNotice({ noticeId, crewMemberId: currentUser.id });
+      recordActivity({
+        action: ACTIVITY_ACTIONS.NOTICE_ACKNOWLEDGED,
+        targetType: 'notice',
+        targetId: noticeId,
+        metadata: notice ? { title: notice.title } : null,
+      });
     } catch (err) {
       console.error('acknowledge failed, reverting', err);
       setNotices(prev => prev.map(n => n.id === noticeId ? { ...n, acknowledgedBy: n.acknowledgedBy.filter(id => id !== currentUser.id) } : n));
@@ -416,6 +463,12 @@ export default function CrewBoard() {
     }
     try {
       await acknowledgeDocument({ documentId: docId, crewMemberId: currentUser.id, version: doc.version });
+      recordActivity({
+        action: ACTIVITY_ACTIONS.DOCUMENT_ACKNOWLEDGED,
+        targetType: 'document',
+        targetId: docId,
+        metadata: { title: doc.title, version: doc.version },
+      });
     } catch (err) {
       console.error('acknowledgeDocument failed, reverting', err);
       setDocs(prev => prev.map(d => d.id === docId ? { ...d, acknowledgedBy: d.acknowledgedBy.filter(id => id !== currentUser.id) } : d));
@@ -450,6 +503,12 @@ export default function CrewBoard() {
       setNotices(prev => [posted, ...prev]);
       setNewNotice({ title: '', body: '', category: 'Safety', priority: 'routine', dept: 'All', pinned: false, requireAck: false });
       setShowNewNotice(false);
+      recordActivity({
+        action: ACTIVITY_ACTIONS.NOTICE_POSTED,
+        targetType: 'notice',
+        targetId: posted.id,
+        metadata: { title: posted.title, priority: posted.priority },
+      });
       // Fan out a broadcast notification so the bell badge updates for every
       // crew member. Failures are non-fatal — the notice itself is already
       // safely persisted at this point.
@@ -489,6 +548,7 @@ export default function CrewBoard() {
     { id: 'notices', label: 'Notices', icon: Icons.notices },
     { id: 'docs', label: 'Documents', icon: Icons.docs },
     { id: 'crew', label: 'Crew', icon: Icons.crew },
+    { id: 'activity', label: 'Activity', icon: Icons.clock },
   ];
 
   const tabs = role === 'admin' ? adminTabs : crewTabs;
@@ -793,6 +853,125 @@ export default function CrewBoard() {
     );
   };
 
+  // ─── Admin Activity Log ────────────────────────────────────────────
+  const AdminActivityLog = () => {
+    // Relative time formatter local to this component to avoid another
+    // shared util file. Mirrors the one in lib/notifications.js.
+    const relTime = (iso) => {
+      if (!iso) return '';
+      const then = new Date(iso).getTime();
+      if (Number.isNaN(then)) return '';
+      const mins = Math.round((Date.now() - then) / 60000);
+      if (mins < 1) return 'just now';
+      if (mins < 60) return `${mins}m ago`;
+      const hours = Math.round(mins / 60);
+      if (hours < 24) return `${hours}h ago`;
+      const days = Math.round(hours / 24);
+      if (days === 1) return 'Yesterday';
+      if (days < 7) return `${days} days ago`;
+      const weeks = Math.round(days / 7);
+      if (weeks < 5) return `${weeks}w ago`;
+      const months = Math.round(days / 30);
+      return `${months}mo ago`;
+    };
+
+    const crewById = Object.fromEntries(crew.map(c => [c.id, c]));
+
+    // Collapses an activity row into {verb, detail, icon, color} so the
+    // render loop stays tidy. Falls back to the metadata title when the
+    // referenced notice/document no longer exists client-side.
+    const describe = (row) => {
+      const title = row.metadata?.title || '';
+      switch (row.action) {
+        case ACTIVITY_ACTIONS.NOTICE_POSTED:
+          return {
+            verb: 'posted notice',
+            detail: title || 'a notice',
+            icon: Icons.pin,
+            color: row.metadata?.priority === 'critical' ? T.critical : T.accent,
+          };
+        case ACTIVITY_ACTIONS.NOTICE_ACKNOWLEDGED:
+          return {
+            verb: 'acknowledged',
+            detail: title || 'a notice',
+            icon: Icons.checkCircle,
+            color: T.success,
+          };
+        case ACTIVITY_ACTIONS.DOCUMENT_ACKNOWLEDGED:
+          return {
+            verb: 'signed off',
+            detail: row.metadata?.version ? `${title} (v${row.metadata.version})` : (title || 'a document'),
+            icon: Icons.file,
+            color: T.gold,
+          };
+        default:
+          return { verb: row.action, detail: '', icon: Icons.bell, color: T.textMuted };
+      }
+    };
+
+    // Group by date (Today, Yesterday, or an absolute date) for a cleaner
+    // scanning experience on longer lists.
+    const groups = [];
+    let lastLabel = null;
+    activity.forEach(row => {
+      const d = new Date(row.createdAt);
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+      const rowDay = new Date(d); rowDay.setHours(0, 0, 0, 0);
+      let label;
+      if (rowDay.getTime() === today.getTime()) label = 'Today';
+      else if (rowDay.getTime() === yesterday.getTime()) label = 'Yesterday';
+      else label = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      if (label !== lastLabel) {
+        groups.push({ label, rows: [] });
+        lastLabel = label;
+      }
+      groups[groups.length - 1].rows.push(row);
+    });
+
+    return (
+      <div style={{ padding: 20 }}>
+        <h2 style={{ fontSize: 20, fontWeight: 800, color: T.text, margin: '0 0 4px' }}>Activity Log</h2>
+        <p style={{ fontSize: 12, color: T.textMuted, margin: '0 0 20px' }}>Every notice posted and every acknowledgement across the vessel.</p>
+
+        {activityLoading && <div style={{ color: T.textMuted, fontSize: 13, padding: '20px 0', textAlign: 'center' }}>Loading activity…</div>}
+        {!activityLoading && activity.length === 0 && (
+          <div style={{ color: T.textMuted, fontSize: 13, padding: '40px 20px', textAlign: 'center', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 14 }}>
+            No activity recorded yet.
+          </div>
+        )}
+
+        {groups.map(group => (
+          <div key={group.label} style={{ marginBottom: 22 }}>
+            <h3 style={{ fontSize: 11, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 10px' }}>{group.label}</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {group.rows.map(row => {
+                const actor = crewById[row.crewMemberId];
+                const name = actor?.name || 'Unknown crew';
+                const initials = actor?.avatar || '?';
+                const { verb, detail, icon, color } = describe(row);
+                return (
+                  <div key={row.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 14, boxShadow: T.shadow }}>
+                    <Avatar initials={initials} size={36} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, color: T.text, lineHeight: 1.4 }}>
+                        <span style={{ fontWeight: 700 }}>{name}</span>
+                        <span style={{ color: T.textMuted }}> {verb} </span>
+                        <span style={{ fontWeight: 600 }}>{detail}</span>
+                      </div>
+                      <div style={{ fontSize: 11, color: T.textDim, marginTop: 3 }}>{relTime(row.createdAt)}</div>
+                    </div>
+                    <div style={{ color, marginTop: 2, flexShrink: 0 }}>{icon}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   // ─── Modals ────────────────────────────────────────────────────────
   const NewNoticeModal = () => (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
@@ -873,6 +1052,7 @@ export default function CrewBoard() {
         case 'notices': return <NoticesScreen />;
         case 'docs': return <DocsScreen />;
         case 'crew': return <CrewManagement />;
+        case 'activity': return <AdminActivityLog />;
         default: return <AdminDashboard />;
       }
     }
