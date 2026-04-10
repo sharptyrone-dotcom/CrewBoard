@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { CURRENT_USER_ID } from '@/lib/constants';
 import { fetchCrew } from '@/lib/crew';
+import { acknowledgeDocument, fetchDocuments } from '@/lib/documents';
 import { acknowledgeNotice, createNotice, fetchNotices, markNoticeRead } from '@/lib/notices';
 
 // ─── Data & Constants ────────────────────────────────────────────────
@@ -18,17 +19,6 @@ const INITIAL_NOTICES = [
   { id: 4, title: 'New Tender Operating SOP', body: 'Updated tender operations SOP has been uploaded to the Document Library. All deck crew must review and acknowledge by 15 April. Key changes in Section 3.2 regarding passenger boarding procedures.', category: 'Safety', priority: 'important', dept: 'Deck', pinned: false, createdAt: '2026-04-07T16:00:00', readBy: [1, 5], acknowledgedBy: [1] },
   { id: 5, title: 'Crew BBQ — Saturday 12th', body: 'Crew BBQ on the crew mess aft deck from 1800hrs. Chef Lisa is doing her famous jerk chicken. BYO drinks. Off-watch crew only — check rota.', category: 'Social', priority: 'routine', dept: 'All', pinned: false, createdAt: '2026-04-07T09:00:00', readBy: [1, 2, 4, 5, 6, 8], acknowledgedBy: [] },
   { id: 6, title: 'Port Side Hydraulic System — Restricted Area', body: 'Port side hydraulic system under maintenance until further notice. Area cordoned off — no crew to enter without Chief Engineer authorisation. Risk assessment RA-2026-041 applies.', category: 'Safety', priority: 'critical', dept: 'Engine', pinned: false, createdAt: '2026-04-06T11:00:00', readBy: [1, 3, 5, 7], acknowledgedBy: [3, 7] },
-];
-
-const INITIAL_DOCS = [
-  { id: 1, title: 'Tender Operations SOP', type: 'SOPs', dept: 'Deck', version: '3.2', updatedAt: '2026-04-07', reviewDate: '2026-10-07', acknowledgedBy: [1], required: true, pages: 12 },
-  { id: 2, title: 'Anchor Winch Risk Assessment', type: 'Risk Assessments', dept: 'Deck', version: '2.1', updatedAt: '2026-03-15', reviewDate: '2026-09-15', acknowledgedBy: [1, 5], required: true, pages: 4 },
-  { id: 3, title: 'Engine Room Safety Manual', type: 'Manuals', dept: 'Engine', version: '5.0', updatedAt: '2026-02-01', reviewDate: '2026-08-01', acknowledgedBy: [3, 7], required: true, pages: 48 },
-  { id: 4, title: 'COSHH — Cleaning Chemicals', type: 'MSDS/COSHH', dept: 'Interior', version: '1.4', updatedAt: '2026-03-20', reviewDate: '2026-09-20', acknowledgedBy: [2, 4, 6], required: true, pages: 8 },
-  { id: 5, title: 'Bridge Watchkeeping Procedures', type: 'SOPs', dept: 'Bridge', version: '4.1', updatedAt: '2026-01-10', reviewDate: '2026-07-10', acknowledgedBy: [1], required: true, pages: 22 },
-  { id: 6, title: 'Guest Service Standards', type: 'Policies', dept: 'Interior', version: '2.0', updatedAt: '2026-03-01', reviewDate: '2026-09-01', acknowledgedBy: [2, 4], required: false, pages: 15 },
-  { id: 7, title: 'Hot Work Permit Checklist', type: 'Checklists', dept: 'Engine', version: '1.2', updatedAt: '2026-02-28', reviewDate: '2026-08-28', acknowledgedBy: [], required: true, pages: 2 },
-  { id: 8, title: 'Helicopter Operations SOP', type: 'SOPs', dept: 'Deck', version: '2.0', updatedAt: '2026-03-10', reviewDate: '2026-09-10', acknowledgedBy: [1, 5], required: true, pages: 18 },
 ];
 
 const INITIAL_NOTIFICATIONS = [
@@ -199,7 +189,7 @@ function NoticeDetail({ notice, currentUser, onBack, onAcknowledge, onMarkRead }
 }
 
 // ─── Document Detail (Crew) ──────────────────────────────────────────
-function DocDetail({ doc, currentUser, onBack }) {
+function DocDetail({ doc, currentUser, onBack, onAcknowledge }) {
   const isAcked = doc.acknowledgedBy.includes(currentUser.id);
 
   return (
@@ -224,7 +214,7 @@ function DocDetail({ doc, currentUser, onBack }) {
         <p style={{ fontSize: 12, color: T.textMuted, margin: '4px 0 0' }}>{doc.pages} pages</p>
       </div>
       {doc.required && !isAcked && (
-        <button className="cb-btn-primary" style={{ width: '100%', padding: 16, borderRadius: 12, border: 'none', background: T.accent, color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
+        <button onClick={() => onAcknowledge && onAcknowledge(doc.id)} className="cb-btn-primary" style={{ width: '100%', padding: 16, borderRadius: 12, border: 'none', background: T.accent, color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
           Acknowledge Current Version
         </button>
       )}
@@ -315,7 +305,8 @@ export default function CrewBoard() {
   const [noticesError, setNoticesError] = useState(null);
   const [crew, setCrew] = useState([]);
   const [crewLoading, setCrewLoading] = useState(true);
-  const [docs] = useState(INITIAL_DOCS);
+  const [docs, setDocs] = useState([]);
+  const [docsLoading, setDocsLoading] = useState(true);
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
   const [selectedNotice, setSelectedNotice] = useState(null);
   const [selectedDoc, setSelectedDoc] = useState(null);
@@ -364,6 +355,21 @@ export default function CrewBoard() {
     return () => { cancelled = true; };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const rows = await fetchDocuments();
+        if (!cancelled) setDocs(rows);
+      } catch (err) {
+        console.error('documents fetch failed', err);
+      } finally {
+        if (!cancelled) setDocsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const unreadNotifs = notifications.filter(n => !n.read).length;
   const unreadNotices = notices.filter(n => !n.readBy.includes(currentUser.id)).length;
   const pendingAcks = notices.filter(n => n.priority === 'critical' && !n.acknowledgedBy.includes(currentUser.id)).length;
@@ -376,6 +382,21 @@ export default function CrewBoard() {
     } catch (err) {
       console.error('acknowledge failed, reverting', err);
       setNotices(prev => prev.map(n => n.id === noticeId ? { ...n, acknowledgedBy: n.acknowledgedBy.filter(id => id !== currentUser.id) } : n));
+    }
+  };
+
+  const handleAckDoc = async (docId) => {
+    const doc = docs.find(d => d.id === docId);
+    if (!doc) return;
+    setDocs(prev => prev.map(d => d.id === docId ? { ...d, acknowledgedBy: [...new Set([...d.acknowledgedBy, currentUser.id])] } : d));
+    if (selectedDoc && selectedDoc.id === docId) {
+      setSelectedDoc(prev => ({ ...prev, acknowledgedBy: [...new Set([...prev.acknowledgedBy, currentUser.id])] }));
+    }
+    try {
+      await acknowledgeDocument({ documentId: docId, crewMemberId: currentUser.id, version: doc.version });
+    } catch (err) {
+      console.error('acknowledgeDocument failed, reverting', err);
+      setDocs(prev => prev.map(d => d.id === docId ? { ...d, acknowledgedBy: d.acknowledgedBy.filter(id => id !== currentUser.id) } : d));
     }
   };
 
@@ -502,7 +523,7 @@ export default function CrewBoard() {
 
   // ─── Documents Screen ──────────────────────────────────────────────
   const DocsScreen = () => {
-    if (selectedDoc) return <DocDetail doc={selectedDoc} currentUser={currentUser} onBack={() => setSelectedDoc(null)} />;
+    if (selectedDoc) return <DocDetail doc={selectedDoc} currentUser={currentUser} onBack={() => setSelectedDoc(null)} onAcknowledge={handleAckDoc} />;
     const filtered = docs
       .filter(d => docDeptFilter === 'All' || d.dept === docDeptFilter)
       .filter(d => docTypeFilter === 'All' || d.type === docTypeFilter);
