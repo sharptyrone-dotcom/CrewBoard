@@ -75,27 +75,35 @@ const Icons = {
 
 // ─── Theme ───────────────────────────────────────────────────────────
 const T = {
-  bg: '#0a0f1a',
-  bgCard: '#111827',
-  bgHover: '#1a2236',
-  bgModal: '#0d1322',
-  border: '#1e293b',
-  borderLight: '#2a3a52',
-  text: '#e2e8f0',
-  textMuted: '#8896ab',
-  textDim: '#5a6a80',
+  bg: '#f8fafc',
+  bgCard: '#ffffff',
+  bgHover: '#f0f7ff',
+  bgModal: '#ffffff',
+  border: '#e2e8f0',
+  borderLight: '#cbd5e1',
+  text: '#0f172a',
+  textMuted: '#475569',
+  textDim: '#94a3b8',
   accent: '#3b82f6',
-  accentGlow: 'rgba(59,130,246,0.15)',
+  accentDark: '#2563eb',
+  accentGlow: '#dbeafe',
+  accentTint: '#f0f7ff',
   gold: '#f59e0b',
+  goldTint: '#fef3c7',
   critical: '#ef4444',
+  criticalTint: '#fef2f2',
   success: '#10b981',
+  successTint: '#d1fae5',
   navy: '#1e3a5f',
+  shadow: '0 1px 3px rgba(15,23,42,0.06), 0 4px 12px rgba(15,23,42,0.04)',
+  shadowLg: '0 10px 30px rgba(15,23,42,0.08)',
 };
 
 // ─── Shared Components ───────────────────────────────────────────────
 function PriorityBadge({ priority }) {
+  const bg = priority === 'critical' ? T.criticalTint : priority === 'important' ? T.goldTint : '#f1f5f9';
   return (
-    <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1.2, color: PRIORITIES[priority], background: `${PRIORITIES[priority]}18`, padding: '3px 8px', borderRadius: 4 }}>
+    <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1.2, color: PRIORITIES[priority], background: bg, padding: '4px 9px', borderRadius: 6 }}>
       {priority}
     </span>
   );
@@ -103,7 +111,7 @@ function PriorityBadge({ priority }) {
 
 function CategoryBadge({ category }) {
   return (
-    <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: 0.8, color: T.accent, background: T.accentGlow, padding: '3px 8px', borderRadius: 4 }}>
+    <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: 0.8, color: T.accentDark, background: T.accentGlow, padding: '4px 9px', borderRadius: 6 }}>
       {category}
     </span>
   );
@@ -111,10 +119,10 @@ function CategoryBadge({ category }) {
 
 function Avatar({ initials, online, size = 36 }) {
   return (
-    <div style={{ position: 'relative', width: size, height: size, borderRadius: '50%', background: `linear-gradient(135deg, ${T.navy}, ${T.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.35, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+    <div style={{ position: 'relative', width: size, height: size, borderRadius: '50%', background: `linear-gradient(135deg, ${T.navy}, ${T.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.35, fontWeight: 700, color: '#fff', flexShrink: 0, boxShadow: '0 4px 10px rgba(59,130,246,0.25)' }}>
       {initials}
       {online !== undefined && (
-        <div style={{ position: 'absolute', bottom: 0, right: 0, width: 10, height: 10, borderRadius: '50%', background: online ? T.success : T.textDim, border: `2px solid ${T.bgCard}` }} />
+        <div style={{ position: 'absolute', bottom: 0, right: 0, width: 10, height: 10, borderRadius: '50%', background: online ? T.success : T.textDim, border: `2px solid #fff` }} />
       )}
     </div>
   );
@@ -122,12 +130,12 @@ function Avatar({ initials, online, size = 36 }) {
 
 function StatCard({ label, value, color = T.accent, icon }) {
   return (
-    <div style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 12, padding: '16px 14px', flex: 1, minWidth: 0 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-        <div style={{ color }}>{icon}</div>
-        <span style={{ fontSize: 24, fontWeight: 800, color, fontFamily: "'JetBrains Mono', monospace" }}>{value}</span>
+    <div style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 16, padding: '20px 18px', flex: 1, minWidth: 0, boxShadow: T.shadow }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+        <div style={{ width: 32, height: 32, borderRadius: 8, background: `${color}15`, color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{icon}</div>
+        <span style={{ fontSize: 26, fontWeight: 800, color: T.text, fontFamily: "'JetBrains Mono', monospace", letterSpacing: '-0.02em' }}>{value}</span>
       </div>
-      <div style={{ fontSize: 11, color: T.textMuted, fontWeight: 500, lineHeight: 1.3 }}>{label}</div>
+      <div style={{ fontSize: 12, color: T.textMuted, fontWeight: 500, lineHeight: 1.3 }}>{label}</div>
     </div>
   );
 }
@@ -142,9 +150,9 @@ function ComplianceBar({ value }) {
 
 function FilterChips({ options, selected, onChange }) {
   return (
-    <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none' }}>
+    <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none' }}>
       {options.map(opt => (
-        <button key={opt} onClick={() => onChange(opt)} style={{ padding: '6px 14px', borderRadius: 20, border: `1px solid ${selected === opt ? T.accent : T.border}`, background: selected === opt ? T.accentGlow : 'transparent', color: selected === opt ? T.accent : T.textMuted, fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s' }}>
+        <button key={opt} onClick={() => onChange(opt)} style={{ padding: '8px 16px', borderRadius: 20, border: `1px solid ${selected === opt ? T.accent : T.border}`, background: selected === opt ? T.accentTint : T.bgCard, color: selected === opt ? T.accentDark : T.textMuted, fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s' }}>
           {opt}
         </button>
       ))}
@@ -180,12 +188,12 @@ function NoticeDetail({ notice, currentUser, onBack, onAcknowledge, onMarkRead }
       </p>
       <div style={{ fontSize: 15, color: T.text, lineHeight: 1.7, marginBottom: 30, opacity: 0.9 }}>{notice.body}</div>
       {!isRead && !needsAck && (
-        <button onClick={() => onMarkRead(notice.id)} style={{ width: '100%', padding: 16, borderRadius: 12, border: 'none', background: T.accent, color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
+        <button onClick={() => onMarkRead(notice.id)} className="cb-btn-primary" style={{ width: '100%', padding: 16, borderRadius: 12, border: 'none', background: T.accent, color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
           Mark as Read
         </button>
       )}
       {needsAck && !isAcked && (
-        <button onClick={() => onAcknowledge(notice.id)} style={{ width: '100%', padding: 16, borderRadius: 12, border: `2px solid ${T.critical}`, background: `${T.critical}15`, color: T.critical, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
+        <button onClick={() => onAcknowledge(notice.id)} style={{ width: '100%', padding: 16, borderRadius: 12, border: `2px solid ${T.critical}`, background: T.criticalTint, color: T.critical, fontSize: 15, fontWeight: 700, cursor: 'pointer', transition: 'background 0.2s' }}>
           I have read and understood
         </button>
       )}
@@ -210,7 +218,7 @@ function DocDetail({ doc, currentUser, onBack }) {
         <span style={{ fontSize: 10, fontWeight: 600, color: T.textMuted, background: `${T.textMuted}18`, padding: '3px 8px', borderRadius: 4 }}>{doc.dept}</span>
       </div>
       <h2 style={{ fontSize: 20, fontWeight: 800, color: T.text, margin: '0 0 16px' }}>{doc.title}</h2>
-      <div style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 12, padding: 16, marginBottom: 20 }}>
+      <div style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 16, padding: 20, marginBottom: 20, boxShadow: T.shadow }}>
         {[['Version', `v${doc.version}`], ['Last Updated', doc.updatedAt], ['Review Date', doc.reviewDate], ['Pages', doc.pages], ['Required', doc.required ? 'Yes' : 'No']].map(([label, val]) => (
           <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${T.border}` }}>
             <span style={{ fontSize: 13, color: T.textMuted }}>{label}</span>
@@ -218,13 +226,13 @@ function DocDetail({ doc, currentUser, onBack }) {
           </div>
         ))}
       </div>
-      <div style={{ background: `${T.navy}40`, border: `1px solid ${T.border}`, borderRadius: 12, padding: 40, textAlign: 'center', marginBottom: 20 }}>
-        <div style={{ color: T.textDim, marginBottom: 8 }}>{Icons.file}</div>
-        <p style={{ fontSize: 13, color: T.textMuted, margin: 0 }}>PDF document preview</p>
-        <p style={{ fontSize: 11, color: T.textDim, margin: '4px 0 0' }}>{doc.pages} pages</p>
+      <div style={{ background: T.accentTint, border: `1px solid ${T.border}`, borderRadius: 16, padding: 48, textAlign: 'center', marginBottom: 20 }}>
+        <div style={{ color: T.accent, marginBottom: 10, display: 'flex', justifyContent: 'center' }}>{Icons.file}</div>
+        <p style={{ fontSize: 14, color: T.text, margin: 0, fontWeight: 600 }}>PDF document preview</p>
+        <p style={{ fontSize: 12, color: T.textMuted, margin: '4px 0 0' }}>{doc.pages} pages</p>
       </div>
       {doc.required && !isAcked && (
-        <button style={{ width: '100%', padding: 16, borderRadius: 12, border: 'none', background: T.accent, color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
+        <button className="cb-btn-primary" style={{ width: '100%', padding: 16, borderRadius: 12, border: 'none', background: T.accent, color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
           Acknowledge Current Version
         </button>
       )}
@@ -260,7 +268,7 @@ function AdminNoticeDetail({ notice, onBack }) {
           const status = hasAcked ? 'Acknowledged' : hasRead ? 'Read' : 'Not read';
           const statusColor = hasAcked ? T.success : hasRead ? T.accent : T.critical;
           return (
-            <div key={cm.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: T.bgCard, borderRadius: 10, border: `1px solid ${T.border}` }}>
+            <div key={cm.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: T.bgCard, borderRadius: 12, border: `1px solid ${T.border}`, boxShadow: T.shadow }}>
               <Avatar initials={cm.avatar} size={32} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{cm.name}</div>
@@ -272,7 +280,7 @@ function AdminNoticeDetail({ notice, onBack }) {
         })}
       </div>
       {notice.readBy.length < totalCrew && (
-        <button style={{ width: '100%', marginTop: 16, padding: 14, borderRadius: 12, border: `1px solid ${T.gold}`, background: `${T.gold}15`, color: T.gold, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+        <button style={{ width: '100%', marginTop: 16, padding: 14, borderRadius: 12, border: `1px solid ${T.gold}`, background: T.goldTint, color: '#b45309', fontSize: 14, fontWeight: 700, cursor: 'pointer', transition: 'background 0.2s' }}>
           Send Reminder to Non-Readers
         </button>
       )}
@@ -284,7 +292,7 @@ function AdminNoticeDetail({ notice, onBack }) {
 function NoticeCard({ notice, currentUser, role, onClick, isPinned }) {
   const isRead = notice.readBy.includes(currentUser.id);
   return (
-    <button onClick={onClick} style={{ display: 'flex', gap: 12, padding: '14px 16px', background: T.bgCard, border: `1px solid ${isPinned ? `${T.gold}40` : T.border}`, borderRadius: 12, cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'border-color 0.2s' }}>
+    <button onClick={onClick} className="cb-card" style={{ display: 'flex', gap: 14, padding: '18px 20px', background: T.bgCard, border: `1px solid ${isPinned ? T.gold : T.border}`, borderRadius: 16, cursor: 'pointer', textAlign: 'left', width: '100%', boxShadow: T.shadow }}>
       <div style={{ width: 4, borderRadius: 2, background: PRIORITIES[notice.priority], flexShrink: 0, alignSelf: 'stretch' }} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
@@ -389,27 +397,27 @@ export default function CrewBoard() {
       <h3 style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1.2, margin: '0 0 10px' }}>Requires Your Attention</h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
         {notices.filter(n => n.priority === 'critical' && !n.acknowledgedBy.includes(currentUser.id)).map(n => (
-          <button key={n.id} onClick={() => { setSelectedNotice(n); setTab('notices'); }} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: `${T.critical}08`, border: `1px solid ${T.critical}30`, borderRadius: 12, cursor: 'pointer', textAlign: 'left', width: '100%' }}>
-            <div style={{ width: 4, height: 36, borderRadius: 2, background: T.critical, flexShrink: 0 }} />
+          <button key={n.id} onClick={() => { setSelectedNotice(n); setTab('notices'); }} className="cb-card" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '18px 20px', background: T.criticalTint, border: `1px solid ${T.critical}40`, borderRadius: 16, cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+            <div style={{ width: 4, height: 40, borderRadius: 2, background: T.critical, flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 2 }}>{n.title}</div>
-              <div style={{ fontSize: 11, color: T.critical, fontWeight: 600 }}>Acknowledgement required</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 3 }}>{n.title}</div>
+              <div style={{ fontSize: 12, color: T.critical, fontWeight: 600 }}>Acknowledgement required</div>
             </div>
           </button>
         ))}
         {docs.filter(d => d.required && !d.acknowledgedBy.includes(currentUser.id)).map(d => (
-          <button key={d.id} onClick={() => { setSelectedDoc(d); setTab('docs'); }} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: `${T.gold}08`, border: `1px solid ${T.gold}30`, borderRadius: 12, cursor: 'pointer', textAlign: 'left', width: '100%' }}>
-            <div style={{ width: 4, height: 36, borderRadius: 2, background: T.gold, flexShrink: 0 }} />
+          <button key={d.id} onClick={() => { setSelectedDoc(d); setTab('docs'); }} className="cb-card" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '18px 20px', background: T.goldTint, border: `1px solid ${T.gold}40`, borderRadius: 16, cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+            <div style={{ width: 4, height: 40, borderRadius: 2, background: T.gold, flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 2 }}>{d.title}</div>
-              <div style={{ fontSize: 11, color: T.gold, fontWeight: 600 }}>Document acknowledgement pending — v{d.version}</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 3 }}>{d.title}</div>
+              <div style={{ fontSize: 12, color: '#b45309', fontWeight: 600 }}>Document acknowledgement pending — v{d.version}</div>
             </div>
           </button>
         ))}
       </div>
       <h3 style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1.2, margin: '0 0 10px' }}>Recent Notices</h3>
       {notices.slice(0, 3).map(n => (
-        <button key={n.id} onClick={() => { setSelectedNotice(n); setTab('notices'); }} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 10, cursor: 'pointer', textAlign: 'left', width: '100%', marginBottom: 6 }}>
+        <button key={n.id} onClick={() => { setSelectedNotice(n); setTab('notices'); }} className="cb-card" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 14, cursor: 'pointer', textAlign: 'left', width: '100%', marginBottom: 8, boxShadow: T.shadow }}>
           <div style={{ width: 3, height: 28, borderRadius: 2, background: PRIORITIES[n.priority], flexShrink: 0 }} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.title}</div>
@@ -434,7 +442,7 @@ export default function CrewBoard() {
         <h2 style={{ fontSize: 20, fontWeight: 800, color: T.text, margin: '0 0 16px' }}>Notices</h2>
         <div style={{ position: 'relative', marginBottom: 12 }}>
           <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: T.textDim }}>{Icons.search}</div>
-          <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search notices..." style={{ width: '100%', padding: '10px 12px 10px 40px', borderRadius: 10, border: `1px solid ${T.border}`, background: T.bgCard, color: T.text, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+          <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search notices..." style={{ width: '100%', padding: '12px 14px 12px 42px', borderRadius: 12, border: `1px solid ${T.border}`, background: T.bgCard, color: T.text, fontSize: 14, outline: 'none', boxSizing: 'border-box', boxShadow: T.shadow }} />
         </div>
         <FilterChips options={CATEGORIES} selected={noticeFilter} onChange={setNoticeFilter} />
         <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -468,8 +476,8 @@ export default function CrewBoard() {
             const isAcked = d.acknowledgedBy.includes(currentUser.id);
             const ackRatio = `${d.acknowledgedBy.length}/${MOCK_CREW.length}`;
             return (
-              <button key={d.id} onClick={() => setSelectedDoc(d)} style={{ display: 'flex', gap: 14, padding: '14px 16px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 12, cursor: 'pointer', textAlign: 'left', width: '100%' }}>
-                <div style={{ width: 40, height: 46, borderRadius: 8, background: `${T.navy}60`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.accent, flexShrink: 0 }}>{Icons.file}</div>
+              <button key={d.id} onClick={() => setSelectedDoc(d)} className="cb-card" style={{ display: 'flex', gap: 14, padding: '18px 20px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 16, cursor: 'pointer', textAlign: 'left', width: '100%', boxShadow: T.shadow }}>
+                <div style={{ width: 44, height: 50, borderRadius: 10, background: T.accentTint, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.accentDark, flexShrink: 0 }}>{Icons.file}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 4 }}>{d.title}</div>
                   <div style={{ display: 'flex', gap: 8, fontSize: 11, color: T.textMuted, flexWrap: 'wrap' }}>
@@ -505,7 +513,7 @@ export default function CrewBoard() {
         <p style={{ fontSize: 13, color: T.textMuted, margin: 0 }}>{currentUser.role} — {currentUser.dept} Department</p>
         <p style={{ fontSize: 12, color: T.textDim, margin: '4px 0 0' }}>M/Y Serenity</p>
       </div>
-      <div style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
+      <div style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 16, overflow: 'hidden', boxShadow: T.shadow, marginBottom: 20 }}>
         {[['Notices Read', `${notices.filter(n => n.readBy.includes(currentUser.id)).length}/${notices.length}`], ['Documents Acknowledged', `${docs.filter(d => d.acknowledgedBy.includes(currentUser.id)).length}/${docs.filter(d => d.required).length}`], ['Compliance Score', '72%']].map(([label, val], i) => (
           <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: i < 2 ? `1px solid ${T.border}` : 'none' }}>
             <span style={{ fontSize: 14, color: T.textMuted }}>{label}</span>
@@ -513,7 +521,7 @@ export default function CrewBoard() {
           </div>
         ))}
       </div>
-      <div style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 16, overflow: 'hidden', boxShadow: T.shadow }}>
         {['Notification Preferences', 'Dark Mode', 'Offline Documents', 'Log Out'].map((item, i) => (
           <button key={item} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: i < 3 ? `1px solid ${T.border}` : 'none', width: '100%', background: 'none', border: 'none', cursor: 'pointer', color: item === 'Log Out' ? T.critical : T.text, fontSize: 14 }}>
             {item}
@@ -549,7 +557,7 @@ export default function CrewBoard() {
           <StatCard label="Critical Unack." value={criticalUnacked} color={T.critical} icon={Icons.alert} />
           <StatCard label="Doc. Pending Ack." value={docsUnacked} color={T.gold} icon={Icons.docs} />
         </div>
-        <div style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 12, padding: 16, marginBottom: 20 }}>
+        <div style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 16, padding: 20, marginBottom: 20, boxShadow: T.shadow }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: T.text }}>Overall Compliance</span>
             <span style={{ fontSize: 20, fontWeight: 800, color: overallCompliance > 70 ? T.success : T.gold, fontFamily: "'JetBrains Mono', monospace" }}>{overallCompliance}%</span>
@@ -562,7 +570,7 @@ export default function CrewBoard() {
         </div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
           {[['New Notice', () => setShowNewNotice(true)], ['Upload Doc', () => {}], ['Send Reminder', () => {}]].map(([label, fn]) => (
-            <button key={label} onClick={fn} style={{ flex: 1, padding: '12px 8px', borderRadius: 10, border: `1px solid ${T.border}`, background: T.bgCard, color: T.accent, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>{label}</button>
+            <button key={label} onClick={fn} className="cb-btn-secondary" style={{ flex: 1, padding: '14px 10px', borderRadius: 12, border: `1px solid ${T.border}`, background: T.bgCard, color: T.accentDark, fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: T.shadow }}>{label}</button>
           ))}
         </div>
         <h3 style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 12px' }}>Crew Compliance</h3>
@@ -572,7 +580,7 @@ export default function CrewBoard() {
           const total = notices.length + docs.filter(d => d.required).length;
           const score = total > 0 ? Math.round(((read + acked) / total) * 100) : 0;
           return (
-            <button key={cm.id} onClick={() => setSelectedCrewMember(cm)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 10, width: '100%', cursor: 'pointer', textAlign: 'left', marginBottom: 6 }}>
+            <button key={cm.id} onClick={() => setSelectedCrewMember(cm)} className="cb-card" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 14, width: '100%', cursor: 'pointer', textAlign: 'left', marginBottom: 8, boxShadow: T.shadow }}>
               <Avatar initials={cm.avatar} online={cm.online} size={36} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -611,7 +619,7 @@ export default function CrewBoard() {
               const status = hasAcked ? 'Acknowledged' : hasRead ? 'Read' : 'Not read';
               const color = hasAcked ? T.success : hasRead ? T.accent : T.critical;
               return (
-                <div key={n.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 8 }}>
+                <div key={n.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 12, boxShadow: T.shadow }}>
                   <span style={{ fontSize: 13, color: T.text, flex: 1 }}>{n.title}</span>
                   <span style={{ fontSize: 11, fontWeight: 700, color, flexShrink: 0, marginLeft: 8 }}>{status}</span>
                 </div>
@@ -623,7 +631,7 @@ export default function CrewBoard() {
             {docs.filter(d => d.required).map(d => {
               const hasAcked = d.acknowledgedBy.includes(cm.id);
               return (
-                <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 8 }}>
+                <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 12, boxShadow: T.shadow }}>
                   <span style={{ fontSize: 13, color: T.text, flex: 1 }}>{d.title}</span>
                   <span style={{ fontSize: 11, fontWeight: 700, color: hasAcked ? T.success : T.critical, flexShrink: 0, marginLeft: 8 }}>{hasAcked ? 'Acknowledged' : 'Pending'}</span>
                 </div>
@@ -641,7 +649,7 @@ export default function CrewBoard() {
           <StatCard label="Online" value={MOCK_CREW.filter(c => c.online).length} color={T.success} icon={Icons.checkCircle} />
         </div>
         {MOCK_CREW.map(cm => (
-          <button key={cm.id} onClick={() => setSelectedCrewMember(cm)} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 12, width: '100%', cursor: 'pointer', textAlign: 'left', marginBottom: 8 }}>
+          <button key={cm.id} onClick={() => setSelectedCrewMember(cm)} className="cb-card" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '18px 20px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 16, width: '100%', cursor: 'pointer', textAlign: 'left', marginBottom: 10, boxShadow: T.shadow }}>
             <Avatar initials={cm.avatar} online={cm.online} size={40} />
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{cm.name}</div>
@@ -656,8 +664,8 @@ export default function CrewBoard() {
 
   // ─── Modals ────────────────────────────────────────────────────────
   const NewNoticeModal = () => (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-      <div style={{ background: T.bgModal, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 480, maxHeight: '90vh', overflow: 'auto', padding: 24 }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+      <div style={{ background: T.bgModal, borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 480, maxHeight: '90vh', overflow: 'auto', padding: 28, boxShadow: '0 -20px 40px rgba(15,23,42,0.15)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <h2 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0 }}>New Notice</h2>
           <button onClick={() => setShowNewNotice(false)} style={{ background: 'none', border: 'none', color: T.textMuted, cursor: 'pointer' }}>{Icons.x}</button>
@@ -693,7 +701,7 @@ export default function CrewBoard() {
               <input type="checkbox" checked={newNotice.requireAck} onChange={e => setNewNotice(p => ({ ...p, requireAck: e.target.checked }))} style={{ accentColor: T.accent }} /> Require acknowledgement
             </label>
           </div>
-          <button onClick={handlePostNotice} disabled={!newNotice.title.trim()} style={{ width: '100%', padding: 16, borderRadius: 12, border: 'none', background: newNotice.title.trim() ? T.accent : T.border, color: '#fff', fontSize: 15, fontWeight: 700, cursor: newNotice.title.trim() ? 'pointer' : 'default', transition: 'background 0.2s' }}>
+          <button onClick={handlePostNotice} disabled={!newNotice.title.trim()} className="cb-btn-primary" style={{ width: '100%', padding: 16, borderRadius: 12, border: 'none', background: newNotice.title.trim() ? T.accent : T.border, color: newNotice.title.trim() ? '#fff' : T.textDim, fontSize: 15, fontWeight: 700, cursor: newNotice.title.trim() ? 'pointer' : 'default', transition: 'background 0.2s' }}>
             Post Notice
           </button>
         </div>
@@ -702,14 +710,14 @@ export default function CrewBoard() {
   );
 
   const NotificationsPanel = () => (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 100 }} onClick={() => setShowNotifications(false)}>
-      <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', top: 0, right: 0, width: '100%', maxWidth: 380, height: '100%', background: T.bgModal, borderLeft: `1px solid ${T.border}`, overflow: 'auto', padding: 20 }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', zIndex: 100 }} onClick={() => setShowNotifications(false)}>
+      <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', top: 0, right: 0, width: '100%', maxWidth: 380, height: '100%', background: T.bgModal, borderLeft: `1px solid ${T.border}`, overflow: 'auto', padding: 24, boxShadow: '-20px 0 40px rgba(15,23,42,0.15)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <h2 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0 }}>Notifications</h2>
           <button onClick={() => setShowNotifications(false)} style={{ background: 'none', border: 'none', color: T.textMuted, cursor: 'pointer' }}>{Icons.x}</button>
         </div>
         {notifications.map(n => (
-          <button key={n.id} onClick={() => { handleReadNotif(n.id); setShowNotifications(false); }} style={{ display: 'flex', gap: 12, padding: '14px 16px', background: n.read ? 'transparent' : T.accentGlow, border: `1px solid ${n.read ? T.border : `${T.accent}30`}`, borderRadius: 12, width: '100%', cursor: 'pointer', textAlign: 'left', marginBottom: 8, transition: 'background 0.2s' }}>
+          <button key={n.id} onClick={() => { handleReadNotif(n.id); setShowNotifications(false); }} className="cb-card" style={{ display: 'flex', gap: 14, padding: '16px 18px', background: n.read ? T.bgCard : T.accentTint, border: `1px solid ${n.read ? T.border : T.accent}`, borderRadius: 14, width: '100%', cursor: 'pointer', textAlign: 'left', marginBottom: 10 }}>
             <div style={{ width: 36, height: 36, borderRadius: '50%', background: n.type === 'notice' ? `${T.accent}20` : n.type === 'document' ? `${T.gold}20` : `${T.critical}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: n.type === 'notice' ? T.accent : n.type === 'document' ? T.gold : T.critical }}>
               {n.type === 'notice' ? Icons.notices : n.type === 'document' ? Icons.file : Icons.bell}
             </div>
@@ -747,40 +755,42 @@ export default function CrewBoard() {
   };
 
   return (
-    <div style={{ background: T.bg, color: T.text, minHeight: '100vh', maxWidth: 480, margin: '0 auto', position: 'relative', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ background: T.bg, color: T.text, minHeight: '100vh', maxWidth: 480, margin: '0 auto', position: 'relative', display: 'flex', flexDirection: 'column', boxShadow: '0 0 80px rgba(15,23,42,0.06)' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderBottom: `1px solid ${T.border}`, background: T.bg, position: 'sticky', top: 0, zIndex: 50 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 22px', borderBottom: `1px solid ${T.border}`, background: 'rgba(255,255,255,0.85)', backdropFilter: 'saturate(180%) blur(12px)', WebkitBackdropFilter: 'saturate(180%) blur(12px)', position: 'sticky', top: 0, zIndex: 50 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ color: T.accent }}>{Icons.anchor}</div>
-          <span style={{ fontSize: 17, fontWeight: 800, color: T.text, letterSpacing: -0.5 }}>CrewBoard</span>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: `linear-gradient(135deg, ${T.accent} 0%, ${T.accentDark} 100%)`, display: 'grid', placeItems: 'center', color: '#fff', boxShadow: '0 4px 10px rgba(59,130,246,0.35)' }}>
+            <Icon d={<><circle cx="12" cy="5" r="3" /><line x1="12" y1="22" x2="12" y2="8" /><path d="M5 12H2a10 10 0 0020 0h-3" /></>} size={18} strokeWidth={2.5} />
+          </div>
+          <span style={{ fontSize: 18, fontWeight: 700, color: T.text, letterSpacing: -0.3 }}>CrewBoard</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ display: 'flex', background: T.bgCard, borderRadius: 8, border: `1px solid ${T.border}`, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', background: T.bg, borderRadius: 10, border: `1px solid ${T.border}`, overflow: 'hidden', padding: 2 }}>
             {['crew', 'admin'].map(r => (
-              <button key={r} onClick={() => { setRole(r); setTab('home'); resetNav(); }} style={{ padding: '6px 12px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, border: 'none', cursor: 'pointer', background: role === r ? T.accent : 'transparent', color: role === r ? '#fff' : T.textMuted, transition: 'all 0.2s' }}>{r}</button>
+              <button key={r} onClick={() => { setRole(r); setTab('home'); resetNav(); }} style={{ padding: '6px 14px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, border: 'none', cursor: 'pointer', background: role === r ? T.accent : 'transparent', color: role === r ? '#fff' : T.textMuted, transition: 'all 0.2s', borderRadius: 8 }}>{r}</button>
             ))}
           </div>
-          <button onClick={() => setShowNotifications(true)} style={{ position: 'relative', background: 'none', border: 'none', color: T.textMuted, cursor: 'pointer', padding: 4 }}>
+          <button onClick={() => setShowNotifications(true)} style={{ position: 'relative', background: T.bg, border: `1px solid ${T.border}`, color: T.textMuted, cursor: 'pointer', padding: 8, borderRadius: 10, display: 'flex' }}>
             {Icons.bell}
-            {unreadNotifs > 0 && <div style={{ position: 'absolute', top: 0, right: 0, width: 16, height: 16, borderRadius: '50%', background: T.critical, fontSize: 10, fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{unreadNotifs}</div>}
+            {unreadNotifs > 0 && <div style={{ position: 'absolute', top: -4, right: -4, width: 18, height: 18, borderRadius: '50%', background: T.critical, fontSize: 10, fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff' }}>{unreadNotifs}</div>}
           </button>
         </div>
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, overflow: 'auto', paddingBottom: 80 }}>
+      <div style={{ flex: 1, overflow: 'auto', paddingBottom: 88 }}>
         {renderScreen()}
       </div>
 
       {/* Bottom Navigation */}
-      <div style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 480, background: T.bgModal, borderTop: `1px solid ${T.border}`, display: 'flex', zIndex: 50, backdropFilter: 'blur(20px)' }}>
+      <div style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 480, background: 'rgba(255,255,255,0.92)', borderTop: `1px solid ${T.border}`, display: 'flex', zIndex: 50, backdropFilter: 'saturate(180%) blur(14px)', WebkitBackdropFilter: 'saturate(180%) blur(14px)', boxShadow: '0 -8px 24px rgba(15,23,42,0.04)' }}>
         {tabs.map(t => (
-          <button key={t.id} onClick={() => { setTab(t.id); resetNav(); }} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '10px 4px 8px', border: 'none', background: 'none', cursor: 'pointer', position: 'relative', color: tab === t.id ? T.accent : T.textDim, transition: 'color 0.2s' }}>
-            {tab === t.id && <div style={{ position: 'absolute', top: 0, left: '25%', right: '25%', height: 2, background: T.accent, borderRadius: '0 0 2px 2px' }} />}
+          <button key={t.id} onClick={() => { setTab(t.id); resetNav(); }} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '12px 4px 14px', border: 'none', background: 'none', cursor: 'pointer', position: 'relative', color: tab === t.id ? T.accent : T.textDim, transition: 'color 0.2s' }}>
+            {tab === t.id && <div style={{ position: 'absolute', top: 0, left: '30%', right: '30%', height: 3, background: T.accent, borderRadius: '0 0 3px 3px' }} />}
             <div style={{ position: 'relative' }}>
               {t.icon}
-              {t.badge > 0 && <div style={{ position: 'absolute', top: -4, right: -8, minWidth: 16, height: 16, borderRadius: 8, background: T.critical, fontSize: 10, fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>{t.badge}</div>}
+              {t.badge > 0 && <div style={{ position: 'absolute', top: -6, right: -8, minWidth: 16, height: 16, borderRadius: 8, background: T.critical, fontSize: 10, fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', border: '2px solid #fff' }}>{t.badge}</div>}
             </div>
             <span style={{ fontSize: 10, fontWeight: 600 }}>{t.label}</span>
           </button>
@@ -789,7 +799,7 @@ export default function CrewBoard() {
 
       {/* Admin FAB */}
       {role === 'admin' && tab === 'notices' && !adminNoticeView && (
-        <button onClick={() => setShowNewNotice(true)} style={{ position: 'fixed', bottom: 90, right: 'calc(50% - 210px)', width: 52, height: 52, borderRadius: '50%', background: T.accent, border: 'none', color: '#fff', cursor: 'pointer', boxShadow: '0 4px 20px rgba(59,130,246,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
+        <button onClick={() => setShowNewNotice(true)} className="cb-btn-primary" style={{ position: 'fixed', bottom: 100, right: 'calc(50% - 214px)', width: 56, height: 56, borderRadius: '50%', background: T.accent, border: 'none', color: '#fff', cursor: 'pointer', boxShadow: '0 10px 30px rgba(59,130,246,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
           {Icons.plus}
         </button>
       )}

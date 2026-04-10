@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap');
 
 * {
   box-sizing: border-box;
@@ -9,8 +9,8 @@
 
 html,
 body {
-  background: #0a0f1a;
-  color: #e2e8f0;
+  background: #f8fafc;
+  color: #0f172a;
   font-family: 'Outfit', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -30,6 +30,31 @@ button {
 }
 
 option {
-  background: #111827;
-  color: #e2e8f0;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+/* App card hover */
+.cb-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.cb-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.04);
+  border-color: #cbd5e1 !important;
+}
+.cb-btn-primary {
+  transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+}
+.cb-btn-primary:hover:not(:disabled) {
+  background: #2563eb !important;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(59, 130, 246, 0.28);
+}
+.cb-btn-secondary {
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.cb-btn-secondary:hover {
+  background: #f0f7ff !important;
+  border-color: #3b82f6 !important;
 }

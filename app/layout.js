@@ -3,14 +3,18 @@ import './globals.css';
 export const metadata = {
   title: 'CrewBoard — Yacht Crew Operational Platform',
   description: 'Digital notice board, document library, and compliance tracking for superyacht crew.',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no',
-  themeColor: '#0a0f1a',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'black-translucent',
+    statusBarStyle: 'default',
     title: 'CrewBoard',
   },
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: '#ffffff',
 };
 
 export default function RootLayout({ children }) {

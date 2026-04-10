@@ -2,6 +2,6 @@
 
 import CrewBoard from '@/components/CrewBoard';
 
-export default function Home() {
+export default function AppPage() {
   return <CrewBoard />;
 }
