@@ -603,20 +603,38 @@ export default function CrewBoard() {
   };
 
   // ─── Crew Profile ──────────────────────────────────────────────────
-  const CrewProfile = () => (
+  const CrewProfile = () => {
+    // Compliance score = (notices read + required docs acked) / (total notices
+    // + total required docs). Matches the per-crew formula used in
+    // AdminDashboard so the numbers line up across screens.
+    const requiredDocs = docs.filter(d => d.required);
+    const noticesRead = notices.filter(n => n.readBy.includes(currentUser.id)).length;
+    const docsAcked = requiredDocs.filter(d => d.acknowledgedBy.includes(currentUser.id)).length;
+    const totalItems = notices.length + requiredDocs.length;
+    const complianceScore = totalItems > 0
+      ? Math.round(((noticesRead + docsAcked) / totalItems) * 100)
+      : 0;
+    const myInitials = (currentUser.name || '')
+      .split(' ')
+      .map(s => s[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase();
+
+    return (
     <div style={{ padding: 20 }}>
       <h2 style={{ fontSize: 20, fontWeight: 800, color: T.text, margin: '0 0 24px' }}>Profile</h2>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 30 }}>
-        <Avatar initials="TH" size={72} />
+        <Avatar initials={myInitials} size={72} />
         <h3 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: '12px 0 2px' }}>{currentUser.name}</h3>
         <p style={{ fontSize: 13, color: T.textMuted, margin: 0 }}>{currentUser.role} — {currentUser.dept} Department</p>
         <p style={{ fontSize: 12, color: T.textDim, margin: '4px 0 0' }}>M/Y Serenity</p>
       </div>
       <div style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 16, overflow: 'hidden', boxShadow: T.shadow, marginBottom: 20 }}>
-        {[['Notices Read', `${notices.filter(n => n.readBy.includes(currentUser.id)).length}/${notices.length}`], ['Documents Acknowledged', `${docs.filter(d => d.acknowledgedBy.includes(currentUser.id)).length}/${docs.filter(d => d.required).length}`], ['Compliance Score', '72%']].map(([label, val], i) => (
+        {[['Notices Read', `${noticesRead}/${notices.length}`], ['Documents Acknowledged', `${docsAcked}/${requiredDocs.length}`], ['Compliance Score', `${complianceScore}%`]].map(([label, val], i) => (
           <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: i < 2 ? `1px solid ${T.border}` : 'none' }}>
             <span style={{ fontSize: 14, color: T.textMuted }}>{label}</span>
-            <span style={{ fontSize: 14, color: T.text, fontWeight: 700 }}>{val}</span>
+            <span style={{ fontSize: 14, color: i === 2 ? (complianceScore >= 70 ? T.success : T.gold) : T.text, fontWeight: 700, fontFamily: i === 2 ? "'JetBrains Mono', monospace" : undefined }}>{val}</span>
           </div>
         ))}
       </div>
@@ -629,7 +647,8 @@ export default function CrewBoard() {
         ))}
       </div>
     </div>
-  );
+    );
+  };
 
   // ─── Admin Dashboard ───────────────────────────────────────────────
   const AdminDashboard = () => {
