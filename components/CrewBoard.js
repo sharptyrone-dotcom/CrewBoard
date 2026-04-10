@@ -5,6 +5,7 @@ import { CURRENT_USER_ID } from '@/lib/constants';
 import { fetchCrew } from '@/lib/crew';
 import { acknowledgeDocument, fetchDocuments } from '@/lib/documents';
 import { acknowledgeNotice, createNotice, fetchNotices, markNoticeRead } from '@/lib/notices';
+import { createBroadcastNotification, fetchNotifications, markNotificationRead } from '@/lib/notifications';
 
 // ─── Data & Constants ────────────────────────────────────────────────
 const CATEGORIES = ['All', 'Safety', 'Operations', 'Guest Info', 'HR/Admin', 'Social', 'Departmental'];
@@ -19,14 +20,6 @@ const INITIAL_NOTICES = [
   { id: 4, title: 'New Tender Operating SOP', body: 'Updated tender operations SOP has been uploaded to the Document Library. All deck crew must review and acknowledge by 15 April. Key changes in Section 3.2 regarding passenger boarding procedures.', category: 'Safety', priority: 'important', dept: 'Deck', pinned: false, createdAt: '2026-04-07T16:00:00', readBy: [1, 5], acknowledgedBy: [1] },
   { id: 5, title: 'Crew BBQ — Saturday 12th', body: 'Crew BBQ on the crew mess aft deck from 1800hrs. Chef Lisa is doing her famous jerk chicken. BYO drinks. Off-watch crew only — check rota.', category: 'Social', priority: 'routine', dept: 'All', pinned: false, createdAt: '2026-04-07T09:00:00', readBy: [1, 2, 4, 5, 6, 8], acknowledgedBy: [] },
   { id: 6, title: 'Port Side Hydraulic System — Restricted Area', body: 'Port side hydraulic system under maintenance until further notice. Area cordoned off — no crew to enter without Chief Engineer authorisation. Risk assessment RA-2026-041 applies.', category: 'Safety', priority: 'critical', dept: 'Engine', pinned: false, createdAt: '2026-04-06T11:00:00', readBy: [1, 3, 5, 7], acknowledgedBy: [3, 7] },
-];
-
-const INITIAL_NOTIFICATIONS = [
-  { id: 1, type: 'notice', title: 'New critical notice', body: 'Man Overboard Drill — 10 April', time: '1h ago', read: false, ref: 1 },
-  { id: 2, type: 'document', title: 'Document updated', body: 'Tender Operations SOP updated to v3.2', time: '2h ago', read: false, ref: 1 },
-  { id: 3, type: 'notice', title: 'New notice posted', body: 'Guest Arrival — 18 April', time: 'Yesterday', read: true, ref: 2 },
-  { id: 4, type: 'reminder', title: 'Acknowledgement required', body: 'Please acknowledge: Port Side Hydraulic System notice', time: 'Yesterday', read: true, ref: 6 },
-  { id: 5, type: 'notice', title: 'New notice posted', body: 'Crew BBQ — Saturday 12th', time: '2 days ago', read: true, ref: 5 },
 ];
 
 // ─── Icons ───────────────────────────────────────────────────────────
@@ -307,7 +300,8 @@ export default function CrewBoard() {
   const [crewLoading, setCrewLoading] = useState(true);
   const [docs, setDocs] = useState([]);
   const [docsLoading, setDocsLoading] = useState(true);
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(true);
   const [selectedNotice, setSelectedNotice] = useState(null);
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -370,6 +364,21 @@ export default function CrewBoard() {
     return () => { cancelled = true; };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const rows = await fetchNotifications();
+        if (!cancelled) setNotifications(rows);
+      } catch (err) {
+        console.error('notifications fetch failed', err);
+      } finally {
+        if (!cancelled) setNotificationsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const unreadNotifs = notifications.filter(n => !n.read).length;
   const unreadNotices = notices.filter(n => !n.readBy.includes(currentUser.id)).length;
   const pendingAcks = notices.filter(n => n.priority === 'critical' && !n.acknowledgedBy.includes(currentUser.id)).length;
@@ -409,8 +418,16 @@ export default function CrewBoard() {
     }
   };
 
-  const handleReadNotif = (id) => {
+  const handleReadNotif = async (id) => {
+    const target = notifications.find(n => n.id === id);
+    if (!target || target.read) return;
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    try {
+      await markNotificationRead(id);
+    } catch (err) {
+      console.error('markNotificationRead failed, reverting', err);
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: false } : n));
+    }
   };
 
   const handlePostNotice = async () => {
@@ -420,6 +437,21 @@ export default function CrewBoard() {
       setNotices(prev => [posted, ...prev]);
       setNewNotice({ title: '', body: '', category: 'Safety', priority: 'routine', dept: 'All', pinned: false, requireAck: false });
       setShowNewNotice(false);
+      // Fan out a broadcast notification so the bell badge updates for every
+      // crew member. Failures are non-fatal — the notice itself is already
+      // safely persisted at this point.
+      try {
+        const notif = await createBroadcastNotification({
+          type: 'notice',
+          title: posted.priority === 'critical' ? 'New critical notice' : 'New notice posted',
+          body: posted.title,
+          referenceType: 'notice',
+          referenceId: posted.id,
+        });
+        setNotifications(prev => [notif, ...prev]);
+      } catch (notifErr) {
+        console.error('broadcast notification failed (non-fatal)', notifErr);
+      }
     } catch (err) {
       alert(`Failed to post notice: ${err.message || err}`);
     }
