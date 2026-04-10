@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { CURRENT_USER_ID } from '@/lib/constants';
+import { signOut } from '@/lib/auth';
 import { fetchCrew, touchLastSeen } from '@/lib/crew';
 import { acknowledgeDocument, fetchDocuments } from '@/lib/documents';
 import { acknowledgeNotice, createNotice, fetchNotices, markNoticeRead } from '@/lib/notices';
@@ -292,8 +292,10 @@ function NoticeCard({ notice, currentUser, role, onClick, isPinned, crewCount })
 }
 
 // ─── Main App Component ──────────────────────────────────────────────
-export default function CrewBoard() {
-  const [role, setRole] = useState('crew');
+export default function CrewBoard({ user }) {
+  // Admins default to the admin view but can flip to the crew view to
+  // preview what their crew sees. Non-admins are locked to 'crew'.
+  const [role, setRole] = useState(user?.isAdmin ? 'admin' : 'crew');
   const [tab, setTab] = useState('home');
   const [notices, setNotices] = useState([]);
   const [noticesLoading, setNoticesLoading] = useState(true);
@@ -318,7 +320,11 @@ export default function CrewBoard() {
   const [adminNoticeView, setAdminNoticeView] = useState(null);
   const [newNotice, setNewNotice] = useState({ title: '', body: '', category: 'Safety', priority: 'routine', dept: 'All', pinned: false, requireAck: false });
 
-  const currentUser = { id: CURRENT_USER_ID, name: 'Tom Hayes', role: 'Deckhand', dept: 'Deck' };
+  // Derived from the authenticated session via fetchCurrentCrewMember in
+  // app/app/page.js. Falls back to an empty object so destructuring stays
+  // safe during the initial paint (the page gate never actually renders
+  // CrewBoard without a user, but belt-and-braces).
+  const currentUser = user || { id: null, name: '', role: '', dept: '', avatar: '', isAdmin: false };
 
   useEffect(() => {
     let cancelled = false;
@@ -364,7 +370,7 @@ export default function CrewBoard() {
       cancelled = true;
       clearInterval(interval);
     };
-  }, []);
+  }, [currentUser.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -385,7 +391,7 @@ export default function CrewBoard() {
     let cancelled = false;
     (async () => {
       try {
-        const rows = await fetchNotifications();
+        const rows = await fetchNotifications(currentUser.id);
         if (!cancelled) setNotifications(rows);
       } catch (err) {
         console.error('notifications fetch failed', err);
@@ -394,7 +400,7 @@ export default function CrewBoard() {
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [currentUser.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -534,6 +540,15 @@ export default function CrewBoard() {
     setSelectedDoc(null);
     setAdminNoticeView(null);
     setSelectedCrewMember(null);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      // The page gate's onAuthStateChange listener swaps back to LoginScreen.
+    } catch (err) {
+      alert(`Sign out failed: ${err?.message || err}`);
+    }
   };
 
   const crewTabs = [
@@ -713,7 +728,11 @@ export default function CrewBoard() {
       </div>
       <div style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 16, overflow: 'hidden', boxShadow: T.shadow }}>
         {['Notification Preferences', 'Dark Mode', 'Offline Documents', 'Log Out'].map((item, i) => (
-          <button key={item} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: i < 3 ? `1px solid ${T.border}` : 'none', width: '100%', background: 'none', border: 'none', cursor: 'pointer', color: item === 'Log Out' ? T.critical : T.text, fontSize: 14 }}>
+          <button
+            key={item}
+            onClick={item === 'Log Out' ? handleLogout : undefined}
+            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: i < 3 ? `1px solid ${T.border}` : 'none', width: '100%', background: 'none', border: 'none', cursor: item === 'Log Out' ? 'pointer' : 'default', color: item === 'Log Out' ? T.critical : T.text, fontSize: 14 }}
+          >
             {item}
             {item !== 'Log Out' && <span style={{ color: T.textDim, fontSize: 18 }}>&rsaquo;</span>}
           </button>
@@ -1077,11 +1096,16 @@ export default function CrewBoard() {
           <span style={{ fontSize: 18, fontWeight: 700, color: T.text, letterSpacing: -0.3 }}>CrewBoard</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ display: 'flex', background: T.bg, borderRadius: 10, border: `1px solid ${T.border}`, overflow: 'hidden', padding: 2 }}>
-            {['crew', 'admin'].map(r => (
-              <button key={r} onClick={() => { setRole(r); setTab('home'); resetNav(); }} style={{ padding: '6px 14px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, border: 'none', cursor: 'pointer', background: role === r ? T.accent : 'transparent', color: role === r ? '#fff' : T.textMuted, transition: 'all 0.2s', borderRadius: 8 }}>{r}</button>
-            ))}
-          </div>
+          {/* Role toggle only appears for admins so non-admin crew can't
+              pretend to be admins. The RLS policies would block most admin
+              actions anyway, but hiding the toggle removes the confusion. */}
+          {currentUser.isAdmin && (
+            <div style={{ display: 'flex', background: T.bg, borderRadius: 10, border: `1px solid ${T.border}`, overflow: 'hidden', padding: 2 }}>
+              {['crew', 'admin'].map(r => (
+                <button key={r} onClick={() => { setRole(r); setTab('home'); resetNav(); }} style={{ padding: '6px 14px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, border: 'none', cursor: 'pointer', background: role === r ? T.accent : 'transparent', color: role === r ? '#fff' : T.textMuted, transition: 'all 0.2s', borderRadius: 8 }}>{r}</button>
+              ))}
+            </div>
+          )}
           <button onClick={() => setShowNotifications(true)} style={{ position: 'relative', background: T.bg, border: `1px solid ${T.border}`, color: T.textMuted, cursor: 'pointer', padding: 8, borderRadius: 10, display: 'flex' }}>
             {Icons.bell}
             {unreadNotifs > 0 && <div style={{ position: 'absolute', top: -4, right: -4, width: 18, height: 18, borderRadius: '50%', background: T.critical, fontSize: 10, fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff' }}>{unreadNotifs}</div>}
