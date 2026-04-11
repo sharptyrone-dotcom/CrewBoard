@@ -292,6 +292,26 @@ function DocDetail({ doc, currentUser, onBack, onAcknowledge, role, onDelete, on
           </div>
         ))}
       </div>
+      {/* Version notes callout — shown whenever the admin supplied a
+          "what changed" summary during replaceDocument(). Placed above
+          the PDF viewer so crew read the changes before they open the
+          file itself, and styled in the gold "requires attention" palette
+          so it stands out from the regular metadata card. Hidden entirely
+          on docs with no notes (i.e. first uploads) so the detail view
+          stays tidy. */}
+      {doc.versionNotes && (
+        <div style={{ background: T.goldTint, border: `1px solid ${T.gold}40`, borderRadius: 16, padding: '16px 18px', marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <span style={{ color: T.gold, display: 'flex' }}>{Icons.alert}</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#b45309', textTransform: 'uppercase', letterSpacing: 1 }}>
+              What&apos;s new in v{doc.version}
+            </span>
+          </div>
+          <p style={{ fontSize: 13, color: T.text, margin: 0, lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
+            {doc.versionNotes}
+          </p>
+        </div>
+      )}
       {isRealFile ? (
         <div
           onContextMenu={e => e.preventDefault()}
@@ -855,17 +875,53 @@ export default function CrewBoard({ user }) {
     }
 
     if (routesToDocument) {
-      const doc = findItem(docs);
-      if (doc) {
-        navigateToDocument(doc);
+      // Documents aren't on the realtime channel yet (only notices +
+      // notifications + notice_reads are), so if an admin replaced a doc
+      // while the crew was idle our local `docs` state could have stale
+      // version metadata and a stale acknowledgedBy array. Refetch the
+      // whole library from Supabase before navigating so the DocDetail
+      // view shows the new version + empty acks (= the re-acknowledge
+      // button) instead of a ghost v1.0 from cache.
+      //
+      // We still navigate to the last-known row first (for instant
+      // feedback), then swap in the fresh row once the fetch lands —
+      // gives us best of both worlds.
+      const stale = findItem(docs);
+      if (stale) {
+        navigateToDocument(stale);
       } else {
-        // Same fallback for documents — flip to the library tab so the
-        // user sees the list even if we can't pick out the exact row.
         setSelectedNotice(null);
         setAdminNoticeView(null);
         setSelectedDoc(null);
         setTab('docs');
       }
+      (async () => {
+        try {
+          const fresh = await fetchDocuments();
+          setDocs(fresh);
+          // Re-resolve the target from the freshly fetched list and
+          // replace the in-view doc so version / acks / file_url all
+          // reflect the latest state.
+          const freshDoc = (() => {
+            if (notification.ref) {
+              const byRef = fresh.find(i => i.id === notification.ref);
+              if (byRef) return byRef;
+            }
+            const body = (notification.body || '').toLowerCase();
+            const title = (notification.title || '').toLowerCase();
+            return (
+              fresh.find(i => i.title && body.includes(i.title.toLowerCase())) ||
+              fresh.find(i => i.title && title.includes(i.title.toLowerCase())) ||
+              null
+            );
+          })();
+          if (freshDoc) {
+            setSelectedDoc(freshDoc);
+          }
+        } catch (err) {
+          console.error('[notification] document refetch failed', err);
+        }
+      })();
     }
   };
 
@@ -1061,10 +1117,20 @@ export default function CrewBoard({ user }) {
         metadata: { title: replaced.title, version: replaced.version },
       });
       try {
+        // Include the admin's version notes in the body so the bell preview
+        // already hints at what changed. Truncated to ~160 chars with an
+        // ellipsis so a long release note doesn't balloon the notification
+        // panel. Falls back to the plain "<title> — v<version>" line for
+        // replaces where the admin skipped the notes field.
+        const notes = (replaced.versionNotes || '').trim();
+        const truncatedNotes = notes.length > 160 ? `${notes.slice(0, 157)}…` : notes;
+        const body = notes
+          ? `${replaced.title} — v${replaced.version}: ${truncatedNotes}`
+          : `${replaced.title} — now v${replaced.version}`;
         const notif = await createBroadcastNotification({
           type: 'document',
           title: replaced.required ? 'Required document updated' : 'Document updated',
-          body: `${replaced.title} — v${replaced.version}`,
+          body,
           referenceType: 'document',
           referenceId: replaced.id,
         });
