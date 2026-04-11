@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { signOut } from '@/lib/auth';
 import { fetchCrew } from '@/lib/crew';
-import { acknowledgeDocument, fetchDocuments, getDocumentSignedUrl, uploadDocument } from '@/lib/documents';
+import { acknowledgeDocument, deleteDocument, fetchDocuments, getDocumentSignedUrl, replaceDocument, uploadDocument } from '@/lib/documents';
 import { acknowledgeNotice, createNotice, deleteNotice, fetchNotices, markNoticeRead, rowToNotice } from '@/lib/notices';
 import { createBroadcastNotification, fetchNotifications, markNotificationRead, rowToNotification } from '@/lib/notifications';
 import { ACTIVITY_ACTIONS, fetchActivity, logActivity } from '@/lib/activity';
@@ -242,9 +242,10 @@ function NoticeDetail({ notice, currentUser, onBack, onAcknowledge, onMarkRead }
 // Legacy seeded rows still have `https://example.com/...` in their
 // file_url and there's no real file behind them, so for those we fall
 // back to the old "PDF document preview" placeholder tile.
-function DocDetail({ doc, currentUser, onBack, onAcknowledge }) {
+function DocDetail({ doc, currentUser, onBack, onAcknowledge, role, onDelete, onReplace }) {
   const isAcked = doc.acknowledgedBy.includes(currentUser.id);
   const isRealFile = !!doc.fileUrl && !/^https?:\/\//i.test(doc.fileUrl);
+  const isAdmin = role === 'admin';
 
   const [signedUrl, setSignedUrl] = useState(null);
   const [signedUrlError, setSignedUrlError] = useState(null);
@@ -329,14 +330,28 @@ function DocDetail({ doc, currentUser, onBack, onAcknowledge }) {
           <p style={{ fontSize: 12, color: T.textMuted, margin: '4px 0 0' }}>{doc.pages} pages</p>
         </div>
       )}
-      {doc.required && !isAcked && (
+      {doc.required && !isAcked && !isAdmin && (
         <button onClick={() => onAcknowledge && onAcknowledge(doc.id)} className="cb-btn-primary" style={{ width: '100%', padding: 16, borderRadius: 12, border: 'none', background: T.accent, color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
           Acknowledge Current Version
         </button>
       )}
-      {isAcked && (
+      {isAcked && !isAdmin && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: 16, color: T.success, fontWeight: 600, fontSize: 14 }}>
           {Icons.checkCircle} Acknowledged — v{doc.version}
+        </div>
+      )}
+      {isAdmin && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
+          {onReplace && (
+            <button onClick={onReplace} style={{ width: '100%', padding: 14, borderRadius: 12, border: `1px solid ${T.accent}`, background: T.accentTint, color: T.accentDark, fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'background 0.2s' }}>
+              {Icons.file} Replace with new version
+            </button>
+          )}
+          {onDelete && (
+            <button onClick={onDelete} style={{ width: '100%', padding: 14, borderRadius: 12, border: `1px solid ${T.critical}`, background: T.criticalTint, color: T.critical, fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'background 0.2s' }}>
+              {Icons.trash} Delete document
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -453,6 +468,16 @@ export default function CrewBoard({ user }) {
   // Shape matches what uploadDocument() expects.
   const [newDoc, setNewDoc] = useState({ file: null, title: '', docType: 'SOPs', department: 'General', version: '1.0', reviewDate: '', isRequired: false, pageCount: '' });
   const [uploadingDoc, setUploadingDoc] = useState(false);
+  // Replace-document modal state. `replaceDocState` holds the in-flight form
+  // (new file + bumped version + optional notes); `showReplaceDoc` is the
+  // visibility flag so the modal can mount/unmount cleanly and `replacingDoc`
+  // drives the button disabled/label while the upload is running. The modal
+  // always acts on `selectedDoc`, which is the document currently being
+  // viewed in DocDetail — there's no independent "pick a doc to replace"
+  // affordance, so we can tie its lifecycle to the detail view.
+  const [showReplaceDoc, setShowReplaceDoc] = useState(false);
+  const [replaceDocState, setReplaceDocState] = useState({ file: null, version: '', versionNotes: '', pageCount: '' });
+  const [replacingDoc, setReplacingDoc] = useState(false);
   // Toast shown when a new notice arrives while the user is looking at a
   // different tab. Shape: { id, title, priority } | null. Auto-clears after
   // a few seconds or when the user clicks through to the notice.
@@ -975,6 +1000,85 @@ export default function CrewBoard({ user }) {
     }
   };
 
+  // Admin-only: delete a document (and its backing PDF in storage). Gated
+  // behind a confirm() for the same reason as handleDeleteNotice — the
+  // action is destructive and irreversible. On success we drop the row
+  // from local state, clear the selectedDoc so we bounce out of the detail
+  // view, and write an activity entry. The helper itself handles the
+  // storage cleanup (best-effort — a leaked blob is better than a
+  // half-committed delete).
+  const handleDeleteDoc = async (docId) => {
+    const doc = docs.find(d => d.id === docId);
+    if (!doc) return;
+    const confirmed = window.confirm(
+      `Delete "${doc.title}"? This cannot be undone and will remove the document for everyone on board.`
+    );
+    if (!confirmed) return;
+    try {
+      await deleteDocument({ documentId: docId, fileUrl: doc.fileUrl });
+      setDocs(prev => prev.filter(d => d.id !== docId));
+      setSelectedDoc(curr => (curr && curr.id === docId ? null : curr));
+      recordActivity({
+        action: ACTIVITY_ACTIONS.DOCUMENT_DELETED,
+        targetType: 'document',
+        targetId: docId,
+        metadata: { title: doc.title, version: doc.version },
+      });
+    } catch (err) {
+      alert(`Failed to delete document: ${err?.message || err}`);
+    }
+  };
+
+  // Admin-only: replace a document with a new version. The helper uploads
+  // the new PDF, updates the documents row in place, removes the old file,
+  // and wipes the document_acknowledgements rows so crew have to re-ack the
+  // new version. We then splice the returned row into local state (with
+  // empty acknowledgedBy since the wipe just ran) and broadcast a
+  // notification so the bell badge lights up for everyone. Errors keep the
+  // modal open so the admin can retry without re-filling the form.
+  const handleReplaceDoc = async () => {
+    if (!selectedDoc || !replaceDocState.file) return;
+    setReplacingDoc(true);
+    try {
+      const replaced = await replaceDocument({
+        documentId: selectedDoc.id,
+        oldFileUrl: selectedDoc.fileUrl,
+        file: replaceDocState.file,
+        version: replaceDocState.version || selectedDoc.version,
+        versionNotes: replaceDocState.versionNotes || null,
+        pageCount: replaceDocState.pageCount ? Number(replaceDocState.pageCount) : null,
+      });
+      setDocs(prev => prev.map(d => (d.id === replaced.id ? replaced : d)));
+      // Refresh the detail view so the version / metadata / iframe all
+      // re-render against the new file URL.
+      setSelectedDoc(replaced);
+      setShowReplaceDoc(false);
+      setReplaceDocState({ file: null, version: '', versionNotes: '', pageCount: '' });
+      recordActivity({
+        action: ACTIVITY_ACTIONS.DOCUMENT_REPLACED,
+        targetType: 'document',
+        targetId: replaced.id,
+        metadata: { title: replaced.title, version: replaced.version },
+      });
+      try {
+        const notif = await createBroadcastNotification({
+          type: 'document',
+          title: replaced.required ? 'Required document updated' : 'Document updated',
+          body: `${replaced.title} — v${replaced.version}`,
+          referenceType: 'document',
+          referenceId: replaced.id,
+        });
+        setNotifications(prev => [notif, ...prev]);
+      } catch (notifErr) {
+        console.error('broadcast notification failed (non-fatal)', notifErr);
+      }
+    } catch (err) {
+      alert(`Failed to replace document: ${err?.message || err}`);
+    } finally {
+      setReplacingDoc(false);
+    }
+  };
+
   const resetNav = () => {
     setSelectedNotice(null);
     setSelectedDoc(null);
@@ -1083,7 +1187,30 @@ export default function CrewBoard({ user }) {
 
   // ─── Documents Screen ──────────────────────────────────────────────
   const DocsScreen = () => {
-    if (selectedDoc) return <DocDetail doc={selectedDoc} currentUser={currentUser} onBack={() => setSelectedDoc(null)} onAcknowledge={handleAckDoc} />;
+    if (selectedDoc) return (
+      <DocDetail
+        doc={selectedDoc}
+        currentUser={currentUser}
+        onBack={() => setSelectedDoc(null)}
+        onAcknowledge={handleAckDoc}
+        role={role}
+        onDelete={role === 'admin' ? () => handleDeleteDoc(selectedDoc.id) : undefined}
+        onReplace={role === 'admin' ? () => {
+          // Prime the form with the current version so the admin can bump it
+          // without having to retype the whole string. `pageCount` starts
+          // empty so we don't accidentally carry over the old page count
+          // for a totally different file — admin has to re-enter if they
+          // want to track it.
+          setReplaceDocState({
+            file: null,
+            version: selectedDoc.version || '',
+            versionNotes: '',
+            pageCount: '',
+          });
+          setShowReplaceDoc(true);
+        } : undefined}
+      />
+    );
     const filtered = docs
       .filter(d => docDeptFilter === 'All' || d.dept === docDeptFilter)
       .filter(d => docTypeFilter === 'All' || d.type === docTypeFilter);
@@ -1382,6 +1509,20 @@ export default function CrewBoard({ user }) {
             icon: Icons.file,
             color: T.accent,
           };
+        case ACTIVITY_ACTIONS.DOCUMENT_REPLACED:
+          return {
+            verb: 'replaced document',
+            detail: row.metadata?.version ? `${title} (now v${row.metadata.version})` : (title || 'a document'),
+            icon: Icons.file,
+            color: T.accent,
+          };
+        case ACTIVITY_ACTIONS.DOCUMENT_DELETED:
+          return {
+            verb: 'deleted document',
+            detail: title || 'a document',
+            icon: Icons.trash,
+            color: T.critical,
+          };
         case ACTIVITY_ACTIONS.DOCUMENT_ACKNOWLEDGED:
           return {
             verb: 'signed off',
@@ -1597,6 +1738,73 @@ export default function CrewBoard({ user }) {
     );
   };
 
+  // Admin PDF replace modal. Triggered from DocDetail's "Replace with new
+  // version" button, always acts on `selectedDoc`. Mirrors NewDocumentModal
+  // but locks the title/type/department (those shouldn't change across
+  // versions — if they do, delete + re-upload instead), and puts version
+  // bumping front-and-centre. Like the other modals, it's a factory called
+  // as a function rather than rendered as JSX to avoid the inline-component
+  // remount trap (see the renderScreen comment for the full explanation).
+  const ReplaceDocumentModal = () => {
+    if (!selectedDoc) return null;
+    const canSubmit = !!replaceDocState.file && !replacingDoc;
+    return (
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+        <div style={{ background: T.bgModal, borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 480, maxHeight: '90vh', overflow: 'auto', padding: 28, boxShadow: '0 -20px 40px rgba(15,23,42,0.15)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0 }}>Replace Document</h2>
+            <button onClick={() => setShowReplaceDoc(false)} style={{ background: 'none', border: 'none', color: T.textMuted, cursor: 'pointer' }}>{Icons.x}</button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ background: T.accentTint, border: `1px solid ${T.border}`, borderRadius: 10, padding: '12px 14px' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>Replacing</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 2 }}>{selectedDoc.title}</div>
+              <div style={{ fontSize: 12, color: T.textMuted }}>Currently v{selectedDoc.version} — {selectedDoc.type} / {selectedDoc.dept}</div>
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: T.textMuted, display: 'block', marginBottom: 6 }}>New PDF file</label>
+              <label htmlFor="cb-replace-doc-file" style={{ display: 'block', padding: 16, borderRadius: 10, border: `2px dashed ${replaceDocState.file ? T.accent : T.border}`, background: replaceDocState.file ? T.accentTint : T.bgCard, color: replaceDocState.file ? T.accentDark : T.textMuted, fontSize: 13, textAlign: 'center', cursor: 'pointer', fontWeight: 600 }}>
+                {replaceDocState.file
+                  ? `${replaceDocState.file.name} (${Math.round((replaceDocState.file.size / 1024 / 1024) * 10) / 10} MB)`
+                  : 'Click to choose a PDF (max 50 MB)'}
+              </label>
+              <input
+                id="cb-replace-doc-file"
+                type="file"
+                accept="application/pdf"
+                onChange={e => {
+                  const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+                  setReplaceDocState(p => ({ ...p, file }));
+                }}
+                style={{ display: 'none' }}
+              />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: T.textMuted, display: 'block', marginBottom: 6 }}>New version</label>
+                <input value={replaceDocState.version} onChange={e => setReplaceDocState(p => ({ ...p, version: e.target.value }))} placeholder="e.g. 1.1" style={{ width: '100%', padding: 12, borderRadius: 10, border: `1px solid ${T.border}`, background: T.bgCard, color: T.text, fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: T.textMuted, display: 'block', marginBottom: 6 }}>Pages</label>
+                <input type="number" min="1" value={replaceDocState.pageCount} onChange={e => setReplaceDocState(p => ({ ...p, pageCount: e.target.value }))} placeholder="—" style={{ width: '100%', padding: 12, borderRadius: 10, border: `1px solid ${T.border}`, background: T.bgCard, color: T.text, fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: T.textMuted, display: 'block', marginBottom: 6 }}>Version notes (optional)</label>
+              <textarea value={replaceDocState.versionNotes} onChange={e => setReplaceDocState(p => ({ ...p, versionNotes: e.target.value }))} placeholder="What changed in this version?" rows={3} style={{ width: '100%', padding: 12, borderRadius: 10, border: `1px solid ${T.border}`, background: T.bgCard, color: T.text, fontSize: 14, outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+            </div>
+            <div style={{ fontSize: 11, color: T.textMuted, padding: '10px 12px', background: T.goldTint, border: `1px solid ${T.gold}40`, borderRadius: 10, lineHeight: 1.5 }}>
+              Replacing will wipe all existing acknowledgements for this document — crew will need to re-acknowledge the new version.
+            </div>
+            <button onClick={handleReplaceDoc} disabled={!canSubmit} className="cb-btn-primary" style={{ width: '100%', padding: 16, borderRadius: 12, border: 'none', background: canSubmit ? T.accent : T.border, color: canSubmit ? '#fff' : T.textDim, fontSize: 15, fontWeight: 700, cursor: canSubmit ? 'pointer' : 'default', transition: 'background 0.2s' }}>
+              {replacingDoc ? 'Uploading new version…' : 'Replace Document'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const NotificationsPanel = () => (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', zIndex: 100 }} onClick={() => setShowNotifications(false)}>
       <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', top: 0, right: 0, width: '100%', maxWidth: 380, height: '100%', background: T.bgModal, borderLeft: `1px solid ${T.border}`, overflow: 'auto', padding: 24, boxShadow: '-20px 0 40px rgba(15,23,42,0.15)' }}>
@@ -1781,6 +1989,7 @@ export default function CrewBoard({ user }) {
       {showNotifications && NotificationsPanel()}
       {showNewNotice && NewNoticeModal()}
       {showNewDoc && NewDocumentModal()}
+      {showReplaceDoc && ReplaceDocumentModal()}
     </div>
   );
 }
