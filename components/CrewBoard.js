@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { signOut } from '@/lib/auth';
 import { fetchCrew } from '@/lib/crew';
 import { acknowledgeDocument, fetchDocuments } from '@/lib/documents';
-import { acknowledgeNotice, createNotice, fetchNotices, markNoticeRead, rowToNotice } from '@/lib/notices';
+import { acknowledgeNotice, createNotice, deleteNotice, fetchNotices, markNoticeRead, rowToNotice } from '@/lib/notices';
 import { createBroadcastNotification, fetchNotifications, markNotificationRead, rowToNotification } from '@/lib/notifications';
 import { ACTIVITY_ACTIONS, fetchActivity, logActivity } from '@/lib/activity';
 import useRealtime from '@/hooks/useRealtime';
@@ -50,6 +50,8 @@ const Icons = {
   arrowLeft: <Icon d={<><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></>} />,
   anchor: <Icon d={<><circle cx="12" cy="5" r="3" /><line x1="12" y1="22" x2="12" y2="8" /><path d="M5 12H2a10 10 0 0020 0h-3" /></>} />,
   clock: <Icon d={<><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></>} />,
+  calendar: <Icon d={<><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></>} />,
+  trash: <Icon d={<><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></>} />,
 };
 
 // ─── Theme ───────────────────────────────────────────────────────────
@@ -147,6 +149,46 @@ function BackButton({ onClick, label = 'Back' }) {
   );
 }
 
+// Returns metadata about a notice's expiry state so callers can render a
+// consistent "Valid until" / "Expired" pill without re-doing the date math.
+// null => no expiry set; active => not yet expired; expired => past the date.
+function getValidityInfo(validUntil) {
+  if (!validUntil) return null;
+  const expiry = new Date(validUntil);
+  if (Number.isNaN(expiry.getTime())) return null;
+  const expired = expiry.getTime() <= Date.now();
+  const label = expiry.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  return { expired, label, expiry };
+}
+
+// Small pill-shaped validity indicator shared by NoticeCard / NoticeDetail /
+// AdminNoticeDetail. Returns null when there's no validUntil so the caller
+// can drop it in unconditionally.
+function ValidityPill({ validUntil, size = 'sm' }) {
+  const info = getValidityInfo(validUntil);
+  if (!info) return null;
+  const { expired, label } = info;
+  const fontSize = size === 'lg' ? 12 : 10;
+  const padding = size === 'lg' ? '5px 10px' : '3px 8px';
+  return (
+    <span style={{
+      fontSize,
+      fontWeight: 700,
+      textTransform: 'uppercase',
+      letterSpacing: 0.8,
+      color: expired ? T.critical : T.textMuted,
+      background: expired ? T.criticalTint : '#f1f5f9',
+      padding,
+      borderRadius: 6,
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 4,
+    }}>
+      {expired ? 'Expired' : `Valid until ${label}`}
+    </span>
+  );
+}
+
 // ─── Notice Detail (Crew) ────────────────────────────────────────────
 function NoticeDetail({ notice, currentUser, onBack, onAcknowledge, onMarkRead }) {
   const isRead = notice.readBy.includes(currentUser.id);
@@ -159,6 +201,7 @@ function NoticeDetail({ notice, currentUser, onBack, onAcknowledge, onMarkRead }
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
         <PriorityBadge priority={notice.priority} />
         <CategoryBadge category={notice.category} />
+        <ValidityPill validUntil={notice.validUntil} />
         {notice.pinned && <span style={{ fontSize: 10, color: T.gold, display: 'flex', alignItems: 'center', gap: 4 }}>{Icons.pin} Pinned</span>}
       </div>
       <h2 style={{ fontSize: 20, fontWeight: 800, color: T.text, margin: '0 0 8px', lineHeight: 1.3 }}>{notice.title}</h2>
@@ -225,14 +268,15 @@ function DocDetail({ doc, currentUser, onBack, onAcknowledge }) {
 }
 
 // ─── Admin Notice Read Receipts ──────────────────────────────────────
-function AdminNoticeDetail({ notice, onBack, crew }) {
+function AdminNoticeDetail({ notice, onBack, crew, onDelete }) {
   const totalCrew = crew.length;
   return (
     <div style={{ padding: 20 }}>
       <BackButton onClick={onBack} />
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
         <PriorityBadge priority={notice.priority} />
         <CategoryBadge category={notice.category} />
+        <ValidityPill validUntil={notice.validUntil} />
       </div>
       <h2 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: '0 0 20px' }}>{notice.title}</h2>
       <div style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
@@ -263,6 +307,11 @@ function AdminNoticeDetail({ notice, onBack, crew }) {
           Send Reminder to Non-Readers
         </button>
       )}
+      {onDelete && (
+        <button onClick={onDelete} style={{ width: '100%', marginTop: 10, padding: 14, borderRadius: 12, border: `1px solid ${T.critical}`, background: T.criticalTint, color: T.critical, fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'background 0.2s' }}>
+          {Icons.trash} Delete Notice
+        </button>
+      )}
     </div>
   );
 }
@@ -277,6 +326,7 @@ function NoticeCard({ notice, currentUser, role, onClick, isPinned, crewCount })
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
           <PriorityBadge priority={notice.priority} />
           <CategoryBadge category={notice.category} />
+          <ValidityPill validUntil={notice.validUntil} />
           {isPinned && <span style={{ color: T.gold, display: 'flex' }}><Icon d={<><line x1="12" y1="17" x2="12" y2="22" /><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1V2H8v4h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24z" /></>} size={14} /></span>}
         </div>
         <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 4, lineHeight: 1.3 }}>{notice.title}</div>
@@ -320,7 +370,7 @@ export default function CrewBoard({ user }) {
   const [showNewNotice, setShowNewNotice] = useState(false);
   const [selectedCrewMember, setSelectedCrewMember] = useState(null);
   const [adminNoticeView, setAdminNoticeView] = useState(null);
-  const [newNotice, setNewNotice] = useState({ title: '', body: '', category: 'Safety', priority: 'routine', dept: 'All', pinned: false, requireAck: false });
+  const [newNotice, setNewNotice] = useState({ title: '', body: '', category: 'Safety', priority: 'routine', dept: 'All', pinned: false, requireAck: false, validUntil: '' });
   // Toast shown when a new notice arrives while the user is looking at a
   // different tab. Shape: { id, title, priority } | null. Auto-clears after
   // a few seconds or when the user clicks through to the notice.
@@ -465,6 +515,10 @@ export default function CrewBoard({ user }) {
     onNoticeDelete: (row) => {
       setNotices(prev => prev.filter(n => n.id !== row.id));
       setNoticeToast(curr => (curr && curr.id === row.id ? null : curr));
+      // If another admin deleted the notice we're currently viewing, bounce
+      // back to the list so we don't render a stale detail view.
+      setSelectedNotice(curr => (curr && curr.id === row.id ? null : curr));
+      setAdminNoticeView(curr => (curr && curr.id === row.id ? null : curr));
     },
     onNotificationInsert: (row) => {
       const mapped = rowToNotification(row);
@@ -711,9 +765,19 @@ export default function CrewBoard({ user }) {
   const handlePostNotice = async () => {
     if (!newNotice.title.trim()) return;
     try {
-      const posted = await createNotice({ ...newNotice, createdBy: currentUser.id });
+      // Convert the datetime-local string (e.g. "2026-04-20T18:00") into an
+      // ISO string so Supabase interprets it in the user's local zone.
+      // Empty string → null so the notice never auto-expires.
+      const validUntilIso = newNotice.validUntil
+        ? new Date(newNotice.validUntil).toISOString()
+        : null;
+      const posted = await createNotice({
+        ...newNotice,
+        validUntil: validUntilIso,
+        createdBy: currentUser.id,
+      });
       setNotices(prev => [posted, ...prev]);
-      setNewNotice({ title: '', body: '', category: 'Safety', priority: 'routine', dept: 'All', pinned: false, requireAck: false });
+      setNewNotice({ title: '', body: '', category: 'Safety', priority: 'routine', dept: 'All', pinned: false, requireAck: false, validUntil: '' });
       setShowNewNotice(false);
       recordActivity({
         action: ACTIVITY_ACTIONS.NOTICE_POSTED,
@@ -738,6 +802,42 @@ export default function CrewBoard({ user }) {
       }
     } catch (err) {
       alert(`Failed to post notice: ${err.message || err}`);
+    }
+  };
+
+  // Admin-only: delete a notice the user selected in the admin detail view.
+  // Gated behind a confirm() so a stray click doesn't nuke an announcement.
+  // On success we:
+  //   • optimistically drop the row from local state so the list updates
+  //     immediately (the realtime DELETE event will echo back and be a
+  //     no-op thanks to the filter dedupe in onNoticeDelete),
+  //   • clear both admin and crew detail states so the user lands back on
+  //     the notices list instead of an empty detail view,
+  //   • log an activity entry so the audit trail captures who deleted
+  //     what.
+  // Errors surface as a blocking alert — deletion is destructive and we
+  // want the admin to know if the server refused the request (e.g. they
+  // weren't actually admin, or the row was already gone).
+  const handleDeleteNotice = async (noticeId) => {
+    const notice = notices.find(n => n.id === noticeId);
+    if (!notice) return;
+    const confirmed = window.confirm(
+      `Delete "${notice.title}"? This cannot be undone and will remove the notice for everyone on board.`
+    );
+    if (!confirmed) return;
+    try {
+      await deleteNotice({ noticeId });
+      setNotices(prev => prev.filter(n => n.id !== noticeId));
+      setAdminNoticeView(null);
+      setSelectedNotice(null);
+      recordActivity({
+        action: ACTIVITY_ACTIONS.NOTICE_DELETED,
+        targetType: 'notice',
+        targetId: noticeId,
+        metadata: { title: notice.title },
+      });
+    } catch (err) {
+      alert(`Failed to delete notice: ${err?.message || err}`);
     }
   };
 
@@ -1134,6 +1234,13 @@ export default function CrewBoard({ user }) {
             icon: Icons.checkCircle,
             color: T.success,
           };
+        case ACTIVITY_ACTIONS.NOTICE_DELETED:
+          return {
+            verb: 'deleted notice',
+            detail: title || 'a notice',
+            icon: Icons.trash,
+            color: T.critical,
+          };
         case ACTIVITY_ACTIONS.DOCUMENT_ACKNOWLEDGED:
           return {
             verb: 'signed off',
@@ -1240,6 +1347,16 @@ export default function CrewBoard({ user }) {
               </select>
             </div>
           </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: T.textMuted, display: 'block', marginBottom: 6 }}>Valid until (optional)</label>
+            <input
+              type="datetime-local"
+              value={newNotice.validUntil}
+              onChange={e => setNewNotice(p => ({ ...p, validUntil: e.target.value }))}
+              style={{ width: '100%', padding: 12, borderRadius: 10, border: `1px solid ${T.border}`, background: T.bgCard, color: T.text, fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+            />
+            <div style={{ fontSize: 11, color: T.textDim, marginTop: 4 }}>Leave blank if the notice doesn&apos;t expire.</div>
+          </div>
           <div style={{ display: 'flex', gap: 12 }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: T.text, cursor: 'pointer' }}>
               <input type="checkbox" checked={newNotice.pinned} onChange={e => setNewNotice(p => ({ ...p, pinned: e.target.checked }))} style={{ accentColor: T.accent }} /> Pin notice
@@ -1301,7 +1418,7 @@ export default function CrewBoard({ user }) {
   // AdminNoticeDetail is a genuine component (defined outside CrewBoard)
   // with its own hooks, so it stays as `<AdminNoticeDetail ... />`.
   const renderScreen = () => {
-    if (role === 'admin' && adminNoticeView) return <AdminNoticeDetail notice={adminNoticeView} onBack={() => setAdminNoticeView(null)} crew={liveCrew} />;
+    if (role === 'admin' && adminNoticeView) return <AdminNoticeDetail notice={adminNoticeView} onBack={() => setAdminNoticeView(null)} crew={liveCrew} onDelete={() => handleDeleteNotice(adminNoticeView.id)} />;
     if (role === 'admin') {
       switch (tab) {
         case 'home': return AdminDashboard();
