@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { signInWithPassword } from '@/lib/auth';
 
 // Lightweight email/password login. No sign-up flow — crew accounts are
@@ -107,6 +108,14 @@ export default function LoginScreen() {
             {submitting ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
+
+        {/* Join-a-vessel CTA for crew who have a code but no account yet. */}
+        <div style={{ textAlign: 'center', marginBottom: 16, fontSize: 13, color: T.textMuted }}>
+          Don&apos;t have an account?{' '}
+          <Link href="/join" style={{ color: T.accent, fontWeight: 700, textDecoration: 'none' }}>
+            Join a vessel
+          </Link>
+        </div>
 
         <div style={{ background: T.bgCard, border: `1px dashed ${T.border}`, borderRadius: 14, padding: 16 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Dev accounts</div>

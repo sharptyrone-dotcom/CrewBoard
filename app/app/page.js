@@ -1,72 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import CrewBoard from '@/components/CrewBoard';
 import LoginScreen from '@/components/LoginScreen';
-import { fetchCurrentCrewMember, getSession, onAuthStateChange } from '@/lib/auth';
+import { AuthProvider, useAuth } from '@/components/AuthProvider';
 
-// Client-side session gate. Subscribes to Supabase auth state changes so
-// sign-in/sign-out swaps the rendered tree without a hard refresh.
+// Thin shell around <AuthProvider>. The provider owns the loading/authed/
+// anon state; this file just picks the right tree based on the current
+// status.
 //
-// Auth handoff flow:
-//   1. On mount, read the cached session (fast, no network).
-//   2. If signed in, load the matching crew_members row (one round trip).
-//   3. Render <LoginScreen /> or <CrewBoard user={...} /> accordingly.
-//   4. onAuthStateChange keeps everything in sync as the user signs in/out.
-export default function AppPage() {
-  const [status, setStatus] = useState('loading'); // 'loading' | 'authed' | 'anon'
-  const [user, setUser] = useState(null);
-  const [loadError, setLoadError] = useState(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadUserForSession = async (session) => {
-      if (!session?.user) {
-        if (!cancelled) {
-          setUser(null);
-          setStatus('anon');
-          setLoadError(null);
-        }
-        return;
-      }
-      try {
-        const crewMember = await fetchCurrentCrewMember(session.user.id);
-        if (cancelled) return;
-        if (!crewMember) {
-          // Signed in but no matching crew_members row — treat as error
-          // rather than silently showing a broken UI.
-          setLoadError('No crew profile found for this account. Ask an admin to link it.');
-          setUser(null);
-          setStatus('anon');
-          return;
-        }
-        setUser(crewMember);
-        setLoadError(null);
-        setStatus('authed');
-      } catch (err) {
-        if (cancelled) return;
-        setLoadError(err?.message || 'Failed to load your crew profile.');
-        setUser(null);
-        setStatus('anon');
-      }
-    };
-
-    (async () => {
-      const session = await getSession();
-      if (cancelled) return;
-      await loadUserForSession(session);
-    })();
-
-    const unsubscribe = onAuthStateChange(async (session) => {
-      await loadUserForSession(session);
-    });
-
-    return () => {
-      cancelled = true;
-      unsubscribe();
-    };
-  }, []);
+// Realtime subscriptions (useRealtime, usePresence) live inside CrewBoard
+// and therefore only mount once `status === 'authed'`, guaranteeing they
+// start post-auth and tear down automatically on sign-out.
+function AppPageInner() {
+  const { status, user, loadError } = useAuth();
 
   if (status === 'loading') {
     return (
@@ -90,4 +36,12 @@ export default function AppPage() {
   }
 
   return <CrewBoard user={user} />;
+}
+
+export default function AppPage() {
+  return (
+    <AuthProvider>
+      <AppPageInner />
+    </AuthProvider>
+  );
 }
