@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { signOut } from '@/lib/auth';
 import { fetchCrew } from '@/lib/crew';
-import { acknowledgeDocument, fetchDocuments, uploadDocument } from '@/lib/documents';
+import { acknowledgeDocument, fetchDocuments, getDocumentSignedUrl, uploadDocument } from '@/lib/documents';
 import { acknowledgeNotice, createNotice, deleteNotice, fetchNotices, markNoticeRead, rowToNotice } from '@/lib/notices';
 import { createBroadcastNotification, fetchNotifications, markNotificationRead, rowToNotification } from '@/lib/notifications';
 import { ACTIVITY_ACTIONS, fetchActivity, logActivity } from '@/lib/activity';
@@ -229,8 +229,51 @@ function NoticeDetail({ notice, currentUser, onBack, onAcknowledge, onMarkRead }
 }
 
 // ─── Document Detail (Crew) ──────────────────────────────────────────
+// Shows the doc metadata + an inline PDF viewer. We fetch a short-lived
+// signed URL for the stored object and embed it in an iframe with the
+// Chrome PDF viewer toolbar stripped via hash params (`#toolbar=0&
+// navpanes=0`). The bucket is private so crew can't grab the URL out of
+// the DOM and share it — and because we never render a link or a
+// Download button, there's no obvious UI affordance to save the file.
+// (A determined user with devtools can always still exfiltrate anything
+// the browser renders — this is a UI "view-only" lock, not a DRM
+// guarantee.)
+//
+// Legacy seeded rows still have `https://example.com/...` in their
+// file_url and there's no real file behind them, so for those we fall
+// back to the old "PDF document preview" placeholder tile.
 function DocDetail({ doc, currentUser, onBack, onAcknowledge }) {
   const isAcked = doc.acknowledgedBy.includes(currentUser.id);
+  const isRealFile = !!doc.fileUrl && !/^https?:\/\//i.test(doc.fileUrl);
+
+  const [signedUrl, setSignedUrl] = useState(null);
+  const [signedUrlError, setSignedUrlError] = useState(null);
+  const [signedUrlLoading, setSignedUrlLoading] = useState(isRealFile);
+
+  useEffect(() => {
+    if (!isRealFile) {
+      setSignedUrl(null);
+      setSignedUrlLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setSignedUrlLoading(true);
+    setSignedUrlError(null);
+    getDocumentSignedUrl({ path: doc.fileUrl, expiresInSeconds: 300 })
+      .then(url => {
+        if (cancelled) return;
+        setSignedUrl(url);
+      })
+      .catch(err => {
+        if (cancelled) return;
+        console.error('[DocDetail] signed url failed', err);
+        setSignedUrlError(err?.message || 'Failed to load document');
+      })
+      .finally(() => {
+        if (!cancelled) setSignedUrlLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [doc.fileUrl, isRealFile]);
 
   return (
     <div style={{ padding: 20 }}>
@@ -248,11 +291,44 @@ function DocDetail({ doc, currentUser, onBack, onAcknowledge }) {
           </div>
         ))}
       </div>
-      <div style={{ background: T.accentTint, border: `1px solid ${T.border}`, borderRadius: 16, padding: 48, textAlign: 'center', marginBottom: 20 }}>
-        <div style={{ color: T.accent, marginBottom: 10, display: 'flex', justifyContent: 'center' }}>{Icons.file}</div>
-        <p style={{ fontSize: 14, color: T.text, margin: 0, fontWeight: 600 }}>PDF document preview</p>
-        <p style={{ fontSize: 12, color: T.textMuted, margin: '4px 0 0' }}>{doc.pages} pages</p>
-      </div>
+      {isRealFile ? (
+        <div
+          onContextMenu={e => e.preventDefault()}
+          style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 16, overflow: 'hidden', marginBottom: 20, boxShadow: T.shadow, position: 'relative' }}
+        >
+          {signedUrlLoading && (
+            <div style={{ padding: 60, textAlign: 'center', color: T.textMuted, fontSize: 13 }}>
+              Loading document…
+            </div>
+          )}
+          {signedUrlError && !signedUrlLoading && (
+            <div style={{ padding: 40, textAlign: 'center', color: T.critical, fontSize: 13 }}>
+              Couldn&apos;t load the document.<br />
+              <span style={{ color: T.textMuted, fontSize: 11 }}>{signedUrlError}</span>
+            </div>
+          )}
+          {signedUrl && !signedUrlLoading && !signedUrlError && (
+            <iframe
+              title={doc.title}
+              src={`${signedUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+              // `download` attribute on iframe has no meaning, but setting
+              // sandbox without allow-downloads blocks the built-in viewer
+              // entirely in Chromium, so we leave sandbox off. The download
+              // toolbar button is suppressed via the hash param above.
+              style={{ width: '100%', height: 560, border: 'none', display: 'block', background: T.bgCard }}
+            />
+          )}
+          <div style={{ padding: '10px 14px', borderTop: `1px solid ${T.border}`, background: T.bgCard, fontSize: 11, color: T.textDim, display: 'flex', alignItems: 'center', gap: 6 }}>
+            {Icons.eye} View-only — downloads are disabled.
+          </div>
+        </div>
+      ) : (
+        <div style={{ background: T.accentTint, border: `1px solid ${T.border}`, borderRadius: 16, padding: 48, textAlign: 'center', marginBottom: 20 }}>
+          <div style={{ color: T.accent, marginBottom: 10, display: 'flex', justifyContent: 'center' }}>{Icons.file}</div>
+          <p style={{ fontSize: 14, color: T.text, margin: 0, fontWeight: 600 }}>PDF document preview</p>
+          <p style={{ fontSize: 12, color: T.textMuted, margin: '4px 0 0' }}>{doc.pages} pages</p>
+        </div>
+      )}
       {doc.required && !isAcked && (
         <button onClick={() => onAcknowledge && onAcknowledge(doc.id)} className="cb-btn-primary" style={{ width: '100%', padding: 16, borderRadius: 12, border: 'none', background: T.accent, color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
           Acknowledge Current Version
