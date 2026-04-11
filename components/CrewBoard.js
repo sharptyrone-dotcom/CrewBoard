@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { signOut } from '@/lib/auth';
 import { fetchCrew } from '@/lib/crew';
-import { acknowledgeDocument, fetchDocuments } from '@/lib/documents';
+import { acknowledgeDocument, fetchDocuments, uploadDocument } from '@/lib/documents';
 import { acknowledgeNotice, createNotice, deleteNotice, fetchNotices, markNoticeRead, rowToNotice } from '@/lib/notices';
 import { createBroadcastNotification, fetchNotifications, markNotificationRead, rowToNotification } from '@/lib/notifications';
 import { ACTIVITY_ACTIONS, fetchActivity, logActivity } from '@/lib/activity';
@@ -368,9 +368,15 @@ export default function CrewBoard({ user }) {
   const [docTypeFilter, setDocTypeFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewNotice, setShowNewNotice] = useState(false);
+  const [showNewDoc, setShowNewDoc] = useState(false);
   const [selectedCrewMember, setSelectedCrewMember] = useState(null);
   const [adminNoticeView, setAdminNoticeView] = useState(null);
   const [newNotice, setNewNotice] = useState({ title: '', body: '', category: 'Safety', priority: 'routine', dept: 'All', pinned: false, requireAck: false, validUntil: '' });
+  // New document upload form state. `file` holds a browser File object
+  // picked via <input type="file">; the rest are plain text inputs.
+  // Shape matches what uploadDocument() expects.
+  const [newDoc, setNewDoc] = useState({ file: null, title: '', docType: 'SOPs', department: 'General', version: '1.0', reviewDate: '', isRequired: false, pageCount: '' });
+  const [uploadingDoc, setUploadingDoc] = useState(false);
   // Toast shown when a new notice arrives while the user is looking at a
   // different tab. Shape: { id, title, priority } | null. Auto-clears after
   // a few seconds or when the user clicks through to the notice.
@@ -841,6 +847,58 @@ export default function CrewBoard({ user }) {
     }
   };
 
+  // Admin-only: upload a PDF to the vessel-documents storage bucket and
+  // insert the matching metadata row. Both writes are admin-gated at the
+  // database layer (see migration 012), so the catch here covers RLS
+  // refusals just as much as network errors. We keep the modal open on
+  // failure so the admin can see the alert and retry without retyping
+  // their form.
+  const handleUploadDoc = async () => {
+    if (!newDoc.file || !newDoc.title.trim()) return;
+    setUploadingDoc(true);
+    try {
+      const uploaded = await uploadDocument({
+        file: newDoc.file,
+        title: newDoc.title.trim(),
+        docType: newDoc.docType,
+        department: newDoc.department,
+        version: newDoc.version || null,
+        reviewDate: newDoc.reviewDate || null,
+        isRequired: newDoc.isRequired,
+        pageCount: newDoc.pageCount ? Number(newDoc.pageCount) : null,
+        uploadedBy: currentUser.id,
+      });
+      setDocs(prev => [uploaded, ...prev]);
+      setNewDoc({ file: null, title: '', docType: 'SOPs', department: 'General', version: '1.0', reviewDate: '', isRequired: false, pageCount: '' });
+      setShowNewDoc(false);
+      recordActivity({
+        action: ACTIVITY_ACTIONS.DOCUMENT_POSTED,
+        targetType: 'document',
+        targetId: uploaded.id,
+        metadata: { title: uploaded.title, version: uploaded.version },
+      });
+      // Broadcast a notification so the bell badge lights up for every
+      // crew member who needs to acknowledge the new doc. Non-fatal if it
+      // fails — the document itself is already persisted.
+      try {
+        const notif = await createBroadcastNotification({
+          type: 'document',
+          title: uploaded.required ? 'New required document' : 'New document',
+          body: uploaded.title,
+          referenceType: 'document',
+          referenceId: uploaded.id,
+        });
+        setNotifications(prev => [notif, ...prev]);
+      } catch (notifErr) {
+        console.error('broadcast notification failed (non-fatal)', notifErr);
+      }
+    } catch (err) {
+      alert(`Failed to upload document: ${err?.message || err}`);
+    } finally {
+      setUploadingDoc(false);
+    }
+  };
+
   const resetNav = () => {
     setSelectedNotice(null);
     setSelectedDoc(null);
@@ -1087,7 +1145,7 @@ export default function CrewBoard({ user }) {
         <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
           {[
             ['New Notice', () => setShowNewNotice(true)],
-            ['Upload Doc', () => {}],
+            ['Upload Doc', () => setShowNewDoc(true)],
             ['Send Reminder', () => {}],
             // Navigates via window.location.href rather than next/link so we
             // get a full page load — the admin invites page owns its own
@@ -1241,6 +1299,13 @@ export default function CrewBoard({ user }) {
             icon: Icons.trash,
             color: T.critical,
           };
+        case ACTIVITY_ACTIONS.DOCUMENT_POSTED:
+          return {
+            verb: 'uploaded document',
+            detail: row.metadata?.version ? `${title} (v${row.metadata.version})` : (title || 'a document'),
+            icon: Icons.file,
+            color: T.accent,
+          };
         case ACTIVITY_ACTIONS.DOCUMENT_ACKNOWLEDGED:
           return {
             verb: 'signed off',
@@ -1372,6 +1437,89 @@ export default function CrewBoard({ user }) {
       </div>
     </div>
   );
+
+  // Admin PDF upload modal. File picker + metadata fields that get sent
+  // straight through to uploadDocument() -> storage + documents insert.
+  // Mirrors NewNoticeModal styling so the two feel like part of the same
+  // admin surface. Like the notice modal, this is a factory called as a
+  // function at render time (NOT as a JSX component) to avoid the inline-
+  // component remount / focus-loss trap.
+  const NewDocumentModal = () => {
+    const canSubmit = !!newDoc.file && newDoc.title.trim() && !uploadingDoc;
+    return (
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+        <div style={{ background: T.bgModal, borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 480, maxHeight: '90vh', overflow: 'auto', padding: 28, boxShadow: '0 -20px 40px rgba(15,23,42,0.15)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0 }}>Upload Document</h2>
+            <button onClick={() => setShowNewDoc(false)} style={{ background: 'none', border: 'none', color: T.textMuted, cursor: 'pointer' }}>{Icons.x}</button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: T.textMuted, display: 'block', marginBottom: 6 }}>PDF file</label>
+              <label htmlFor="cb-doc-file" style={{ display: 'block', padding: 16, borderRadius: 10, border: `2px dashed ${newDoc.file ? T.accent : T.border}`, background: newDoc.file ? T.accentTint : T.bgCard, color: newDoc.file ? T.accentDark : T.textMuted, fontSize: 13, textAlign: 'center', cursor: 'pointer', fontWeight: 600 }}>
+                {newDoc.file
+                  ? `${newDoc.file.name} (${Math.round((newDoc.file.size / 1024 / 1024) * 10) / 10} MB)`
+                  : 'Click to choose a PDF (max 50 MB)'}
+              </label>
+              <input
+                id="cb-doc-file"
+                type="file"
+                accept="application/pdf"
+                onChange={e => {
+                  const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+                  setNewDoc(p => ({
+                    ...p,
+                    file,
+                    // Auto-fill title from filename if the user hasn't typed anything yet.
+                    title: p.title || (file ? file.name.replace(/\.pdf$/i, '') : ''),
+                  }));
+                }}
+                style={{ display: 'none' }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: T.textMuted, display: 'block', marginBottom: 6 }}>Title</label>
+              <input value={newDoc.title} onChange={e => setNewDoc(p => ({ ...p, title: e.target.value }))} placeholder="Document title..." style={{ width: '100%', padding: 12, borderRadius: 10, border: `1px solid ${T.border}`, background: T.bgCard, color: T.text, fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: T.textMuted, display: 'block', marginBottom: 6 }}>Type</label>
+                <select value={newDoc.docType} onChange={e => setNewDoc(p => ({ ...p, docType: e.target.value }))} style={{ width: '100%', padding: 12, borderRadius: 10, border: `1px solid ${T.border}`, background: T.bgCard, color: T.text, fontSize: 13, outline: 'none' }}>
+                  {DOC_TYPES.filter(t => t !== 'All').map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: T.textMuted, display: 'block', marginBottom: 6 }}>Department</label>
+                <select value={newDoc.department} onChange={e => setNewDoc(p => ({ ...p, department: e.target.value }))} style={{ width: '100%', padding: 12, borderRadius: 10, border: `1px solid ${T.border}`, background: T.bgCard, color: T.text, fontSize: 13, outline: 'none' }}>
+                  {DEPARTMENTS.filter(d => d !== 'All').concat('General').filter((v, i, a) => a.indexOf(v) === i).map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: T.textMuted, display: 'block', marginBottom: 6 }}>Version</label>
+                <input value={newDoc.version} onChange={e => setNewDoc(p => ({ ...p, version: e.target.value }))} placeholder="1.0" style={{ width: '100%', padding: 12, borderRadius: 10, border: `1px solid ${T.border}`, background: T.bgCard, color: T.text, fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: T.textMuted, display: 'block', marginBottom: 6 }}>Pages</label>
+                <input type="number" min="1" value={newDoc.pageCount} onChange={e => setNewDoc(p => ({ ...p, pageCount: e.target.value }))} placeholder="—" style={{ width: '100%', padding: 12, borderRadius: 10, border: `1px solid ${T.border}`, background: T.bgCard, color: T.text, fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: T.textMuted, display: 'block', marginBottom: 6 }}>Review date</label>
+                <input type="date" value={newDoc.reviewDate} onChange={e => setNewDoc(p => ({ ...p, reviewDate: e.target.value }))} style={{ width: '100%', padding: 12, borderRadius: 10, border: `1px solid ${T.border}`, background: T.bgCard, color: T.text, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
+              </div>
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: T.text, cursor: 'pointer' }}>
+              <input type="checkbox" checked={newDoc.isRequired} onChange={e => setNewDoc(p => ({ ...p, isRequired: e.target.checked }))} style={{ accentColor: T.accent }} /> Required acknowledgement
+            </label>
+            <button onClick={handleUploadDoc} disabled={!canSubmit} className="cb-btn-primary" style={{ width: '100%', padding: 16, borderRadius: 12, border: 'none', background: canSubmit ? T.accent : T.border, color: canSubmit ? '#fff' : T.textDim, fontSize: 15, fontWeight: 700, cursor: canSubmit ? 'pointer' : 'default', transition: 'background 0.2s' }}>
+              {uploadingDoc ? 'Uploading…' : 'Upload Document'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const NotificationsPanel = () => (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', zIndex: 100 }} onClick={() => setShowNotifications(false)}>
@@ -1556,6 +1704,7 @@ export default function CrewBoard({ user }) {
           renderScreen for the full explanation. */}
       {showNotifications && NotificationsPanel()}
       {showNewNotice && NewNoticeModal()}
+      {showNewDoc && NewDocumentModal()}
     </div>
   );
 }
