@@ -1281,24 +1281,43 @@ export default function CrewBoard({ user }) {
   );
 
   // ─── Router ────────────────────────────────────────────────────────
+  // Screen factories are defined above as arrow functions that close over
+  // local state instead of taking props. We intentionally CALL them here
+  // (e.g. `NoticesScreen()`) instead of rendering them as JSX elements
+  // (`<NoticesScreen />`). The distinction matters: rendering them as
+  // `<Component />` would make React treat the factory as a new component
+  // type on every parent re-render — because an arrow function declared
+  // inside `CrewBoard` is a fresh function reference each render — which
+  // forces an unmount/remount of the entire subtree. That, in turn, steals
+  // focus from inputs (you could only type one character before the field
+  // unmounted) and resets scroll position.
+  //
+  // By calling them as plain functions we splice their returned JSX
+  // directly into `CrewBoard`'s tree, so React reconciles the DOM nodes
+  // in place and focus is preserved. This only works because none of the
+  // factories use hooks of their own; they just read from the CrewBoard
+  // closure.
+  //
+  // AdminNoticeDetail is a genuine component (defined outside CrewBoard)
+  // with its own hooks, so it stays as `<AdminNoticeDetail ... />`.
   const renderScreen = () => {
     if (role === 'admin' && adminNoticeView) return <AdminNoticeDetail notice={adminNoticeView} onBack={() => setAdminNoticeView(null)} crew={liveCrew} />;
     if (role === 'admin') {
       switch (tab) {
-        case 'home': return <AdminDashboard />;
-        case 'notices': return <NoticesScreen />;
-        case 'docs': return <DocsScreen />;
-        case 'crew': return <CrewManagement />;
-        case 'activity': return <AdminActivityLog />;
-        default: return <AdminDashboard />;
+        case 'home': return AdminDashboard();
+        case 'notices': return NoticesScreen();
+        case 'docs': return DocsScreen();
+        case 'crew': return CrewManagement();
+        case 'activity': return AdminActivityLog();
+        default: return AdminDashboard();
       }
     }
     switch (tab) {
-      case 'home': return <CrewHome />;
-      case 'notices': return <NoticesScreen />;
-      case 'docs': return <DocsScreen />;
-      case 'profile': return <CrewProfile />;
-      default: return <CrewHome />;
+      case 'home': return CrewHome();
+      case 'notices': return NoticesScreen();
+      case 'docs': return DocsScreen();
+      case 'profile': return CrewProfile();
+      default: return CrewHome();
     }
   };
 
@@ -1413,9 +1432,13 @@ export default function CrewBoard({ user }) {
         </div>
       )}
 
-      {/* Modals */}
-      {showNotifications && <NotificationsPanel />}
-      {showNewNotice && <NewNoticeModal />}
+      {/* Modals — called as functions, not rendered as <Component />, for
+          the same reason as the screen factories in renderScreen: it keeps
+          React from remounting the subtree on every parent re-render and
+          preserves input focus while typing. See the comment above
+          renderScreen for the full explanation. */}
+      {showNotifications && NotificationsPanel()}
+      {showNewNotice && NewNoticeModal()}
     </div>
   );
 }
