@@ -12,6 +12,21 @@
 -- This migration was applied to the live DB via MCP during development.
 -- It's committed here so fresh clones of the database can reproduce the
 -- cutover deterministically.
+--
+-- Amendment (2026-04-11)
+-- ----------------------
+-- The original INSERT below omitted the GoTrue token columns
+-- (confirmation_token, recovery_token, email_change, email_change_token_new,
+-- email_change_token_current, reauthentication_token). Those columns
+-- default to NULL, but Supabase GoTrue scans them into Go strings at login
+-- time and panics with "converting NULL to string is unsupported" — which
+-- surfaces in the client as "Database error querying schema".
+--
+-- The INSERT is now explicit about each of those columns being '' so fresh
+-- clones don't need a follow-up backfill migration. The hotfix for the
+-- already-provisioned live database was applied via MCP on 2026-04-11;
+-- re-running this migration is still a no-op there thanks to the
+-- `on conflict (id) do nothing` clause.
 
 -- ---------------------------------------------------------------------------
 -- 1. Create auth.users + auth.identities for every seeded crew member.
@@ -22,7 +37,12 @@ insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
   email_confirmed_at, created_at, updated_at,
   raw_app_meta_data, raw_user_meta_data, is_super_admin,
-  is_sso_user, is_anonymous
+  is_sso_user, is_anonymous,
+  -- Token columns must be empty strings, not NULL — see amendment note
+  -- above. GoTrue panics on NULL during the Scan into a Go string.
+  confirmation_token, recovery_token,
+  email_change, email_change_token_new,
+  email_change_token_current, reauthentication_token
 )
 select
   '00000000-0000-0000-0000-000000000000'::uuid,
@@ -36,7 +56,10 @@ select
   jsonb_build_object('full_name', cm.full_name),
   false,
   false,
-  false
+  false,
+  '', '',
+  '', '',
+  '', ''
 from crew_members cm
 where cm.vessel_id = '10000000-0000-0000-0000-000000000001'
 on conflict (id) do nothing;
