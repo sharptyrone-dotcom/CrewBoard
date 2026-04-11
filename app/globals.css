@@ -58,3 +58,22 @@ option {
   background: #f0f7ff !important;
   border-color: #3b82f6 !important;
 }
+
+/* Realtime new-notice toast — slides down from just below the header when
+   a notice arrives while the user is on another tab. */
+@keyframes cb-slide-down {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+.cb-toast {
+  animation: cb-slide-down 220ms ease-out;
+}
+.cb-toast:hover {
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12) !important;
+}

@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { signOut } from '@/lib/auth';
-import { fetchCrew, touchLastSeen } from '@/lib/crew';
+import { fetchCrew } from '@/lib/crew';
 import { acknowledgeDocument, fetchDocuments } from '@/lib/documents';
-import { acknowledgeNotice, createNotice, fetchNotices, markNoticeRead } from '@/lib/notices';
-import { createBroadcastNotification, fetchNotifications, markNotificationRead } from '@/lib/notifications';
+import { acknowledgeNotice, createNotice, fetchNotices, markNoticeRead, rowToNotice } from '@/lib/notices';
+import { createBroadcastNotification, fetchNotifications, markNotificationRead, rowToNotification } from '@/lib/notifications';
 import { ACTIVITY_ACTIONS, fetchActivity, logActivity } from '@/lib/activity';
+import useRealtime from '@/hooks/useRealtime';
+import usePresence from '@/hooks/usePresence';
 
 // ─── Data & Constants ────────────────────────────────────────────────
 const CATEGORIES = ['All', 'Safety', 'Operations', 'Guest Info', 'HR/Admin', 'Social', 'Departmental'];
@@ -319,12 +321,31 @@ export default function CrewBoard({ user }) {
   const [selectedCrewMember, setSelectedCrewMember] = useState(null);
   const [adminNoticeView, setAdminNoticeView] = useState(null);
   const [newNotice, setNewNotice] = useState({ title: '', body: '', category: 'Safety', priority: 'routine', dept: 'All', pinned: false, requireAck: false });
+  // Toast shown when a new notice arrives while the user is looking at a
+  // different tab. Shape: { id, title, priority } | null. Auto-clears after
+  // a few seconds or when the user clicks through to the notice.
+  const [noticeToast, setNoticeToast] = useState(null);
 
   // Derived from the authenticated session via fetchCurrentCrewMember in
   // app/app/page.js. Falls back to an empty object so destructuring stays
   // safe during the initial paint (the page gate never actually renders
   // CrewBoard without a user, but belt-and-braces).
-  const currentUser = user || { id: null, name: '', role: '', dept: '', avatar: '', isAdmin: false };
+  const currentUser = user || { id: null, name: '', role: '', dept: '', avatar: '', isAdmin: false, vesselId: null };
+
+  // Realtime presence: websocket channel keyed on the crew id, exposes a Set
+  // of crew ids that are currently connected so the online dots update
+  // instantly (instead of waiting for the 5-minute last_seen_at window). The
+  // hook also owns the last_seen_at heartbeat now that the old 2-minute
+  // touchLastSeen loop has been removed.
+  const { onlineCrewIds } = usePresence({ vesselId: currentUser.vesselId, user: currentUser });
+
+  // Fold presence into the crew list so every Avatar that reads `cm.online`
+  // reacts to join/leave events without having to know about presence. We
+  // OR with the DB-derived flag so quick disconnects don't flap the dot.
+  const liveCrew = useMemo(
+    () => crew.map(c => ({ ...c, online: onlineCrewIds.has(c.id) || c.online })),
+    [crew, onlineCrewIds],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -344,17 +365,14 @@ export default function CrewBoard({ user }) {
     return () => { cancelled = true; };
   }, []);
 
-  // Online heartbeat: on mount (and every 2 minutes thereafter) write `now()`
-  // to our own `last_seen_at`, then re-fetch the crew list so the online dots
-  // for everyone else also refresh as they cross the 5-minute threshold.
+  // Initial crew fetch. With usePresence handling both the last_seen_at
+  // heartbeat and the live online/offline deltas, there's no need to poll
+  // fetchCrew anymore — the websocket keeps the UI in sync, and anything
+  // that changes out-of-band (role swaps, new joiners) will be picked up
+  // on the next sign-in.
   useEffect(() => {
     let cancelled = false;
-    const tick = async () => {
-      try {
-        await touchLastSeen(currentUser.id);
-      } catch (err) {
-        console.error('touchLastSeen failed (non-fatal)', err);
-      }
+    (async () => {
       try {
         const rows = await fetchCrew();
         if (!cancelled) setCrew(rows);
@@ -363,13 +381,8 @@ export default function CrewBoard({ user }) {
       } finally {
         if (!cancelled) setCrewLoading(false);
       }
-    };
-    tick();
-    const interval = setInterval(tick, 2 * 60 * 1000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
+    })();
+    return () => { cancelled = true; };
   }, [currentUser.id]);
 
   useEffect(() => {
@@ -416,6 +429,67 @@ export default function CrewBoard({ user }) {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  // Realtime fan-out: listens to Postgres changes on notices, notifications
+  // and notice_reads for the current vessel, then merges each payload into
+  // local state. All handlers are idempotent (Set-style dedupe on ids) so
+  // the optimistic updates we do inside handlePostNotice / handleAcknowledge
+  // / handleMarkRead don't double-insert when the realtime echo lands.
+  useRealtime({
+    vesselId: currentUser.vesselId,
+    userId: currentUser.id,
+    onNoticeInsert: (row) => {
+      const mapped = rowToNotice(row);
+      setNotices(prev => (prev.some(n => n.id === mapped.id) ? prev : [mapped, ...prev]));
+      // Only surface a toast if the user didn't post it themselves and isn't
+      // already looking at the notices tab. Keeps self-writes quiet.
+      if (tab !== 'notices' && row.created_by && row.created_by !== currentUser.id) {
+        const toast = { id: mapped.id, title: mapped.title, priority: mapped.priority };
+        setNoticeToast(toast);
+        setTimeout(() => {
+          setNoticeToast(curr => (curr && curr.id === toast.id ? null : curr));
+        }, 6000);
+      }
+    },
+    onNoticeUpdate: (row) => {
+      const mapped = rowToNotice(row);
+      setNotices(prev => prev.map(n => (
+        n.id === mapped.id
+          // Preserve readBy/acknowledgedBy from local state — the raw row
+          // from the realtime payload doesn't include the joined notice_reads
+          // so we'd otherwise wipe the read-receipt arrays on every UPDATE.
+          ? { ...n, ...mapped, readBy: n.readBy, acknowledgedBy: n.acknowledgedBy }
+          : n
+      )));
+    },
+    onNoticeDelete: (row) => {
+      setNotices(prev => prev.filter(n => n.id !== row.id));
+      setNoticeToast(curr => (curr && curr.id === row.id ? null : curr));
+    },
+    onNotificationInsert: (row) => {
+      const mapped = rowToNotification(row);
+      setNotifications(prev => (prev.some(n => n.id === mapped.id) ? prev : [mapped, ...prev]));
+    },
+    onNoticeReadChange: (payload) => {
+      const row = payload.new || payload.old;
+      if (!row) return;
+      setNotices(prev => prev.map(n => {
+        if (n.id !== row.notice_id) return n;
+        if (payload.eventType === 'DELETE') {
+          return {
+            ...n,
+            readBy: n.readBy.filter(id => id !== row.crew_member_id),
+            acknowledgedBy: n.acknowledgedBy.filter(id => id !== row.crew_member_id),
+          };
+        }
+        const readBy = Array.from(new Set([...n.readBy, row.crew_member_id]));
+        const acknowledgedBy = row.acknowledged_at
+          ? Array.from(new Set([...n.acknowledgedBy, row.crew_member_id]))
+          : n.acknowledgedBy.filter(id => id !== row.crew_member_id);
+        return { ...n, readBy, acknowledgedBy };
+      }));
+    },
+  });
 
   const unreadNotifs = notifications.filter(n => !n.read).length;
   const unreadNotices = notices.filter(n => !n.readBy.includes(currentUser.id)).length;
@@ -495,10 +569,142 @@ export default function CrewBoard({ user }) {
     if (!target || target.read) return;
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
     try {
-      await markNotificationRead(id);
+      // Pass both the current user's id (so broadcasts write to
+      // notification_reads) and the targetCrewId from the UI shape (so the
+      // helper can skip a roundtrip to look it up on the server).
+      await markNotificationRead(id, currentUser.id, { targetCrewId: target.targetCrewId });
     } catch (err) {
       console.error('markNotificationRead failed, reverting', err);
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: false } : n));
+    }
+  };
+
+  // Shared navigation helpers. Any entry-point that wants to jump the user
+  // into a notice or document detail view should go through these so the
+  // routing quirks (admin vs crew, competing detail states) are in one
+  // place instead of re-derived at every call site.
+  //
+  //   • Notice detail for a crew user lives behind `selectedNotice` +
+  //     tab === 'notices' (the NoticesScreen early-returns on selectedNotice).
+  //   • Notice detail for an admin lives behind `adminNoticeView` — the
+  //     top-level renderScreen() short-circuits on that state regardless
+  //     of the current tab, so we still set the tab for nav-bar highlight
+  //     consistency but the detail view would render either way.
+  //   • Document detail is the same for both roles: `selectedDoc` + tab.
+  //
+  // Each helper also clears any *other* detail state so you can't end up
+  // with a stale overlay (e.g. navigating from a doc detail straight into
+  // a notice via a notification click).
+  const navigateToNotice = (notice) => {
+    if (!notice) return;
+    setSelectedDoc(null);
+    if (role === 'admin') {
+      setSelectedNotice(null);
+      setAdminNoticeView(notice);
+    } else {
+      setAdminNoticeView(null);
+      setSelectedNotice(notice);
+    }
+    setTab('notices');
+  };
+
+  const navigateToDocument = (doc) => {
+    if (!doc) return;
+    setSelectedNotice(null);
+    setAdminNoticeView(null);
+    setSelectedDoc(doc);
+    setTab('docs');
+  };
+
+  // Clicking a notification in the bell panel should both mark it read AND
+  // jump the user into the relevant detail view — Facebook-style. Dispatch
+  // is keyed on the notification's `type`:
+  //
+  //   • 'notice'   → notice detail
+  //   • 'reminder' → notice detail (a reminder is just a nudge to ack a
+  //                  specific notice, so it routes to the same place)
+  //   • 'document' → document detail
+  //   • 'system' / unknown → close the panel, don't navigate
+  //
+  // The item-matching strategy inside `findItem` tries three fallbacks
+  // before giving up, so a single click always lands the user somewhere
+  // useful instead of silently doing nothing:
+  //
+  //   1. `reference_id` (exposed as `.ref` on the UI shape). Fast, exact,
+  //      and every notification created by the app carries it.
+  //   2. Case-insensitive substring match on `notification.body` against
+  //      each item's title. Seeded data follows a pattern like
+  //      "Man Overboard Drill — 10 April" / "Tender Operations SOP updated
+  //      to v3.2", where the referenced item's title is embedded verbatim
+  //      in the body, so substring lookups are usually enough.
+  //   3. Same substring match against `notification.title` (some rows
+  //      embed the target title in the title, not the body).
+  //
+  // If all three fallbacks miss — e.g. a realtime notification arrives
+  // before the corresponding notice/document has been folded into local
+  // state — we still flip the active tab to `notices` or `docs`. That way
+  // the user at minimum lands on the right screen and can find the item
+  // themselves, rather than seeing the click do nothing. Setting `null`
+  // on the detail state also clears any stale overlay from a previous
+  // navigation.
+  //
+  // The panel is closed immediately so navigation feels snappy, and
+  // handleReadNotif runs in the background — we deliberately don't await
+  // it so a slow network doesn't stall the screen change.
+  const handleNotificationClick = (notification) => {
+    setShowNotifications(false);
+    handleReadNotif(notification.id);
+
+    const routesToNotice = notification.type === 'notice' || notification.type === 'reminder';
+    const routesToDocument = notification.type === 'document';
+    if (!routesToNotice && !routesToDocument) return;
+
+    const findItem = (items) => {
+      if (!Array.isArray(items) || items.length === 0) return null;
+      if (notification.ref) {
+        const byRef = items.find(i => i.id === notification.ref);
+        if (byRef) return byRef;
+      }
+      const body = (notification.body || '').toLowerCase();
+      const title = (notification.title || '').toLowerCase();
+      const byBody = body
+        ? items.find(i => i.title && body.includes(i.title.toLowerCase()))
+        : null;
+      if (byBody) return byBody;
+      const byTitle = title
+        ? items.find(i => i.title && title.includes(i.title.toLowerCase()))
+        : null;
+      return byTitle || null;
+    };
+
+    if (routesToNotice) {
+      const notice = findItem(notices);
+      if (notice) {
+        navigateToNotice(notice);
+      } else {
+        // Couldn't resolve the exact notice — at least land the user on
+        // the notices tab so the click isn't a dead-end. Clear any stale
+        // detail overlays first.
+        setSelectedDoc(null);
+        setSelectedNotice(null);
+        setAdminNoticeView(null);
+        setTab('notices');
+      }
+      return;
+    }
+
+    if (routesToDocument) {
+      const doc = findItem(docs);
+      if (doc) {
+        navigateToDocument(doc);
+      } else {
+        // Same fallback for documents — flip to the library tab so the
+        // user sees the list even if we can't pick out the exact row.
+        setSelectedNotice(null);
+        setAdminNoticeView(null);
+        setSelectedDoc(null);
+        setTab('docs');
+      }
     }
   };
 
@@ -744,26 +950,26 @@ export default function CrewBoard({ user }) {
 
   // ─── Admin Dashboard ───────────────────────────────────────────────
   const AdminDashboard = () => {
-    const criticalUnacked = notices.filter(n => n.priority === 'critical').reduce((sum, n) => sum + (crew.length - n.acknowledgedBy.length), 0);
-    const docsUnacked = docs.filter(d => d.required).reduce((sum, d) => sum + (crew.length - d.acknowledgedBy.length), 0);
+    const criticalUnacked = notices.filter(n => n.priority === 'critical').reduce((sum, n) => sum + (liveCrew.length - n.acknowledgedBy.length), 0);
+    const docsUnacked = docs.filter(d => d.required).reduce((sum, d) => sum + (liveCrew.length - d.acknowledgedBy.length), 0);
     const overallCompliance = Math.round(
-      crew.reduce((sum, cm) => {
+      liveCrew.reduce((sum, cm) => {
         const read = notices.filter(n => n.readBy.includes(cm.id)).length;
         const acked = docs.filter(d => d.required && d.acknowledgedBy.includes(cm.id)).length;
         const total = notices.length + docs.filter(d => d.required).length;
         return sum + (total > 0 ? ((read + acked) / total) * 100 : 0);
-      }, 0) / crew.length
+      }, 0) / (liveCrew.length || 1)
     );
 
     return (
       <div style={{ padding: 20 }}>
         <div style={{ marginBottom: 20 }}>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text, margin: 0 }}>Dashboard</h1>
-          <p style={{ fontSize: 13, color: T.textMuted, margin: '4px 0 0' }}>M/Y Serenity — {crew.length} crew on board</p>
+          <p style={{ fontSize: 13, color: T.textMuted, margin: '4px 0 0' }}>M/Y Serenity — {liveCrew.length} crew on board</p>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
           <StatCard label="Active Notices" value={notices.length} icon={Icons.notices} />
-          <StatCard label="Crew Online" value={crew.filter(c => c.online).length} color={T.success} icon={Icons.crew} />
+          <StatCard label="Crew Online" value={liveCrew.filter(c => c.online).length} color={T.success} icon={Icons.crew} />
           <StatCard label="Critical Unack." value={criticalUnacked} color={T.critical} icon={Icons.alert} />
           <StatCard label="Doc. Pending Ack." value={docsUnacked} color={T.gold} icon={Icons.docs} />
         </div>
@@ -778,13 +984,22 @@ export default function CrewBoard({ user }) {
         <div style={{ marginBottom: 12 }}>
           <h3 style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1, margin: 0 }}>Quick Actions</h3>
         </div>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
-          {[['New Notice', () => setShowNewNotice(true)], ['Upload Doc', () => {}], ['Send Reminder', () => {}]].map(([label, fn]) => (
-            <button key={label} onClick={fn} className="cb-btn-secondary" style={{ flex: 1, padding: '14px 10px', borderRadius: 12, border: `1px solid ${T.border}`, background: T.bgCard, color: T.accentDark, fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: T.shadow }}>{label}</button>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
+          {[
+            ['New Notice', () => setShowNewNotice(true)],
+            ['Upload Doc', () => {}],
+            ['Send Reminder', () => {}],
+            // Navigates via window.location.href rather than next/link so we
+            // get a full page load — the admin invites page owns its own
+            // AuthProvider and a hard navigation keeps the two trees
+            // cleanly separated.
+            ['Invite Crew', () => { window.location.href = '/admin/invites'; }],
+          ].map(([label, fn]) => (
+            <button key={label} onClick={fn} className="cb-btn-secondary" style={{ flex: '1 1 140px', padding: '14px 10px', borderRadius: 12, border: `1px solid ${T.border}`, background: T.bgCard, color: T.accentDark, fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: T.shadow }}>{label}</button>
           ))}
         </div>
         <h3 style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 12px' }}>Crew Compliance</h3>
-        {crew.map(cm => {
+        {liveCrew.map(cm => {
           const read = notices.filter(n => n.readBy.includes(cm.id)).length;
           const acked = docs.filter(d => d.required && d.acknowledgedBy.includes(cm.id)).length;
           const total = notices.length + docs.filter(d => d.required).length;
@@ -810,7 +1025,10 @@ export default function CrewBoard({ user }) {
   // ─── Crew Management ───────────────────────────────────────────────
   const CrewManagement = () => {
     if (selectedCrewMember) {
-      const cm = selectedCrewMember;
+      // Re-hydrate from liveCrew so the detail view's online dot reacts to
+      // presence changes even while this screen is open. Falls back to the
+      // captured snapshot if the row is no longer on the roster.
+      const cm = liveCrew.find(c => c.id === selectedCrewMember.id) || selectedCrewMember;
       return (
         <div style={{ padding: 20 }}>
           <BackButton onClick={() => setSelectedCrewMember(null)} />
@@ -855,10 +1073,10 @@ export default function CrewBoard({ user }) {
       <div style={{ padding: 20 }}>
         <h2 style={{ fontSize: 20, fontWeight: 800, color: T.text, margin: '0 0 16px' }}>Crew Management</h2>
         <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
-          <StatCard label="On Board" value={crew.length} icon={Icons.crew} />
-          <StatCard label="Online" value={crew.filter(c => c.online).length} color={T.success} icon={Icons.checkCircle} />
+          <StatCard label="On Board" value={liveCrew.length} icon={Icons.crew} />
+          <StatCard label="Online" value={liveCrew.filter(c => c.online).length} color={T.success} icon={Icons.checkCircle} />
         </div>
-        {crew.map(cm => (
+        {liveCrew.map(cm => (
           <button key={cm.id} onClick={() => setSelectedCrewMember(cm)} className="cb-card" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '18px 20px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 16, width: '100%', cursor: 'pointer', textAlign: 'left', marginBottom: 10, boxShadow: T.shadow }}>
             <Avatar initials={cm.avatar} online={cm.online} size={40} />
             <div style={{ flex: 1 }}>
@@ -1046,7 +1264,7 @@ export default function CrewBoard({ user }) {
           <button onClick={() => setShowNotifications(false)} style={{ background: 'none', border: 'none', color: T.textMuted, cursor: 'pointer' }}>{Icons.x}</button>
         </div>
         {notifications.map(n => (
-          <button key={n.id} onClick={() => { handleReadNotif(n.id); setShowNotifications(false); }} className="cb-card" style={{ display: 'flex', gap: 14, padding: '16px 18px', background: n.read ? T.bgCard : T.accentTint, border: `1px solid ${n.read ? T.border : T.accent}`, borderRadius: 14, width: '100%', cursor: 'pointer', textAlign: 'left', marginBottom: 10 }}>
+          <button key={n.id} onClick={() => handleNotificationClick(n)} className="cb-card" style={{ display: 'flex', gap: 14, padding: '16px 18px', background: n.read ? T.bgCard : T.accentTint, border: `1px solid ${n.read ? T.border : T.accent}`, borderRadius: 14, width: '100%', cursor: 'pointer', textAlign: 'left', marginBottom: 10 }}>
             <div style={{ width: 36, height: 36, borderRadius: '50%', background: n.type === 'notice' ? `${T.accent}20` : n.type === 'document' ? `${T.gold}20` : `${T.critical}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: n.type === 'notice' ? T.accent : n.type === 'document' ? T.gold : T.critical }}>
               {n.type === 'notice' ? Icons.notices : n.type === 'document' ? Icons.file : Icons.bell}
             </div>
@@ -1064,7 +1282,7 @@ export default function CrewBoard({ user }) {
 
   // ─── Router ────────────────────────────────────────────────────────
   const renderScreen = () => {
-    if (role === 'admin' && adminNoticeView) return <AdminNoticeDetail notice={adminNoticeView} onBack={() => setAdminNoticeView(null)} crew={crew} />;
+    if (role === 'admin' && adminNoticeView) return <AdminNoticeDetail notice={adminNoticeView} onBack={() => setAdminNoticeView(null)} crew={liveCrew} />;
     if (role === 'admin') {
       switch (tab) {
         case 'home': return <AdminDashboard />;
@@ -1137,6 +1355,62 @@ export default function CrewBoard({ user }) {
         <button onClick={() => setShowNewNotice(true)} className="cb-btn-primary" style={{ position: 'fixed', bottom: 100, right: 'calc(50% - 214px)', width: 56, height: 56, borderRadius: '50%', background: T.accent, border: 'none', color: '#fff', cursor: 'pointer', boxShadow: '0 10px 30px rgba(59,130,246,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
           {Icons.plus}
         </button>
+      )}
+
+      {/* Realtime toast — slides in when a new notice lands while the user
+          is on a different tab. Clicks through to the notice detail;
+          auto-dismisses after 6 seconds via the useRealtime handler. */}
+      {noticeToast && (
+        <div
+          role="status"
+          onClick={() => {
+            // Route through the shared helper so admin and crew both land
+            // in the right detail view. navigateToNotice is a no-op when
+            // the notice can't be found (e.g. deleted between the toast
+            // firing and the click), so we can call it unconditionally.
+            navigateToNotice(notices.find(n => n.id === noticeToast.id));
+            setNoticeToast(null);
+          }}
+          className="cb-toast"
+          style={{
+            position: 'fixed',
+            top: 76,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 'calc(100% - 32px)',
+            maxWidth: 448,
+            background: T.bgCard,
+            border: `1px solid ${noticeToast.priority === 'critical' ? T.critical : T.accent}`,
+            borderLeft: `4px solid ${noticeToast.priority === 'critical' ? T.critical : T.accent}`,
+            borderRadius: 12,
+            padding: '12px 16px',
+            boxShadow: T.shadowLg,
+            zIndex: 120,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          <div style={{ color: noticeToast.priority === 'critical' ? T.critical : T.accent, display: 'flex', flexShrink: 0 }}>
+            {Icons.notices}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+              New {noticeToast.priority === 'critical' ? 'critical ' : ''}notice
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {noticeToast.title}
+            </div>
+          </div>
+          <button
+            onClick={(e) => { e.stopPropagation(); setNoticeToast(null); }}
+            aria-label="Dismiss"
+            style={{ background: 'none', border: 'none', color: T.textDim, cursor: 'pointer', padding: 4, display: 'flex', flexShrink: 0 }}
+          >
+            {Icons.x}
+          </button>
+        </div>
       )}
 
       {/* Modals */}
