@@ -11,7 +11,10 @@ import useRealtime from '@/hooks/useRealtime';
 import usePresence from '@/hooks/usePresence';
 import useMediaQuery from '@/hooks/useMediaQuery';
 import { isPushSupported, getPushPermission, subscribeToPush, isSubscribed as checkPushSubscribed } from '@/lib/push';
-import { supabase } from '@/lib/supabase';
+// supabase client import removed — training images are stored as data
+// URLs in the JSONB content blocks rather than in the Storage bucket
+// (which is currently PDF-only). Migration 017 widens the bucket MIME
+// types for a future switch to proper Storage uploads.
 import { sendReminderChannels } from '@/lib/send-reminder';
 // reportGenerator is dynamically imported in handleExport to keep the
 // main bundle small — jspdf + autotable add ~140 kB that only admins
@@ -2776,28 +2779,20 @@ export default function CrewBoard({ user }) {
     } catch (err) { console.error('[training] refresh failed', err); }
   };
 
-  const uploadTrainingImage = async (file) => {
-    const safeName = (file.name || 'image.jpg').replace(/[^a-zA-Z0-9._-]/g, '_');
-    const objectId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2);
-    const objectPath = `${currentUser.vesselId}/training/${objectId}-${safeName}`;
-    const { error } = await supabase.storage.from('vessel-documents').upload(objectPath, file, {
-      contentType: file.type || 'image/jpeg', cacheControl: '3600', upsert: false,
-    });
-    if (error) throw error;
-    return objectPath;
-  };
+  const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  });
 
+  // Content images are stored as data URLs (base64) directly in the
+  // JSONB content blocks. This avoids the vessel-documents storage
+  // bucket which is currently restricted to PDFs only. For the small
+  // number of training modules on a yacht the extra payload is fine.
   const resolveContentUrls = async (content) => {
-    if (!content || !content.length) return content;
-    return Promise.all(content.map(async (block) => {
-      if (block.type === 'image' && block.value && !/^https?:\/\//i.test(block.value) && !/^data:/i.test(block.value)) {
-        try {
-          const { data } = await supabase.storage.from('vessel-documents').createSignedUrl(block.value, 3600);
-          return { ...block, resolvedUrl: data?.signedUrl || block.value };
-        } catch { return block; }
-      }
-      return block;
-    }));
+    // Data URLs and https URLs render directly — nothing to resolve.
+    return content || [];
   };
 
   const resetModuleBuilder = () => {
@@ -2970,13 +2965,11 @@ export default function CrewBoard({ user }) {
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       const m = data.module;
-      // Resolve image URLs for preview in builder
-      const resolvedContent = await resolveContentUrls(m.content || []);
       setEditingModuleId(m.id);
       setModuleBuilderData({
         title: m.title || '',
         description: m.description || '',
-        content: resolvedContent.map(c => ({ type: c.type, value: c.value || '', caption: c.caption || '', previewUrl: c.resolvedUrl || '' })),
+        content: (m.content || []).map(c => ({ type: c.type, value: c.value || '', caption: c.caption || '' })),
         passMark: m.passMark || 80,
         timeLimitMinutes: m.timeLimitMinutes || '',
         randomiseQuestions: m.randomiseQuestions || false,
@@ -3558,14 +3551,13 @@ export default function CrewBoard({ user }) {
                             const file = e.target.files?.[0];
                             if (!file) return;
                             try {
-                              const path = await uploadTrainingImage(file);
-                              const { data: signedData } = await supabase.storage.from('vessel-documents').createSignedUrl(path, 3600);
+                              const dataUrl = await readFileAsDataUrl(file);
                               const next = [...b.content];
-                              next[i] = { ...next[i], value: path, previewUrl: signedData?.signedUrl || '' };
+                              next[i] = { ...next[i], value: dataUrl, previewUrl: dataUrl };
                               setB('content', next);
                             } catch (err) {
-                              console.error('[training] image upload failed', err);
-                              alert('Failed to upload image: ' + err.message);
+                              console.error('[training] image read failed', err);
+                              alert('Failed to load image: ' + err.message);
                             }
                           }} />
                         </label>
