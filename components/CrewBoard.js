@@ -779,6 +779,34 @@ export default function CrewBoard({ user }) {
   const [editingModuleId, setEditingModuleId] = useState(null);
   const [trainingReminderState, setTrainingReminderState] = useState('idle');
 
+  // ── Events system state ──
+  const [events, setEvents] = useState([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [eventDetail, setEventDetail] = useState(null);
+  const [eventDetailLoading, setEventDetailLoading] = useState(false);
+  const [adminEventView, setAdminEventView] = useState(null); // 'create' | 'detail'
+  const [adminEventDetail, setAdminEventDetail] = useState(null);
+  const [adminEventDetailLoading, setAdminEventDetailLoading] = useState(false);
+  const [showNewEvent, setShowNewEvent] = useState(false);
+  const [eventFilter, setEventFilter] = useState('upcoming');
+  const [newEventData, setNewEventData] = useState({
+    title: '', description: '', event_type: 'custom', start_date: '', start_time: '',
+    end_date: '', end_time: '', attachments: [], restricted_fields: {},
+    notification_schedule: [
+      { days_before: 7, sent: false },
+      { days_before: 3, sent: false },
+      { days_before: 1, sent: false },
+    ],
+    briefings: [],
+    restrictedEnabled: false,
+    restrictedValue: '',
+    restrictedRoles: [],
+  });
+  const [eventSaving, setEventSaving] = useState(false);
+  const [newUpdateText, setNewUpdateText] = useState('');
+  const [postingUpdate, setPostingUpdate] = useState(false);
+
   // Derived from the authenticated session via fetchCurrentCrewMember in
   // app/app/page.js. Falls back to an empty object so destructuring stays
   // safe during the initial paint (the page gate never actually renders
@@ -919,6 +947,24 @@ export default function CrewBoard({ user }) {
     })();
     return () => { cancelled = true; };
   }, [currentUser.id, currentUser.vesselId, role]);
+
+  // ── Events data fetch ──
+  useEffect(() => {
+    if (!currentUser.id || !currentUser.vesselId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/events?crew_member_id=${currentUser.id}&vessel_id=${currentUser.vesselId}&role=${role}&include_past=${eventFilter === 'past' ? 'true' : 'false'}${eventFilter !== 'past' && eventFilter !== 'all' ? `&status=${eventFilter}` : eventFilter === 'all' ? '&include_past=true' : ''}`);
+        const data = await res.json();
+        if (!cancelled) setEvents(data.events || []);
+      } catch (err) {
+        console.error('[events] fetch failed', err);
+      } finally {
+        if (!cancelled) setEventsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [currentUser.id, currentUser.vesselId, role, eventFilter]);
 
   // Check whether the user has subscribed to push notifications. We run
   // this once on mount so the opt-in banner can decide whether to show.
@@ -1641,6 +1687,11 @@ export default function CrewBoard({ user }) {
     setQuizAnswers({});
     setQuizCurrent(0);
     setAdminTrainingResults(null);
+    setSelectedEvent(null);
+    setEventDetail(null);
+    setAdminEventView(null);
+    setAdminEventDetail(null);
+    setNewUpdateText('');
   };
 
   // Training badge: count of pending (non-completed) assignments for crew
@@ -1657,11 +1708,16 @@ export default function CrewBoard({ user }) {
     }
   };
 
+  const unreadEvents = role === 'crew'
+    ? events.filter(e => !e.isRead && (e.status === 'upcoming' || e.status === 'active')).length
+    : 0;
+
   const crewTabs = [
     { id: 'home', label: 'Home', icon: Icons.home },
     { id: 'notices', label: 'Notices', icon: Icons.notices, badge: unreadNotices },
     { id: 'docs', label: 'Library', icon: Icons.docs, badge: pendingDocAcks },
     { id: 'training', label: 'Training', icon: Icons.training, badge: pendingTraining },
+    { id: 'events', label: 'Events', icon: Icons.calendar, badge: unreadEvents },
   ];
 
   const adminTabs = [
@@ -1669,6 +1725,7 @@ export default function CrewBoard({ user }) {
     { id: 'notices', label: 'Notices', icon: Icons.notices },
     { id: 'docs', label: 'Documents', icon: Icons.docs },
     { id: 'training', label: 'Training', icon: Icons.training },
+    { id: 'events', label: 'Events', icon: Icons.calendar },
     { id: 'crew', label: 'Crew', icon: Icons.crew },
     { id: 'activity', label: 'Activity', icon: Icons.clock },
   ];
@@ -3737,6 +3794,737 @@ export default function CrewBoard({ user }) {
   // factories use hooks of their own; they just read from the CrewBoard
   // closure.
   //
+  // ─── Events: helpers ────────────────────────────────────────────────
+  const EVENT_TYPE_ICONS = {
+    passage: Icons.anchor,
+    guest_visit: Icons.crew,
+    maintenance: Icons.file,
+    social: Icons.star,
+    custom: Icons.calendar,
+  };
+  const EVENT_TYPE_COLORS = {
+    passage: '#3b82f6',
+    guest_visit: '#8b5cf6',
+    maintenance: '#f59e0b',
+    social: '#10b981',
+    custom: '#64748b',
+  };
+  const EVENT_TYPE_LABELS = {
+    passage: 'Passage',
+    guest_visit: 'Guest Visit',
+    maintenance: 'Maintenance',
+    social: 'Social',
+    custom: 'Custom',
+  };
+
+  const refreshEvents = async () => {
+    try {
+      const res = await fetch(`/api/events?crew_member_id=${currentUser.id}&vessel_id=${currentUser.vesselId}&role=${role}&include_past=${eventFilter === 'past' || eventFilter === 'all' ? 'true' : 'false'}${eventFilter !== 'past' && eventFilter !== 'all' ? `&status=${eventFilter}` : ''}`);
+      const data = await res.json();
+      setEvents(data.events || []);
+    } catch (err) { console.error('[events] refresh failed', err); }
+  };
+
+  const handleLoadEventDetail = async (eventSummary, forAdmin = false) => {
+    const setter = forAdmin ? setAdminEventDetail : setEventDetail;
+    const loadSetter = forAdmin ? setAdminEventDetailLoading : setEventDetailLoading;
+    loadSetter(true);
+    try {
+      const res = await fetch(`/api/events/${eventSummary.id}?crew_member_id=${currentUser.id}&role=${forAdmin ? 'admin' : 'crew'}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setter(data.event);
+    } catch (err) {
+      console.error('[events] load detail failed', err);
+      setter(null);
+    } finally { loadSetter(false); }
+  };
+
+  const handleMarkEventRead = async (eventId) => {
+    try {
+      await fetch(`/api/events/${eventId}/read`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ crew_member_id: currentUser.id }),
+      });
+      setEvents(prev => prev.map(e => e.id === eventId ? { ...e, isRead: true } : e));
+      if (eventDetail?.id === eventId) setEventDetail(prev => prev ? { ...prev, isRead: true } : prev);
+    } catch (err) { console.error('[events] mark read failed', err); }
+  };
+
+  const handlePostEventUpdate = async (eventId) => {
+    if (!newUpdateText.trim() || postingUpdate) return;
+    setPostingUpdate(true);
+    try {
+      const res = await fetch(`/api/events/${eventId}/updates`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ crew_member_id: currentUser.id, content: newUpdateText.trim() }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setNewUpdateText('');
+      // Reload detail to show the new update
+      const isAdmin = role === 'admin';
+      const detail = isAdmin ? adminEventDetail : eventDetail;
+      if (detail) {
+        const setter = isAdmin ? setAdminEventDetail : setEventDetail;
+        setter(prev => prev ? { ...prev, updates: [data.update, ...(prev.updates || [])] } : prev);
+      }
+    } catch (err) {
+      console.error('[events] post update failed', err);
+      alert('Failed to post update: ' + err.message);
+    } finally { setPostingUpdate(false); }
+  };
+
+  const handleCreateEvent = async () => {
+    if (eventSaving) return;
+    setEventSaving(true);
+    const d = newEventData;
+    try {
+      const startDate = d.start_date && d.start_time
+        ? new Date(`${d.start_date}T${d.start_time}`).toISOString()
+        : d.start_date ? new Date(d.start_date).toISOString() : null;
+      const endDate = d.end_date && d.end_time
+        ? new Date(`${d.end_date}T${d.end_time}`).toISOString()
+        : d.end_date ? new Date(d.end_date).toISOString() : null;
+
+      if (!startDate) { alert('Start date is required'); setEventSaving(false); return; }
+
+      // Build restricted fields
+      let restricted_fields = null;
+      if (d.restrictedEnabled && d.restrictedValue.trim() && d.restrictedRoles.length > 0) {
+        restricted_fields = {
+          confidentialInfo: { value: d.restrictedValue.trim(), roles: d.restrictedRoles },
+        };
+      }
+
+      const res = await fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          crew_member_id: currentUser.id,
+          vessel_id: currentUser.vesselId,
+          event_type: d.event_type,
+          title: d.title,
+          description: d.description,
+          start_date: startDate,
+          end_date: endDate,
+          restricted_fields,
+          notification_schedule: d.notification_schedule,
+          briefings: d.briefings.filter(b => b.department && b.content.trim()),
+        }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      // Create notifications for all crew
+      const crewIds = crew.filter(c => c.id !== currentUser.id).map(c => c.id);
+      for (const cid of crewIds) {
+        createTargetedNotification({
+          targetCrewId: cid,
+          type: 'system',
+          title: 'New Event',
+          body: `"${d.title}" — ${new Date(startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`,
+          referenceType: 'event',
+          referenceId: data.event.id,
+        }).catch(() => {});
+      }
+
+      setShowNewEvent(false);
+      setNewEventData({
+        title: '', description: '', event_type: 'custom', start_date: '', start_time: '',
+        end_date: '', end_time: '', attachments: [], restricted_fields: {},
+        notification_schedule: [
+          { days_before: 7, sent: false },
+          { days_before: 3, sent: false },
+          { days_before: 1, sent: false },
+        ],
+        briefings: [],
+        restrictedEnabled: false, restrictedValue: '', restrictedRoles: [],
+      });
+      refreshEvents();
+    } catch (err) {
+      console.error('[events] create failed', err);
+      alert('Failed to create event: ' + err.message);
+    } finally { setEventSaving(false); }
+  };
+
+  const handleArchiveEvent = async (eventId) => {
+    try {
+      const res = await fetch(`/api/events/${eventId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ crew_member_id: currentUser.id, status: 'completed' }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      refreshEvents();
+      setAdminEventView(null);
+      setAdminEventDetail(null);
+    } catch (err) {
+      console.error('[events] archive failed', err);
+      alert('Failed to archive event: ' + err.message);
+    }
+  };
+
+  const handleDeleteEvent = async (eventId) => {
+    if (!confirm('Delete this event?')) return;
+    try {
+      const res = await fetch(`/api/events/${eventId}?crew_member_id=${currentUser.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      refreshEvents();
+      setAdminEventView(null);
+      setAdminEventDetail(null);
+    } catch (err) {
+      console.error('[events] delete failed', err);
+      alert('Failed to delete event: ' + err.message);
+    }
+  };
+
+  // Countdown helper
+  const getCountdown = (dateStr) => {
+    const now = new Date();
+    const target = new Date(dateStr);
+    const diffMs = target - now;
+    if (diffMs < 0) return null;
+    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    if (days > 0) return `in ${days}d`;
+    if (hours > 0) return `in ${hours}h`;
+    return 'soon';
+  };
+
+  // ─── Crew Events Screen ───────────────────────────────────────────
+  const CrewEventsScreen = () => {
+    // Detail view
+    if (selectedEvent && eventDetail) {
+      return (
+        <div style={{ padding: 20 }}>
+          <button onClick={() => { setSelectedEvent(null); setEventDetail(null); }} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: T.accent, cursor: 'pointer', padding: 0, fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
+            {Icons.arrowLeft} <span>Back to Events</span>
+          </button>
+
+          {eventDetailLoading ? (
+            <p style={{ fontSize: 13, color: T.textMuted, textAlign: 'center', padding: 40 }}>Loading event...</p>
+          ) : (
+            <>
+              {/* Header */}
+              <div style={{ background: T.bgCard, borderRadius: 16, border: `1px solid ${T.border}`, padding: 20, marginBottom: 12, boxShadow: T.shadow }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: `${EVENT_TYPE_COLORS[eventDetail.eventType] || T.accent}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: EVENT_TYPE_COLORS[eventDetail.eventType] || T.accent }}>
+                    {EVENT_TYPE_ICONS[eventDetail.eventType] || Icons.calendar}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: EVENT_TYPE_COLORS[eventDetail.eventType] || T.accent }}>
+                      {EVENT_TYPE_LABELS[eventDetail.eventType] || 'Event'}
+                    </div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: T.text }}>{eventDetail.title}</div>
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, padding: '4px 10px', borderRadius: 6, background: eventDetail.status === 'active' ? T.successTint : eventDetail.status === 'upcoming' ? T.accentTint : T.bg, color: eventDetail.status === 'active' ? T.success : eventDetail.status === 'upcoming' ? T.accent : T.textMuted }}>
+                    {eventDetail.status}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: 16, fontSize: 12, color: T.textMuted, marginBottom: 12 }}>
+                  <span>{Icons.calendar} {new Date(eventDetail.startDate).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                  {eventDetail.endDate && <span>to {new Date(eventDetail.endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>}
+                </div>
+                {eventDetail.description && <p style={{ fontSize: 13, color: T.textMuted, margin: 0, lineHeight: 1.6 }}>{eventDetail.description}</p>}
+
+                {/* Restricted fields visible to this crew member */}
+                {eventDetail.restrictedFields && Object.keys(eventDetail.restrictedFields).length > 0 && (
+                  <div style={{ marginTop: 12, padding: 12, background: T.goldTint, borderRadius: 10, border: `1px solid ${T.gold}30` }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: T.gold, marginBottom: 6 }}>Restricted Information</div>
+                    {Object.entries(eventDetail.restrictedFields).map(([key, config]) => (
+                      <p key={key} style={{ fontSize: 13, color: T.text, margin: '4px 0' }}>{typeof config === 'object' ? config.value : config}</p>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Briefings */}
+              {(eventDetail.briefings || []).length > 0 && (
+                <div style={{ marginBottom: 12 }}>
+                  <h3 style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1.2, margin: '0 0 8px' }}>Department Briefings</h3>
+                  {eventDetail.briefings.map((b) => (
+                    <div key={b.id} style={{ background: T.bgCard, borderRadius: 14, border: `1px solid ${b.isMyDepartment ? T.accent + '40' : T.border}`, padding: 16, marginBottom: 8, boxShadow: T.shadow }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, padding: '3px 8px', borderRadius: 5, background: b.isMyDepartment ? T.accentTint : T.bg, color: b.isMyDepartment ? T.accent : T.textMuted }}>
+                          {b.department}{b.isMyDepartment ? ' (You)' : ''}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: 13, color: T.text, margin: 0, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{b.content}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Attachments */}
+              {(eventDetail.attachments || []).length > 0 && (
+                <div style={{ marginBottom: 12 }}>
+                  <h3 style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1.2, margin: '0 0 8px' }}>Attachments</h3>
+                  {eventDetail.attachments.map((a, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 12, background: T.bgCard, borderRadius: 10, border: `1px solid ${T.border}`, marginBottom: 6 }}>
+                      {Icons.file}
+                      <span style={{ fontSize: 13, color: T.text }}>{a.name || a}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Live Updates */}
+              <div style={{ marginBottom: 12 }}>
+                <h3 style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1.2, margin: '0 0 8px' }}>Live Updates</h3>
+                {(eventDetail.updates || []).length === 0 ? (
+                  <p style={{ fontSize: 13, color: T.textDim, textAlign: 'center', padding: 20 }}>No updates yet</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {eventDetail.updates.map((u) => (
+                      <div key={u.id} style={{ background: T.bgCard, borderRadius: 12, border: `1px solid ${T.border}`, padding: 14, boxShadow: T.shadow }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{u.createdBy}</span>
+                          <span style={{ fontSize: 11, color: T.textDim }}>{new Date(u.createdAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                        <p style={{ fontSize: 13, color: T.textMuted, margin: 0 }}>{u.content}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Mark as Read */}
+              {!eventDetail.isRead && (
+                <button onClick={() => handleMarkEventRead(eventDetail.id)} className="cb-btn-primary" style={{ width: '100%', padding: 14, borderRadius: 12, border: 'none', background: T.accent, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', marginTop: 8 }}>
+                  {Icons.check} Mark as Read
+                </button>
+              )}
+              {eventDetail.isRead && (
+                <div style={{ textAlign: 'center', padding: 12, color: T.success, fontSize: 13, fontWeight: 600 }}>
+                  {Icons.check} You have read this event
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      );
+    }
+
+    // Timeline list view
+    return (
+      <div style={{ padding: 20 }}>
+        <h2 style={{ fontSize: 20, fontWeight: 800, color: T.text, margin: '0 0 16px' }}>Events</h2>
+
+        {/* Filter chips */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 16, overflowX: 'auto', paddingBottom: 4 }}>
+          {['upcoming', 'active', 'all'].map(f => (
+            <button key={f} onClick={() => setEventFilter(f)} style={{ padding: '7px 14px', borderRadius: 8, border: `1px solid ${eventFilter === f ? T.accent : T.border}`, background: eventFilter === f ? T.accentTint : T.bgCard, color: eventFilter === f ? T.accent : T.textMuted, fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', textTransform: 'capitalize' }}>
+              {f}
+            </button>
+          ))}
+        </div>
+
+        {eventsLoading && events.length === 0 && <p style={{ fontSize: 13, color: T.textMuted, textAlign: 'center', padding: 40 }}>Loading events...</p>}
+        {!eventsLoading && events.length === 0 && <p style={{ fontSize: 13, color: T.textMuted, textAlign: 'center', padding: 40 }}>No events found</p>}
+
+        {/* Vertical timeline */}
+        <div style={{ position: 'relative', paddingLeft: 24 }}>
+          {/* Timeline line */}
+          {events.length > 0 && <div style={{ position: 'absolute', left: 7, top: 8, bottom: 8, width: 2, background: T.border }} />}
+
+          {events.map((e) => {
+            const countdown = getCountdown(e.startDate);
+            const typeColor = EVENT_TYPE_COLORS[e.eventType] || T.accent;
+            return (
+              <div key={e.id} style={{ position: 'relative', marginBottom: 12 }}>
+                {/* Timeline dot */}
+                <div style={{ position: 'absolute', left: -20, top: 18, width: 12, height: 12, borderRadius: '50%', background: e.status === 'active' ? T.success : typeColor, border: '2px solid #fff', boxShadow: `0 0 0 2px ${e.status === 'active' ? T.success : typeColor}40` }} />
+
+                <button onClick={() => { setSelectedEvent(e); handleLoadEventDetail(e); }} className="cb-card" style={{ display: 'block', width: '100%', textAlign: 'left', padding: 16, background: T.bgCard, border: `1px solid ${!e.isRead ? typeColor + '40' : T.border}`, borderRadius: 14, cursor: 'pointer', boxShadow: T.shadow }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 8, background: `${typeColor}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: typeColor, flexShrink: 0 }}>
+                      {EVENT_TYPE_ICONS[e.eventType] || Icons.calendar}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: T.text, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.title}</span>
+                        {!e.isRead && <div style={{ width: 8, height: 8, borderRadius: '50%', background: T.accent, flexShrink: 0 }} />}
+                      </div>
+                      <div style={{ fontSize: 12, color: T.textMuted, marginBottom: 4 }}>
+                        {new Date(e.startDate).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
+                        {e.endDate && ` — ${new Date(e.endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        {countdown && (
+                          <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 5, background: T.accentTint, color: T.accent }}>{countdown}</span>
+                        )}
+                        <span style={{ fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 5, background: `${typeColor}15`, color: typeColor, textTransform: 'capitalize' }}>
+                          {EVENT_TYPE_LABELS[e.eventType] || e.eventType}
+                        </span>
+                        {e.updateCount > 0 && (
+                          <span style={{ fontSize: 10, fontWeight: 600, color: T.textDim }}>{e.updateCount} update{e.updateCount !== 1 ? 's' : ''}</span>
+                        )}
+                      </div>
+                      {e.myBriefingPreview && (
+                        <p style={{ fontSize: 12, color: T.textDim, margin: '6px 0 0', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{e.myBriefingPreview}</p>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  // ─── Admin Events Screen ──────────────────────────────────────────
+  const AdminEventsScreen = () => {
+    // Admin event detail view
+    if (adminEventView === 'detail' && adminEventDetail) {
+      return (
+        <div style={{ padding: isDesktop ? '28px 36px' : 20 }}>
+          <button onClick={() => { setAdminEventView(null); setAdminEventDetail(null); setNewUpdateText(''); }} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: T.accent, cursor: 'pointer', padding: 0, fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
+            {Icons.arrowLeft} <span>Back to Events</span>
+          </button>
+
+          {adminEventDetailLoading ? (
+            <p style={{ fontSize: 13, color: T.textMuted, textAlign: 'center', padding: 40 }}>Loading event...</p>
+          ) : (
+            <>
+              {/* Header */}
+              <div style={{ background: T.bgCard, borderRadius: 16, border: `1px solid ${T.border}`, padding: 20, marginBottom: 16, boxShadow: T.shadow }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: `${EVENT_TYPE_COLORS[adminEventDetail.eventType] || T.accent}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: EVENT_TYPE_COLORS[adminEventDetail.eventType] || T.accent }}>
+                    {EVENT_TYPE_ICONS[adminEventDetail.eventType] || Icons.calendar}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: EVENT_TYPE_COLORS[adminEventDetail.eventType] || T.accent }}>
+                      {EVENT_TYPE_LABELS[adminEventDetail.eventType] || 'Event'}
+                    </div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: T.text }}>{adminEventDetail.title}</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {adminEventDetail.status !== 'completed' && adminEventDetail.status !== 'cancelled' && (
+                      <button onClick={() => handleArchiveEvent(adminEventDetail.id)} style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${T.border}`, background: T.bg, color: T.textMuted, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Archive</button>
+                    )}
+                    <button onClick={() => handleDeleteEvent(adminEventDetail.id)} style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${T.critical}40`, background: T.criticalTint, color: T.critical, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Delete</button>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 16, fontSize: 12, color: T.textMuted, marginBottom: 8, flexWrap: 'wrap' }}>
+                  <span>{Icons.calendar} {new Date(adminEventDetail.startDate).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                  {adminEventDetail.endDate && <span>to {new Date(adminEventDetail.endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>}
+                  <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, padding: '3px 8px', borderRadius: 5, background: adminEventDetail.status === 'active' ? T.successTint : adminEventDetail.status === 'upcoming' ? T.accentTint : T.bg, color: adminEventDetail.status === 'active' ? T.success : adminEventDetail.status === 'upcoming' ? T.accent : T.textMuted }}>
+                    {adminEventDetail.status}
+                  </span>
+                </div>
+                {adminEventDetail.description && <p style={{ fontSize: 13, color: T.textMuted, margin: 0, lineHeight: 1.6 }}>{adminEventDetail.description}</p>}
+
+                {/* Restricted fields (admin sees all) */}
+                {adminEventDetail.restrictedFields && Object.keys(adminEventDetail.restrictedFields).length > 0 && (
+                  <div style={{ marginTop: 12, padding: 12, background: T.goldTint, borderRadius: 10, border: `1px solid ${T.gold}30` }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: T.gold, marginBottom: 6 }}>Restricted Fields</div>
+                    {Object.entries(adminEventDetail.restrictedFields).map(([key, config]) => (
+                      <div key={key} style={{ fontSize: 13, color: T.text, marginBottom: 4 }}>
+                        <strong>{typeof config === 'object' ? `Visible to: ${(config.roles || []).join(', ')}` : key}:</strong>{' '}
+                        {typeof config === 'object' ? config.value : config}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Read receipts */}
+              <div style={{ background: T.bgCard, borderRadius: 16, border: `1px solid ${T.border}`, padding: 20, marginBottom: 16, boxShadow: T.shadow }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <h3 style={{ fontSize: 14, fontWeight: 700, color: T.text, margin: 0 }}>Read Receipts</h3>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: adminEventDetail.readCount === adminEventDetail.totalCrew ? T.success : T.accent }}>
+                    {adminEventDetail.readCount || 0} / {adminEventDetail.totalCrew || 0}
+                  </span>
+                </div>
+                <div style={{ width: '100%', height: 6, borderRadius: 3, background: T.bg, overflow: 'hidden', marginBottom: 12 }}>
+                  <div style={{ height: '100%', borderRadius: 3, background: adminEventDetail.readCount === adminEventDetail.totalCrew ? T.success : T.accent, width: `${adminEventDetail.totalCrew ? (adminEventDetail.readCount / adminEventDetail.totalCrew) * 100 : 0}%`, transition: 'width 0.3s' }} />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: 6 }}>
+                  {(adminEventDetail.reads || []).map((r) => (
+                    <div key={r.crewMemberId} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 8, background: T.bg, borderRadius: 8 }}>
+                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: T.success }} />
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: T.text }}>{r.crewName}</div>
+                        <div style={{ fontSize: 10, color: T.textDim }}>{new Date(r.readAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Briefings */}
+              {(adminEventDetail.briefings || []).length > 0 && (
+                <div style={{ background: T.bgCard, borderRadius: 16, border: `1px solid ${T.border}`, padding: 20, marginBottom: 16, boxShadow: T.shadow }}>
+                  <h3 style={{ fontSize: 14, fontWeight: 700, color: T.text, margin: '0 0 12px' }}>Department Briefings</h3>
+                  {adminEventDetail.briefings.map((b) => (
+                    <div key={b.id} style={{ padding: 12, background: T.bg, borderRadius: 10, marginBottom: 8 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, color: T.accent, display: 'inline-block', marginBottom: 6 }}>{b.department}</span>
+                      <p style={{ fontSize: 13, color: T.text, margin: 0, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{b.content}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Post live update */}
+              <div style={{ background: T.bgCard, borderRadius: 16, border: `1px solid ${T.border}`, padding: 20, marginBottom: 16, boxShadow: T.shadow }}>
+                <h3 style={{ fontSize: 14, fontWeight: 700, color: T.text, margin: '0 0 12px' }}>Post Live Update</h3>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input value={newUpdateText} onChange={e => setNewUpdateText(e.target.value)} placeholder='e.g. "ETA changed to 1400"' onKeyDown={e => e.key === 'Enter' && handlePostEventUpdate(adminEventDetail.id)} style={{ flex: 1, padding: '10px 14px', borderRadius: 10, border: `1px solid ${T.border}`, background: T.bg, color: T.text, fontSize: 13, outline: 'none' }} />
+                  <button onClick={() => handlePostEventUpdate(adminEventDetail.id)} disabled={!newUpdateText.trim() || postingUpdate} style={{ padding: '10px 16px', borderRadius: 10, border: 'none', background: !newUpdateText.trim() || postingUpdate ? T.border : T.accent, color: !newUpdateText.trim() || postingUpdate ? T.textDim : '#fff', fontSize: 13, fontWeight: 700, cursor: !newUpdateText.trim() || postingUpdate ? 'default' : 'pointer' }}>
+                    {postingUpdate ? '...' : 'Post'}
+                  </button>
+                </div>
+
+                {/* Existing updates */}
+                {(adminEventDetail.updates || []).length > 0 && (
+                  <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {adminEventDetail.updates.map((u) => (
+                      <div key={u.id} style={{ padding: 12, background: T.bg, borderRadius: 10 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{u.createdBy}</span>
+                          <span style={{ fontSize: 11, color: T.textDim }}>{new Date(u.createdAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                        <p style={{ fontSize: 13, color: T.textMuted, margin: 0 }}>{u.content}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      );
+    }
+
+    // Admin events list
+    const upcomingEvents = events.filter(e => e.status === 'upcoming' || e.status === 'active');
+    const pastEvents = events.filter(e => e.status === 'completed' || e.status === 'cancelled');
+
+    return (
+      <div style={{ padding: isDesktop ? '28px 36px' : 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <h2 style={{ fontSize: isDesktop ? 26 : 20, fontWeight: 800, color: T.text, margin: 0 }}>Events</h2>
+          {isDesktop && (
+            <button onClick={() => setShowNewEvent(true)} className="cb-btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, border: 'none', background: T.accent, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+              {Icons.plus} New Event
+            </button>
+          )}
+        </div>
+
+        {/* Stats row */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+          <StatCard label="Upcoming" value={events.filter(e => e.status === 'upcoming').length} icon={Icons.calendar} />
+          <StatCard label="Active" value={events.filter(e => e.status === 'active').length} color={T.success} icon={Icons.play} />
+        </div>
+
+        {/* Filter */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 16, overflowX: 'auto', paddingBottom: 4 }}>
+          {['upcoming', 'active', 'all', 'past'].map(f => (
+            <button key={f} onClick={() => setEventFilter(f)} style={{ padding: '7px 14px', borderRadius: 8, border: `1px solid ${eventFilter === f ? T.accent : T.border}`, background: eventFilter === f ? T.accentTint : T.bgCard, color: eventFilter === f ? T.accent : T.textMuted, fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', textTransform: 'capitalize' }}>
+              {f === 'past' ? 'Archived' : f}
+            </button>
+          ))}
+        </div>
+
+        {eventsLoading && events.length === 0 && <p style={{ fontSize: 13, color: T.textMuted, textAlign: 'center', padding: 40 }}>Loading events...</p>}
+        {!eventsLoading && events.length === 0 && <p style={{ fontSize: 13, color: T.textMuted, textAlign: 'center', padding: 40 }}>No events found</p>}
+
+        {/* Events list */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {events.map((e) => {
+            const countdown = getCountdown(e.startDate);
+            const typeColor = EVENT_TYPE_COLORS[e.eventType] || T.accent;
+            const readPct = e.totalCrew ? Math.round((e.readCount / e.totalCrew) * 100) : 0;
+            return (
+              <button key={e.id} onClick={() => { setAdminEventView('detail'); handleLoadEventDetail(e, true); }} className="cb-card" style={{ display: 'block', width: '100%', textAlign: 'left', padding: isDesktop ? 20 : 16, background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 14, cursor: 'pointer', boxShadow: T.shadow }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: `${typeColor}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: typeColor, flexShrink: 0 }}>
+                    {EVENT_TYPE_ICONS[e.eventType] || Icons.calendar}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: T.text }}>{e.title}</span>
+                      {countdown && <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 5, background: T.accentTint, color: T.accent }}>{countdown}</span>}
+                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, padding: '3px 8px', borderRadius: 5, background: e.status === 'active' ? T.successTint : e.status === 'upcoming' ? T.accentTint : T.bg, color: e.status === 'active' ? T.success : e.status === 'upcoming' ? T.accent : T.textMuted }}>{e.status}</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: T.textMuted, marginBottom: 8 }}>
+                      {new Date(e.startDate).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      {e.endDate && ` — ${new Date(e.endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 11, color: T.textDim }}>Read: {e.readCount || 0}/{e.totalCrew || 0}</span>
+                        <div style={{ flex: 1, maxWidth: 120, height: 4, borderRadius: 2, background: T.bg, overflow: 'hidden' }}>
+                          <div style={{ height: '100%', borderRadius: 2, background: readPct === 100 ? T.success : T.accent, width: `${readPct}%` }} />
+                        </div>
+                      </div>
+                      {e.updateCount > 0 && <span style={{ fontSize: 11, color: T.textDim }}>{e.updateCount} update{e.updateCount !== 1 ? 's' : ''}</span>}
+                      <span style={{ fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 5, background: `${typeColor}15`, color: typeColor, textTransform: 'capitalize' }}>{EVENT_TYPE_LABELS[e.eventType] || e.eventType}</span>
+                    </div>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  // ─── New Event Modal ──────────────────────────────────────────────
+  const NewEventModal = () => {
+    const d = newEventData;
+    const setD = (key, val) => setNewEventData(prev => ({ ...prev, [key]: val }));
+    const inputStyle = { width: '100%', padding: '10px 14px', borderRadius: 10, border: `1px solid ${T.border}`, background: T.bg, color: T.text, fontSize: 13, outline: 'none', boxSizing: 'border-box' };
+
+    const addBriefing = () => {
+      setD('briefings', [...d.briefings, { department: '', content: '' }]);
+    };
+    const updateBriefing = (idx, field, val) => {
+      const updated = [...d.briefings];
+      updated[idx] = { ...updated[idx], [field]: val };
+      setD('briefings', updated);
+    };
+    const removeBriefing = (idx) => {
+      setD('briefings', d.briefings.filter((_, i) => i !== idx));
+    };
+
+    return (
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', zIndex: 100, display: 'flex', justifyContent: 'center', alignItems: isDesktop ? 'center' : 'flex-end' }}>
+        <div style={{ background: T.bgModal, borderRadius: isDesktop ? 20 : '20px 20px 0 0', width: '100%', maxWidth: isDesktop ? 640 : 480, maxHeight: isDesktop ? '85vh' : '92vh', overflow: 'auto', boxShadow: T.shadowLg }}>
+          {/* Header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 22px', borderBottom: `1px solid ${T.border}`, position: 'sticky', top: 0, background: T.bgModal, zIndex: 1 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0 }}>Create Event</h2>
+            <button onClick={() => setShowNewEvent(false)} style={{ background: 'none', border: 'none', color: T.textMuted, cursor: 'pointer', padding: 4 }}>{Icons.x}</button>
+          </div>
+
+          <div style={{ padding: 22, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* Event Type */}
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6, display: 'block' }}>Event Type</label>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {Object.entries(EVENT_TYPE_LABELS).map(([key, label]) => (
+                  <button key={key} onClick={() => setD('event_type', key)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: `1px solid ${d.event_type === key ? EVENT_TYPE_COLORS[key] : T.border}`, background: d.event_type === key ? `${EVENT_TYPE_COLORS[key]}15` : T.bgCard, color: d.event_type === key ? EVENT_TYPE_COLORS[key] : T.textMuted, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                    {EVENT_TYPE_ICONS[key]} {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Title */}
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6, display: 'block' }}>Title</label>
+              <input value={d.title} onChange={e => setD('title', e.target.value)} placeholder="e.g. Monaco Grand Prix Passage" style={inputStyle} />
+            </div>
+
+            {/* Description */}
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6, display: 'block' }}>General Description</label>
+              <textarea value={d.description} onChange={e => setD('description', e.target.value)} placeholder="General briefing for all crew..." rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
+            </div>
+
+            {/* Dates */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6, display: 'block' }}>Start Date</label>
+                <input type="date" value={d.start_date} onChange={e => setD('start_date', e.target.value)} style={inputStyle} />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6, display: 'block' }}>Start Time</label>
+                <input type="time" value={d.start_time} onChange={e => setD('start_time', e.target.value)} style={inputStyle} />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6, display: 'block' }}>End Date</label>
+                <input type="date" value={d.end_date} onChange={e => setD('end_date', e.target.value)} style={inputStyle} />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6, display: 'block' }}>End Time</label>
+                <input type="time" value={d.end_time} onChange={e => setD('end_time', e.target.value)} style={inputStyle} />
+              </div>
+            </div>
+
+            {/* Department Briefings */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 0.8 }}>Department Briefings</label>
+                <button onClick={addBriefing} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 7, border: `1px solid ${T.accent}40`, background: T.accentTint, color: T.accent, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                  {Icons.plus} Add
+                </button>
+              </div>
+              {d.briefings.map((b, i) => (
+                <div key={i} style={{ padding: 14, background: T.bg, borderRadius: 12, marginBottom: 8, border: `1px solid ${T.border}` }}>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                    <select value={b.department} onChange={e => updateBriefing(i, 'department', e.target.value)} style={{ ...inputStyle, flex: 1, padding: 8 }}>
+                      <option value="">Select department...</option>
+                      {DEPARTMENTS.filter(d => d !== 'All').map(dept => (
+                        <option key={dept} value={dept}>{dept}</option>
+                      ))}
+                    </select>
+                    <button onClick={() => removeBriefing(i)} style={{ background: 'none', border: 'none', color: T.critical, cursor: 'pointer', padding: 4 }}>{Icons.trash}</button>
+                  </div>
+                  <textarea value={b.content} onChange={e => updateBriefing(i, 'content', e.target.value)} placeholder={`Briefing for ${b.department || 'this department'}...`} rows={2} style={{ ...inputStyle, resize: 'vertical' }} />
+                </div>
+              ))}
+            </div>
+
+            {/* Notification Schedule */}
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6, display: 'block' }}>Notification Schedule</label>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {d.notification_schedule.map((n, i) => (
+                  <span key={i} style={{ padding: '6px 12px', borderRadius: 8, background: T.accentTint, color: T.accent, fontSize: 12, fontWeight: 600 }}>
+                    {n.days_before}d before
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Restricted Fields */}
+            <div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginBottom: 8 }}>
+                <input type="checkbox" checked={d.restrictedEnabled} onChange={e => setD('restrictedEnabled', e.target.checked)} style={{ accentColor: T.accent }} />
+                <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>Add restricted information</span>
+              </label>
+              {d.restrictedEnabled && (
+                <div style={{ padding: 14, background: T.goldTint, borderRadius: 12, border: `1px solid ${T.gold}30` }}>
+                  <p style={{ fontSize: 11, color: T.gold, margin: '0 0 8px', fontWeight: 600 }}>This info will only be visible to selected roles</p>
+                  <textarea value={d.restrictedValue} onChange={e => setD('restrictedValue', e.target.value)} placeholder="e.g. Guest names: Mr & Mrs Smith" rows={2} style={{ ...inputStyle, marginBottom: 8, resize: 'vertical' }} />
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {['Captain', 'Chief Officer', 'Chief Stewardess', 'Chef', 'Engineer', 'Bosun'].map(r => (
+                      <button key={r} onClick={() => {
+                        const roles = d.restrictedRoles.includes(r) ? d.restrictedRoles.filter(x => x !== r) : [...d.restrictedRoles, r];
+                        setD('restrictedRoles', roles);
+                      }} style={{ padding: '5px 10px', borderRadius: 6, border: `1px solid ${d.restrictedRoles.includes(r) ? T.gold : T.border}`, background: d.restrictedRoles.includes(r) ? T.goldTint : T.bgCard, color: d.restrictedRoles.includes(r) ? '#b45309' : T.textMuted, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+              <button onClick={() => setShowNewEvent(false)} style={{ flex: 1, padding: 14, borderRadius: 12, border: `1px solid ${T.border}`, background: T.bgCard, color: T.textMuted, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+                Cancel
+              </button>
+              <button onClick={handleCreateEvent} disabled={!d.title.trim() || !d.start_date || eventSaving} className="cb-btn-primary" style={{ flex: 1, padding: 14, borderRadius: 12, border: 'none', background: !d.title.trim() || !d.start_date || eventSaving ? T.border : T.accent, color: !d.title.trim() || !d.start_date || eventSaving ? T.textDim : '#fff', fontSize: 14, fontWeight: 700, cursor: !d.title.trim() || !d.start_date || eventSaving ? 'default' : 'pointer' }}>
+                {eventSaving ? 'Creating...' : 'Create Event'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // AdminNoticeDetail is a genuine component (defined outside CrewBoard)
   // with its own hooks, so it stays as `<AdminNoticeDetail ... />`.
   const renderScreen = () => {
@@ -3747,6 +4535,7 @@ export default function CrewBoard({ user }) {
         case 'notices': return NoticesScreen();
         case 'docs': return DocsScreen();
         case 'training': return AdminTrainingScreen();
+        case 'events': return AdminEventsScreen();
         case 'crew': return CrewManagement();
         case 'activity': return AdminActivityLog();
         default: return AdminDashboard();
@@ -3757,6 +4546,7 @@ export default function CrewBoard({ user }) {
       case 'notices': return NoticesScreen();
       case 'docs': return DocsScreen();
       case 'training': return CrewTrainingScreen();
+      case 'events': return CrewEventsScreen();
       case 'profile': return CrewProfile();
       default: return CrewHome();
     }
@@ -3896,6 +4686,11 @@ export default function CrewBoard({ user }) {
           {Icons.plus}
         </button>
       )}
+      {role === 'admin' && !isDesktop && tab === 'events' && !adminEventView && (
+        <button onClick={() => setShowNewEvent(true)} className="cb-btn-primary" style={{ position: 'fixed', bottom: 100, right: 'calc(50% - 214px)', width: 56, height: 56, borderRadius: '50%', background: T.accent, border: 'none', color: '#fff', cursor: 'pointer', boxShadow: '0 10px 30px rgba(59,130,246,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
+          {Icons.plus}
+        </button>
+      )}
 
       {/* Realtime toast — slides in when a new notice lands while the user
           is on a different tab. Clicks through to the notice detail;
@@ -3964,6 +4759,7 @@ export default function CrewBoard({ user }) {
       {showReplaceDoc && ReplaceDocumentModal()}
       {showExportReport && ExportReportModal()}
       {showModuleBuilder && ModuleBuilderModal()}
+      {showNewEvent && NewEventModal()}
     </div>
   );
 }
