@@ -1,4 +1,6 @@
 import './globals.css';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import CookieConsent from '@/components/CookieConsent';
 
 export const metadata = {
@@ -24,7 +26,7 @@ export default function RootLayout({ children }) {
       <head>
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
-      <body>{children}<CookieConsent /></body>
+      <body>{children}<CookieConsent /><Analytics /><SpeedInsights /></body>
     </html>
   );
 }

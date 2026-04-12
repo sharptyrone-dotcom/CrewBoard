@@ -11,6 +11,7 @@ import useRealtime from '@/hooks/useRealtime';
 import usePresence from '@/hooks/usePresence';
 import useMediaQuery from '@/hooks/useMediaQuery';
 import useOfflineDocuments from '@/hooks/useOfflineDocuments';
+import { trackNoticeRead, trackDocumentAcknowledged, trackQuizCompleted, trackEventRead } from '@/lib/analytics';
 import OfflineIndicator from '@/components/OfflineIndicator';
 import { isPushSupported, getPushPermission, subscribeToPush, isSubscribed as checkPushSubscribed } from '@/lib/push';
 import { sendReminderChannels } from '@/lib/send-reminder';
@@ -429,6 +430,7 @@ export default function CrewBoard({ user }) {
     }
     try {
       await acknowledgeDocument({ documentId: docId, crewMemberId: currentUser.id, version: doc.version });
+      trackDocumentAcknowledged(docId, doc.docType);
       recordActivity({
         action: ACTIVITY_ACTIONS.DOCUMENT_ACKNOWLEDGED,
         targetType: 'document',
@@ -442,9 +444,11 @@ export default function CrewBoard({ user }) {
   };
 
   const handleMarkRead = async (noticeId) => {
+    const notice = notices.find(n => n.id === noticeId);
     setNotices(prev => prev.map(n => n.id === noticeId ? { ...n, readBy: [...new Set([...n.readBy, currentUser.id])] } : n));
     try {
       await markNoticeRead({ noticeId, crewMemberId: currentUser.id });
+      if (notice) trackNoticeRead(noticeId, notice.category, notice.priority);
     } catch (err) {
       console.error('markRead failed', err);
     }
@@ -984,6 +988,7 @@ export default function CrewBoard({ user }) {
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setQuizResults(data.result);
+      trackQuizCompleted(mod.id || mod.moduleId, data.result.score, data.result.passed);
       setTrainingView('results');
       refreshTraining();
     } catch (err) {
@@ -1223,6 +1228,7 @@ export default function CrewBoard({ user }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ crew_member_id: currentUser.id }),
       });
+      trackEventRead(eventId);
       setEvents(prev => prev.map(e => e.id === eventId ? { ...e, isRead: true } : e));
       if (eventDetail?.id === eventId) setEventDetail(prev => prev ? { ...prev, isRead: true } : prev);
     } catch (err) { console.error('[events] mark read failed', err); }

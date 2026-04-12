@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { fetchCurrentCrewMember, getSession, onAuthStateChange } from '@/lib/auth';
+import { trackCrewLogin } from '@/lib/analytics';
 
 // ---------------------------------------------------------------------------
 // AuthProvider
@@ -65,6 +66,7 @@ export function AuthProvider({ children }) {
         setUser(crewMember);
         setLoadError(null);
         setStatus('authed');
+        trackCrewLogin(crewMember.id, crewMember.department);
       } catch (err) {
         if (cancelled) return;
         setLoadError(err?.message || 'Failed to load your crew profile.');
