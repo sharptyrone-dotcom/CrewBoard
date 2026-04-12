@@ -35,6 +35,7 @@ export function useRealtime({
   onNoticeDelete,
   onNotificationInsert,
   onNoticeReadChange,
+  onPollVoteChange,
 } = {}) {
   // Latest-ref pattern: refresh on every render so the channel callbacks
   // always dereference the newest handler (and therefore the newest closure
@@ -46,6 +47,7 @@ export function useRealtime({
     onNoticeDelete,
     onNotificationInsert,
     onNoticeReadChange,
+    onPollVoteChange,
   };
 
   useEffect(() => {
@@ -125,6 +127,19 @@ export function useRealtime({
         },
         (payload) => {
           handlersRef.current.onNoticeReadChange?.(payload);
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          // poll_votes — same pattern as notice_reads: no vessel_id column,
+          // RLS gates visibility to the correct vessel's crew.
+          event: '*',
+          schema: 'public',
+          table: 'poll_votes',
+        },
+        (payload) => {
+          handlersRef.current.onPollVoteChange?.(payload);
         },
       );
 

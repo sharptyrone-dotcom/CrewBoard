@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { signOut } from '@/lib/auth';
 import { fetchCrew } from '@/lib/crew';
 import { acknowledgeDocument, deleteDocument, fetchDocuments, getDocumentSignedUrl, replaceDocument, uploadDocument } from '@/lib/documents';
-import { acknowledgeNotice, createNotice, deleteNotice, fetchNotices, markNoticeRead, rowToNotice } from '@/lib/notices';
+import { acknowledgeNotice, castPollVote, createNotice, deleteNotice, fetchNotices, markNoticeRead, rowToNotice } from '@/lib/notices';
 import { createBroadcastNotification, createTargetedNotification, fetchNotifications, markNotificationRead, rowToNotification } from '@/lib/notifications';
 import { ACTIVITY_ACTIONS, fetchActivity, logActivity } from '@/lib/activity';
 import useRealtime from '@/hooks/useRealtime';
@@ -58,6 +58,8 @@ const Icons = {
   clock: <Icon d={<><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></>} />,
   calendar: <Icon d={<><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></>} />,
   trash: <Icon d={<><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></>} />,
+  poll: <Icon d={<><rect x="3" y="12" width="4" height="9" rx="1" /><rect x="10" y="5" width="4" height="16" rx="1" /><rect x="17" y="8" width="4" height="13" rx="1" /></>} fill="currentColor" strokeWidth={0} />,
+  minus: <Icon d={<line x1="5" y1="12" x2="19" y2="12" />} />,
 };
 
 // ─── Theme ───────────────────────────────────────────────────────────
@@ -195,11 +197,41 @@ function ValidityPill({ validUntil, size = 'sm' }) {
   );
 }
 
+// ─── Poll Results Bar ───────────────────────────────────────────────
+function PollResultsBar({ option, voteCount, totalVotes, isSelected, percentage }) {
+  return (
+    <div style={{
+      position: 'relative', padding: '14px 16px', borderRadius: 12, overflow: 'hidden',
+      border: `2px solid ${isSelected ? T.accent : T.border}`,
+      background: T.bgCard, transition: 'border-color 0.2s',
+    }}>
+      <div style={{
+        position: 'absolute', left: 0, top: 0, bottom: 0,
+        width: `${percentage}%`, background: isSelected ? T.accentGlow : '#f1f5f9',
+        transition: 'width 0.4s ease-out', borderRadius: 10,
+      }} />
+      <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: 14, fontWeight: isSelected ? 700 : 500, color: T.text, display: 'flex', alignItems: 'center', gap: 8 }}>
+          {isSelected && <span style={{ color: T.accent }}>{Icons.checkCircle}</span>}
+          {option.text}
+        </span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: isSelected ? T.accent : T.textMuted }}>
+          {percentage}%
+          <span style={{ fontWeight: 400, fontSize: 11, marginLeft: 4 }}>({voteCount})</span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // ─── Notice Detail (Crew) ────────────────────────────────────────────
-function NoticeDetail({ notice, currentUser, onBack, onAcknowledge, onMarkRead }) {
+function NoticeDetail({ notice, currentUser, onBack, onAcknowledge, onMarkRead, onPollVote }) {
   const isRead = notice.readBy.includes(currentUser.id);
   const isAcked = notice.acknowledgedBy.includes(currentUser.id);
   const needsAck = notice.priority === 'critical';
+  const hasPoll = notice.pollOptions && notice.pollOptions.length >= 2;
+  const myVote = hasPoll ? (notice.pollVotes || []).find(v => v.crewMemberId === currentUser.id) : null;
+  const totalVotes = hasPoll ? (notice.pollVotes || []).length : 0;
 
   return (
     <div style={{ padding: 20 }}>
@@ -209,13 +241,54 @@ function NoticeDetail({ notice, currentUser, onBack, onAcknowledge, onMarkRead }
         <CategoryBadge category={notice.category} />
         <ValidityPill validUntil={notice.validUntil} />
         {notice.pinned && <span style={{ fontSize: 10, color: T.gold, display: 'flex', alignItems: 'center', gap: 4 }}>{Icons.pin} Pinned</span>}
+        {hasPoll && <span style={{ fontSize: 10, fontWeight: 700, color: '#7c3aed', background: '#f5f3ff', padding: '3px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 4 }}>{Icons.poll} Poll</span>}
       </div>
       <h2 style={{ fontSize: 20, fontWeight: 800, color: T.text, margin: '0 0 8px', lineHeight: 1.3 }}>{notice.title}</h2>
       <p style={{ fontSize: 12, color: T.textMuted, margin: '0 0 20px' }}>
         {new Date(notice.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
       </p>
-      <div style={{ fontSize: 15, color: T.text, lineHeight: 1.7, marginBottom: 30, opacity: 0.9 }}>{notice.body}</div>
-      {!isRead && !needsAck && (
+      <div style={{ fontSize: 15, color: T.text, lineHeight: 1.7, marginBottom: hasPoll ? 20 : 30, opacity: 0.9 }}>{notice.body}</div>
+
+      {/* Poll voting / results */}
+      {hasPoll && (
+        <div style={{ marginBottom: 24 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, color: T.text, margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+            {Icons.poll} {myVote ? 'Poll Results' : 'Cast Your Vote'}
+            {totalVotes > 0 && <span style={{ fontSize: 12, fontWeight: 500, color: T.textMuted }}>({totalVotes} vote{totalVotes !== 1 ? 's' : ''})</span>}
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {myVote ? (
+              /* Show results with bars after voting */
+              notice.pollOptions.map(opt => {
+                const voteCount = (notice.pollVotes || []).filter(v => v.optionId === opt.id).length;
+                const pct = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
+                return <PollResultsBar key={opt.id} option={opt} voteCount={voteCount} totalVotes={totalVotes} isSelected={myVote.optionId === opt.id} percentage={pct} />;
+              })
+            ) : (
+              /* Show vote buttons before voting */
+              notice.pollOptions.map(opt => (
+                <button key={opt.id} onClick={() => onPollVote(notice.id, opt.id)} className="cb-card" style={{
+                  width: '100%', padding: '14px 16px', borderRadius: 12, border: `2px solid ${T.border}`,
+                  background: T.bgCard, cursor: 'pointer', textAlign: 'left', fontSize: 14, fontWeight: 500,
+                  color: T.text, transition: 'all 0.15s',
+                }}>
+                  {opt.text}
+                </button>
+              ))
+            )}
+          </div>
+          {myVote && (
+            <button onClick={() => onPollVote(notice.id, myVote.optionId === notice.pollOptions[0].id ? notice.pollOptions[1].id : notice.pollOptions[0].id)} style={{
+              background: 'none', border: 'none', color: T.textMuted, fontSize: 12, cursor: 'pointer',
+              marginTop: 8, padding: 4, textDecoration: 'underline',
+            }}>
+              Change my vote
+            </button>
+          )}
+        </div>
+      )}
+
+      {!isRead && !needsAck && !hasPoll && (
         <button onClick={() => onMarkRead(notice.id)} className="cb-btn-primary" style={{ width: '100%', padding: 16, borderRadius: 12, border: 'none', background: T.accent, color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
           Mark as Read
         </button>
@@ -225,7 +298,7 @@ function NoticeDetail({ notice, currentUser, onBack, onAcknowledge, onMarkRead }
           I have read and understood
         </button>
       )}
-      {(isRead || isAcked) && (
+      {(isRead || isAcked) && !hasPoll && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: 16, color: T.success, fontWeight: 600, fontSize: 14 }}>
           {Icons.checkCircle} {isAcked ? 'Acknowledged' : 'Read'}
         </div>
@@ -389,6 +462,8 @@ function AdminNoticeDetail({ notice, onBack, crew, onDelete, onSendReminder, isD
   const [reminderState, setReminderState] = useState('idle'); // idle | sending | sent | error
   const totalCrew = crew.length;
   const nonReaderCount = crew.filter(cm => !notice.readBy.includes(cm.id)).length;
+  const hasPoll = notice.pollOptions && notice.pollOptions.length >= 2;
+  const totalVotes = hasPoll ? (notice.pollVotes || []).length : 0;
 
   const handleReminder = async () => {
     if (reminderState !== 'idle' || !onSendReminder) return;
@@ -410,8 +485,68 @@ function AdminNoticeDetail({ notice, onBack, crew, onDelete, onSendReminder, isD
         <PriorityBadge priority={notice.priority} />
         <CategoryBadge category={notice.category} />
         <ValidityPill validUntil={notice.validUntil} />
+        {hasPoll && <span style={{ fontSize: 10, fontWeight: 700, color: '#7c3aed', background: '#f5f3ff', padding: '3px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 4 }}>{Icons.poll} Poll</span>}
       </div>
       <h2 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: '0 0 20px' }}>{notice.title}</h2>
+
+      {/* Poll results section for admin */}
+      {hasPoll && (
+        <div style={{ marginBottom: 24, padding: 20, background: '#f8f7ff', borderRadius: 16, border: '1px solid #e9e5ff' }}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, color: '#5b21b6', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+            {Icons.poll} Poll Results
+            <span style={{ fontSize: 12, fontWeight: 500, color: T.textMuted }}>({totalVotes}/{totalCrew} voted)</span>
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {notice.pollOptions.map(opt => {
+              const voters = (notice.pollVotes || []).filter(v => v.optionId === opt.id);
+              const voteCount = voters.length;
+              const pct = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
+              const isWinning = voteCount > 0 && voteCount === Math.max(...notice.pollOptions.map(o => (notice.pollVotes || []).filter(v => v.optionId === o.id).length));
+              return (
+                <div key={opt.id}>
+                  <div style={{
+                    position: 'relative', padding: '12px 16px', borderRadius: 10, overflow: 'hidden',
+                    border: `2px solid ${isWinning ? '#7c3aed' : T.border}`, background: T.bgCard,
+                  }}>
+                    <div style={{
+                      position: 'absolute', left: 0, top: 0, bottom: 0,
+                      width: `${pct}%`, background: isWinning ? '#ede9fe' : '#f1f5f9',
+                      transition: 'width 0.4s ease-out', borderRadius: 8,
+                    }} />
+                    <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 14, fontWeight: isWinning ? 700 : 500, color: T.text }}>{opt.text}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: isWinning ? '#7c3aed' : T.textMuted }}>
+                        {pct}% <span style={{ fontWeight: 400, fontSize: 11 }}>({voteCount})</span>
+                      </span>
+                    </div>
+                  </div>
+                  {/* Show voter names under each option */}
+                  {voters.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6, paddingLeft: 8 }}>
+                      {voters.map(v => {
+                        const cm = crew.find(c => c.id === v.crewMemberId);
+                        return cm ? (
+                          <span key={v.crewMemberId} style={{ fontSize: 11, color: T.textMuted, background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 6, padding: '2px 8px' }}>
+                            {cm.name}
+                          </span>
+                        ) : null;
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {/* Non-voters list */}
+          {totalVotes < totalCrew && (
+            <div style={{ marginTop: 12, fontSize: 12, color: T.textMuted }}>
+              <span style={{ fontWeight: 600 }}>Haven&apos;t voted:</span>{' '}
+              {crew.filter(cm => !(notice.pollVotes || []).some(v => v.crewMemberId === cm.id)).map(cm => cm.name).join(', ')}
+            </div>
+          )}
+        </div>
+      )}
+
       <div style={{ display: 'flex', gap: 10, marginBottom: 24, maxWidth: isDesktop ? 400 : undefined }}>
         <StatCard label="Read" value={`${notice.readBy.length}/${totalCrew}`} color={T.accent} icon={Icons.eye} />
         <StatCard label="Acknowledged" value={`${notice.acknowledgedBy.length}/${totalCrew}`} color={notice.priority === 'critical' ? T.critical : T.success} icon={Icons.checkCircle} />
@@ -472,6 +607,7 @@ function AdminNoticeDetail({ notice, onBack, crew, onDelete, onSendReminder, isD
 function NoticeCard({ notice, currentUser, role, onClick, isPinned, crewCount, isDesktop }) {
   const isRead = notice.readBy.includes(currentUser.id);
   const isAdminDesktop = role === 'admin' && isDesktop;
+  const hasPoll = notice.pollOptions && notice.pollOptions.length >= 2;
   return (
     <button onClick={onClick} className="cb-card" style={{ display: 'flex', gap: isAdminDesktop ? 18 : 14, padding: isAdminDesktop ? '16px 22px' : '18px 20px', background: T.bgCard, border: `1px solid ${isPinned ? T.gold : T.border}`, borderRadius: isAdminDesktop ? 12 : 16, cursor: 'pointer', textAlign: 'left', width: '100%', boxShadow: T.shadow, alignItems: isAdminDesktop ? 'center' : 'stretch' }}>
       <div style={{ width: 4, borderRadius: 2, background: PRIORITIES[notice.priority], flexShrink: 0, alignSelf: 'stretch' }} />
@@ -481,6 +617,7 @@ function NoticeCard({ notice, currentUser, role, onClick, isPinned, crewCount, i
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, minWidth: 120 }}>
             <PriorityBadge priority={notice.priority} />
             <CategoryBadge category={notice.category} />
+            {hasPoll && <span style={{ fontSize: 9, fontWeight: 700, color: '#7c3aed', background: '#f5f3ff', padding: '2px 6px', borderRadius: 4 }}>{Icons.poll}</span>}
           </div>
           <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
             {isPinned && <span style={{ color: T.gold, display: 'flex', flexShrink: 0 }}><Icon d={<><line x1="12" y1="17" x2="12" y2="22" /><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1V2H8v4h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24z" /></>} size={14} /></span>}
@@ -501,6 +638,7 @@ function NoticeCard({ notice, currentUser, role, onClick, isPinned, crewCount, i
               <PriorityBadge priority={notice.priority} />
               <CategoryBadge category={notice.category} />
               <ValidityPill validUntil={notice.validUntil} />
+              {hasPoll && <span style={{ fontSize: 9, fontWeight: 700, color: '#7c3aed', background: '#f5f3ff', padding: '2px 6px', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 3 }}>{Icons.poll} Poll</span>}
               {isPinned && <span style={{ color: T.gold, display: 'flex' }}><Icon d={<><line x1="12" y1="17" x2="12" y2="22" /><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1V2H8v4h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24z" /></>} size={14} /></span>}
             </div>
             <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 4, lineHeight: 1.3 }}>{notice.title}</div>
@@ -550,7 +688,7 @@ export default function CrewBoard({ user }) {
   // Dashboard "Send Reminder" button state: idle → sending → sent/empty → idle
   const [dashReminderState, setDashReminderState] = useState('idle');
   const [dashReminderSentCount, setDashReminderSentCount] = useState(0);
-  const [newNotice, setNewNotice] = useState({ title: '', body: '', category: 'Safety', priority: 'routine', dept: 'All', pinned: false, requireAck: false, validUntil: '' });
+  const [newNotice, setNewNotice] = useState({ title: '', body: '', category: 'Safety', priority: 'routine', dept: 'All', pinned: false, requireAck: false, validUntil: '', pollEnabled: false, pollOptions: ['', ''] });
   // New document upload form state. `file` holds a browser File object
   // picked via <input type="file">; the rest are plain text inputs.
   // Shape matches what uploadDocument() expects.
@@ -606,6 +744,20 @@ export default function CrewBoard({ user }) {
     () => crew.map(c => ({ ...c, online: onlineCrewIds.has(c.id) || c.online })),
     [crew, onlineCrewIds],
   );
+
+  // Keep detail-view snapshots in sync with the canonical notices array so
+  // poll votes, read receipts, etc. update in real-time while the user is
+  // looking at a notice detail view.
+  useEffect(() => {
+    if (selectedNotice) {
+      const fresh = notices.find(n => n.id === selectedNotice.id);
+      if (fresh && fresh !== selectedNotice) setSelectedNotice(fresh);
+    }
+    if (adminNoticeView) {
+      const fresh = notices.find(n => n.id === adminNoticeView.id);
+      if (fresh && fresh !== adminNoticeView) setAdminNoticeView(fresh);
+    }
+  }, [notices]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     let cancelled = false;
@@ -765,6 +917,19 @@ export default function CrewBoard({ user }) {
         return { ...n, readBy, acknowledgedBy };
       }));
     },
+    onPollVoteChange: (payload) => {
+      const row = payload.new || payload.old;
+      if (!row) return;
+      setNotices(prev => prev.map(n => {
+        if (n.id !== row.notice_id) return n;
+        if (payload.eventType === 'DELETE') {
+          return { ...n, pollVotes: (n.pollVotes || []).filter(v => v.crewMemberId !== row.crew_member_id) };
+        }
+        // INSERT or UPDATE — upsert the vote
+        const existing = (n.pollVotes || []).filter(v => v.crewMemberId !== row.crew_member_id);
+        return { ...n, pollVotes: [...existing, { crewMemberId: row.crew_member_id, optionId: row.option_id }] };
+      }));
+    },
   });
 
   const unreadNotifs = notifications.filter(n => !n.read).length;
@@ -837,6 +1002,29 @@ export default function CrewBoard({ user }) {
       await markNoticeRead({ noticeId, crewMemberId: currentUser.id });
     } catch (err) {
       console.error('markRead failed', err);
+    }
+  };
+
+  const handlePollVote = async (noticeId, optionId) => {
+    // Optimistic update — upsert vote in local state
+    setNotices(prev => prev.map(n => {
+      if (n.id !== noticeId) return n;
+      const filtered = (n.pollVotes || []).filter(v => v.crewMemberId !== currentUser.id);
+      return { ...n, pollVotes: [...filtered, { crewMemberId: currentUser.id, optionId }] };
+    }));
+    // Also mark as read if not already
+    if (!notices.find(n => n.id === noticeId)?.readBy.includes(currentUser.id)) {
+      setNotices(prev => prev.map(n => n.id === noticeId ? { ...n, readBy: [...new Set([...n.readBy, currentUser.id])] } : n));
+      markNoticeRead({ noticeId, crewMemberId: currentUser.id }).catch(() => {});
+    }
+    try {
+      await castPollVote({ noticeId, crewMemberId: currentUser.id, optionId });
+    } catch (err) {
+      console.error('pollVote failed, reverting', err);
+      setNotices(prev => prev.map(n => {
+        if (n.id !== noticeId) return n;
+        return { ...n, pollVotes: (n.pollVotes || []).filter(v => v.crewMemberId !== currentUser.id) };
+      }));
     }
   };
 
@@ -1029,13 +1217,26 @@ export default function CrewBoard({ user }) {
       const validUntilIso = newNotice.validUntil
         ? new Date(newNotice.validUntil).toISOString()
         : null;
+      // Build poll options array if the admin enabled a poll and provided
+      // at least 2 non-empty options. Each gets a short unique id.
+      let pollOpts = null;
+      if (newNotice.pollEnabled && newNotice.category === 'Social') {
+        const validOpts = newNotice.pollOptions.filter(o => o.trim());
+        if (validOpts.length >= 2) {
+          pollOpts = validOpts.map((text, i) => ({
+            id: `opt_${i}_${Date.now()}`,
+            text: text.trim(),
+          }));
+        }
+      }
       const posted = await createNotice({
         ...newNotice,
         validUntil: validUntilIso,
         createdBy: currentUser.id,
+        pollOptions: pollOpts,
       });
       setNotices(prev => [posted, ...prev]);
-      setNewNotice({ title: '', body: '', category: 'Safety', priority: 'routine', dept: 'All', pinned: false, requireAck: false, validUntil: '' });
+      setNewNotice({ title: '', body: '', category: 'Safety', priority: 'routine', dept: 'All', pinned: false, requireAck: false, validUntil: '', pollEnabled: false, pollOptions: ['', ''] });
       setShowNewNotice(false);
       recordActivity({
         action: ACTIVITY_ACTIONS.NOTICE_POSTED,
@@ -1423,7 +1624,7 @@ export default function CrewBoard({ user }) {
 
   // ─── Notices Screen ────────────────────────────────────────────────
   const NoticesScreen = () => {
-    if (selectedNotice) return <NoticeDetail notice={selectedNotice} currentUser={currentUser} onBack={() => setSelectedNotice(null)} onAcknowledge={handleAcknowledge} onMarkRead={handleMarkRead} />;
+    if (selectedNotice) return <NoticeDetail notice={selectedNotice} currentUser={currentUser} onBack={() => setSelectedNotice(null)} onAcknowledge={handleAcknowledge} onMarkRead={handleMarkRead} onPollVote={handlePollVote} />;
     const filtered = notices
       .filter(n => noticeFilter === 'All' || n.category === noticeFilter)
       .filter(n => !searchQuery || n.title.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -2059,14 +2260,65 @@ export default function CrewBoard({ user }) {
             />
             <div style={{ fontSize: 11, color: T.textDim, marginTop: 4 }}>Leave blank if the notice doesn&apos;t expire.</div>
           </div>
-          <div style={{ display: 'flex', gap: 12 }}>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: T.text, cursor: 'pointer' }}>
               <input type="checkbox" checked={newNotice.pinned} onChange={e => setNewNotice(p => ({ ...p, pinned: e.target.checked }))} style={{ accentColor: T.accent }} /> Pin notice
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: T.text, cursor: 'pointer' }}>
               <input type="checkbox" checked={newNotice.requireAck} onChange={e => setNewNotice(p => ({ ...p, requireAck: e.target.checked }))} style={{ accentColor: T.accent }} /> Require acknowledgement
             </label>
+            {newNotice.category === 'Social' && (
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#7c3aed', cursor: 'pointer', fontWeight: 600 }}>
+                <input type="checkbox" checked={newNotice.pollEnabled} onChange={e => setNewNotice(p => ({ ...p, pollEnabled: e.target.checked }))} style={{ accentColor: '#7c3aed' }} /> Add Poll
+              </label>
+            )}
           </div>
+
+          {/* Poll builder — only shows when category is Social and poll is enabled */}
+          {newNotice.category === 'Social' && newNotice.pollEnabled && (
+            <div style={{ padding: 16, background: '#f8f7ff', borderRadius: 12, border: '1px solid #e9e5ff' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: '#5b21b6' }}>Poll Options</label>
+                {newNotice.pollOptions.length < 6 && (
+                  <button
+                    onClick={() => setNewNotice(p => ({ ...p, pollOptions: [...p.pollOptions, ''] }))}
+                    style={{ background: 'none', border: 'none', color: '#7c3aed', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                  >
+                    {Icons.plus} Add option
+                  </button>
+                )}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {newNotice.pollOptions.map((opt, idx) => (
+                  <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', width: 20, textAlign: 'center', flexShrink: 0 }}>{idx + 1}.</span>
+                    <input
+                      value={opt}
+                      onChange={e => {
+                        const updated = [...newNotice.pollOptions];
+                        updated[idx] = e.target.value;
+                        setNewNotice(p => ({ ...p, pollOptions: updated }));
+                      }}
+                      placeholder={`Option ${idx + 1}...`}
+                      style={{ flex: 1, padding: 10, borderRadius: 8, border: `1px solid #e9e5ff`, background: T.bgCard, color: T.text, fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+                    />
+                    {newNotice.pollOptions.length > 2 && (
+                      <button
+                        onClick={() => setNewNotice(p => ({ ...p, pollOptions: p.pollOptions.filter((_, i) => i !== idx) }))}
+                        style={{ background: 'none', border: 'none', color: T.textDim, cursor: 'pointer', padding: 4, flexShrink: 0 }}
+                      >
+                        {Icons.minus}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div style={{ fontSize: 11, color: T.textDim, marginTop: 8 }}>
+                Minimum 2 options, maximum 6. Crew can vote for one option.
+              </div>
+            </div>
+          )}
+
           <button onClick={handlePostNotice} disabled={!newNotice.title.trim()} className="cb-btn-primary" style={{ width: '100%', padding: 16, borderRadius: 12, border: 'none', background: newNotice.title.trim() ? T.accent : T.border, color: newNotice.title.trim() ? '#fff' : T.textDim, fontSize: 15, fontWeight: 700, cursor: newNotice.title.trim() ? 'pointer' : 'default', transition: 'background 0.2s' }}>
             Post Notice
           </button>
