@@ -2951,6 +2951,21 @@ export default function CrewBoard({ user }) {
           if (assignData.error) {
             console.error('[module-builder] assign failed', assignData.error);
             alert(`Module saved but assignment failed: ${assignData.error}`);
+          } else {
+            // Create in-app notifications client-side (the assign endpoint's
+            // server-side INSERT into notifications silently fails because
+            // migration 007 dropped the anon RLS policies on that table).
+            const deadlineNote = b.deadline ? ` Deadline: ${b.deadline}.` : '';
+            for (const cid of assignTarget) {
+              createTargetedNotification({
+                targetCrewId: cid,
+                type: 'system',
+                title: 'New Training Assignment',
+                body: `You have been assigned "${b.title}".${deadlineNote}`,
+                referenceType: 'training_module',
+                referenceId: moduleId,
+              }).catch(() => {});
+            }
           }
         }
       }
