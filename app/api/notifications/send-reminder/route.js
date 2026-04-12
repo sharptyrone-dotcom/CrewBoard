@@ -1,13 +1,12 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin as supabaseServer } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 
 // ---------------------------------------------------------------------------
 // POST /api/notifications/send-reminder
 //
 // Sends reminder notifications via email and/or push to a list of crew
-// member IDs. The in-app notification is still created client-side via
-// Supabase — this route handles the two channels that need server-side
-// secrets (Resend API key for email, VAPID private key for Web Push).
+// member IDs. When `createNotification: true` is passed in the body, also
+// creates in-app targeted notifications via the service-role client.
 //
 // Body: {
 //   crewMemberIds: string[],     — UUIDs of crew to notify
@@ -21,13 +20,7 @@ import { NextResponse } from 'next/server';
 // Response: { email: { sent, failed }, push: { sent, failed } }
 // ---------------------------------------------------------------------------
 
-// Server-side Supabase client with service-role key so we can read
-// push_subscriptions and crew emails across the whole vessel. Falls
-// back to the anon key if the service role key isn't set — push/email
-// will silently degrade.
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabaseServer = createClient(supabaseUrl, supabaseServiceKey);
+// supabaseServer is the service-role admin client imported from lib/supabase.
 
 // ── Email via Resend ─────────────────────────────────────────────────
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
@@ -146,7 +139,7 @@ async function sendPushNotification(subscription, payload) {
 // ── Main handler ─────────────────────────────────────────────────────
 export async function POST(request) {
   try {
-    const { crewMemberIds, vesselId, title, body, refType, refId } = await request.json();
+    const { crewMemberIds, vesselId, title, body, refType, refId, createNotification } = await request.json();
 
     if (!crewMemberIds?.length || !vesselId || !title) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -203,6 +196,26 @@ export async function POST(request) {
       await Promise.allSettled(pushPromises);
     } else {
       pushResults.skipped = crewMemberIds.length;
+    }
+
+    // 5. Optionally create in-app notifications server-side.
+    //    Callers that still create notifications client-side should omit this
+    //    flag to avoid duplicates.
+    if (createNotification) {
+      try {
+        const notifRows = crewMemberIds.map((cid) => ({
+          vessel_id: vesselId,
+          target_crew_id: cid,
+          type: 'system',
+          title,
+          body: body || null,
+          reference_type: refType || null,
+          reference_id: refId || null,
+        }));
+        await supabaseServer.from('notifications').insert(notifRows);
+      } catch (notifErr) {
+        console.error('[send-reminder] in-app notification insert failed (non-fatal)', notifErr);
+      }
     }
 
     return NextResponse.json({

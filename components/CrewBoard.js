@@ -1077,18 +1077,8 @@ export default function CrewBoard({ user }) {
           if (assignData.error) {
             console.error('[module-builder] assign failed', assignData.error);
             alert(`Module saved but assignment failed: ${assignData.error}`);
-          } else {
-            const deadlineNote = b.deadline ? ` Deadline: ${b.deadline}.` : '';
-            for (const cid of assignTarget) {
-              createTargetedNotification({
-                targetCrewId: cid,
-                type: 'system',
-                title: 'New Training Assignment',
-                body: `You have been assigned "${b.title}".${deadlineNote}`,
-                referenceType: 'training_module',
-                referenceId: moduleId,
-              }).catch(() => {});
-            }
+          } else if (assignData.error) {
+            // assignment failed — already logged above
           }
         }
       }
@@ -1162,18 +1152,9 @@ export default function CrewBoard({ user }) {
           body: `Please complete the training module "${mod.title || mod.moduleTitle}".`,
           refType: 'training_module',
           refId: mod.id || mod.moduleId,
+          createNotification: true,
         }),
       });
-      for (const cid of crewIds) {
-        createTargetedNotification({
-          targetCrewId: cid,
-          type: 'system',
-          title: 'Training Reminder',
-          body: `Please complete "${mod.title || mod.moduleTitle}".`,
-          referenceType: 'training_module',
-          referenceId: mod.id || mod.moduleId,
-        }).catch(() => {});
-      }
     } catch (err) { console.error('[training] reminder failed', err); }
   };
 
@@ -1311,17 +1292,7 @@ export default function CrewBoard({ user }) {
       const data = await res.json();
       if (data.error) throw new Error(data.error);
 
-      const crewIds = crew.filter(c => c.id !== currentUser.id).map(c => c.id);
-      for (const cid of crewIds) {
-        createTargetedNotification({
-          targetCrewId: cid,
-          type: 'system',
-          title: 'New Event',
-          body: `"${d.title}" \u2014 ${new Date(startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`,
-          referenceType: 'event',
-          referenceId: data.event.id,
-        }).catch(() => {});
-      }
+      // Notifications are now created server-side by the events POST endpoint.
 
       setShowNewEvent(false);
       setNewEventData({

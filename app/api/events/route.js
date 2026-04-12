@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 
 // ---------------------------------------------------------------------------
@@ -20,13 +20,6 @@ import { NextResponse } from 'next/server';
 //   status         — filter by status (default: upcoming,active)
 //   include_past   — 'true' to include completed/cancelled
 // ---------------------------------------------------------------------------
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  '';
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 // ── GET ─────────────────────────────────────────────────────────────────────
 export async function GET(request) {
@@ -204,6 +197,33 @@ export async function POST(request) {
         if (bErr) throw bErr;
         insertedBriefings = bData || [];
       }
+    }
+
+    // 3. Notify all other crew members on this vessel.
+    try {
+      const { data: crewRows } = await supabase
+        .from('crew_members')
+        .select('id')
+        .eq('vessel_id', vessel_id)
+        .eq('is_active', true)
+        .neq('id', crew_member_id);
+
+      if (crewRows && crewRows.length > 0) {
+        const dateFmt = new Date(start_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+        const notifRows = crewRows.map((c) => ({
+          vessel_id,
+          target_crew_id: c.id,
+          type: 'system',
+          title: 'New Event',
+          body: `"${title}" — ${dateFmt}`,
+          reference_type: 'event',
+          reference_id: event.id,
+        }));
+        await supabase.from('notifications').insert(notifRows);
+      }
+    } catch (notifErr) {
+      // Non-fatal — the event was already created successfully.
+      console.error('[events] notification insert failed (non-fatal)', notifErr);
     }
 
     return NextResponse.json(

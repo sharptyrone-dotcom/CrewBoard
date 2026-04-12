@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 
 // ---------------------------------------------------------------------------
@@ -23,13 +23,6 @@ import { NextResponse } from 'next/server';
 //   questions: [{ question_text, question_type, options, explanation, sort_order }]
 // }
 // ---------------------------------------------------------------------------
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  '';
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 // ── GET ─────────────────────────────────────────────────────────────────────
 export async function GET(request) {

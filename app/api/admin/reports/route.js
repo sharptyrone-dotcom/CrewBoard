@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin as supabaseServer } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 
 // ---------------------------------------------------------------------------
@@ -14,10 +14,6 @@ import { NextResponse } from 'next/server';
 //   date_to    — ISO date string (optional, inclusive)
 //   vessel_id  — UUID of the vessel to report on
 // ---------------------------------------------------------------------------
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabaseServer = createClient(supabaseUrl, supabaseKey);
 
 // Map DB rows to the UI shapes that reportGenerator expects.
 function mapNotice(row) {

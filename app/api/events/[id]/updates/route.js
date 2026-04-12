@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 
 // ---------------------------------------------------------------------------
@@ -8,13 +8,6 @@ import { NextResponse } from 'next/server';
 // POST — Post a real-time update (e.g. "ETA changed to 1400").
 //        Body: { crew_member_id, content }
 // ---------------------------------------------------------------------------
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  '';
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 // ── GET ─────────────────────────────────────────────────────────────────────
 export async function GET(request, { params }) {
