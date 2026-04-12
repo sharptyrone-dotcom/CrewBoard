@@ -1,4 +1,5 @@
 import './globals.css';
+import CookieConsent from '@/components/CookieConsent';
 
 export const metadata = {
   title: 'CrewBoard — Yacht Crew Operational Platform',
@@ -23,7 +24,7 @@ export default function RootLayout({ children }) {
       <head>
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
-      <body>{children}</body>
+      <body>{children}<CookieConsent /></body>
     </html>
   );
 }

@@ -412,9 +412,9 @@ export default function LandingPage() {
             <div className="footer-col">
               <h4>Legal</h4>
               <ul>
-                <li><a href="#">Privacy</a></li>
-                <li><a href="#">Terms</a></li>
-                <li><a href="#">GDPR</a></li>
+                <li><Link href="/privacy">Privacy</Link></li>
+                <li><Link href="/terms">Terms</Link></li>
+                <li><Link href="/cookies">Cookies</Link></li>
                 <li><a href="#">DPA</a></li>
               </ul>
             </div>

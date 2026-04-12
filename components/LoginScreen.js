@@ -132,6 +132,13 @@ export default function LoginScreen() {
             </button>
           ))}
         </div>
+
+        {/* Legal footer links */}
+        <div style={{ textAlign: 'center', marginTop: 24, paddingTop: 16, borderTop: `1px solid ${T.border}`, display: 'flex', justifyContent: 'center', gap: 18, fontSize: 12 }}>
+          <Link href="/privacy" style={{ color: T.textDim, textDecoration: 'none' }}>Privacy</Link>
+          <Link href="/terms" style={{ color: T.textDim, textDecoration: 'none' }}>Terms</Link>
+          <Link href="/cookies" style={{ color: T.textDim, textDecoration: 'none' }}>Cookies</Link>
+        </div>
       </div>
     </div>
   );
