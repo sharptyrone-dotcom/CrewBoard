@@ -11,6 +11,7 @@ import useRealtime from '@/hooks/useRealtime';
 import usePresence from '@/hooks/usePresence';
 import useMediaQuery from '@/hooks/useMediaQuery';
 import { isPushSupported, getPushPermission, subscribeToPush, isSubscribed as checkPushSubscribed } from '@/lib/push';
+import { supabase } from '@/lib/supabase';
 import { sendReminderChannels } from '@/lib/send-reminder';
 // reportGenerator is dynamically imported in handleExport to keep the
 // main bundle small — jspdf + autotable add ~140 kB that only admins
@@ -772,6 +773,7 @@ export default function CrewBoard({ user }) {
     questions: [], assignTo: 'none', assignDept: 'All', assignIds: [], deadline: '',
   });
   const [moduleBuilderSaving, setModuleBuilderSaving] = useState(false);
+  const [editingModuleId, setEditingModuleId] = useState(null);
   const [trainingReminderState, setTrainingReminderState] = useState('idle');
 
   // Derived from the authenticated session via fetchCurrentCrewMember in
@@ -2774,6 +2776,37 @@ export default function CrewBoard({ user }) {
     } catch (err) { console.error('[training] refresh failed', err); }
   };
 
+  const uploadTrainingImage = async (file) => {
+    const safeName = (file.name || 'image.jpg').replace(/[^a-zA-Z0-9._-]/g, '_');
+    const objectId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+    const objectPath = `${currentUser.vesselId}/training/${objectId}-${safeName}`;
+    const { error } = await supabase.storage.from('vessel-documents').upload(objectPath, file, {
+      contentType: file.type || 'image/jpeg', cacheControl: '3600', upsert: false,
+    });
+    if (error) throw error;
+    return objectPath;
+  };
+
+  const resolveContentUrls = async (content) => {
+    if (!content || !content.length) return content;
+    return Promise.all(content.map(async (block) => {
+      if (block.type === 'image' && block.value && !/^https?:\/\//i.test(block.value) && !/^data:/i.test(block.value)) {
+        try {
+          const { data } = await supabase.storage.from('vessel-documents').createSignedUrl(block.value, 3600);
+          return { ...block, resolvedUrl: data?.signedUrl || block.value };
+        } catch { return block; }
+      }
+      return block;
+    }));
+  };
+
+  const resetModuleBuilder = () => {
+    setShowModuleBuilder(false);
+    setEditingModuleId(null);
+    setModuleBuilderData({ title: '', description: '', content: [], passMark: 80, timeLimitMinutes: '', randomiseQuestions: false, isPublished: false, questions: [], assignTo: 'none', assignDept: 'All', assignIds: [], deadline: '' });
+    setModuleBuilderSaving(false);
+  };
+
   const handleStartQuiz = async (mod) => {
     try {
       const res = await fetch(`/api/training/modules/${mod.id || mod.moduleId}/quiz?crew_member_id=${currentUser.id}`);
@@ -2818,44 +2851,87 @@ export default function CrewBoard({ user }) {
     setModuleBuilderSaving(true);
     const b = moduleBuilderData;
     try {
-      const modulePayload = {
-        crew_member_id: currentUser.id,
-        vessel_id: currentUser.vesselId,
-        title: b.title,
-        description: b.description,
-        content: b.content,
-        pass_mark: b.passMark,
-        time_limit_minutes: b.timeLimitMinutes ? parseInt(b.timeLimitMinutes) : null,
-        randomise_questions: b.randomiseQuestions,
-        is_published: publish,
-        questions: b.questions.map((q, i) => ({
-          question_text: q.questionText,
-          question_type: q.questionType,
-          options: q.options,
-          explanation: q.explanation || null,
-          sort_order: i,
-        })),
-      };
-      const res = await fetch('/api/training/modules', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(modulePayload),
-      });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      // Assign if selected
-      if (b.assignTo !== 'none' && publish) {
-        let assignIds = b.assignTo === 'all' ? 'all'
-          : b.assignTo === 'department' ? `department:${b.assignDept}`
-          : b.assignIds;
-        await fetch(`/api/training/modules/${data.module.id}/assign`, {
+      // Strip ephemeral preview URLs from content before saving
+      const cleanContent = (b.content || []).map(({ previewUrl, resolvedUrl, ...rest }) => rest);
+      const questions = b.questions.map((q, i) => ({
+        question_text: q.questionText,
+        question_type: q.questionType,
+        options: q.options,
+        explanation: q.explanation || null,
+        sort_order: i,
+      }));
+
+      let moduleId = editingModuleId;
+
+      if (editingModuleId) {
+        // ── Edit existing module via PUT ──
+        const res = await fetch(`/api/training/modules/${editingModuleId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            crew_member_id: currentUser.id,
+            title: b.title,
+            description: b.description,
+            content: cleanContent,
+            pass_mark: b.passMark,
+            time_limit_minutes: b.timeLimitMinutes ? parseInt(b.timeLimitMinutes) : null,
+            randomise_questions: b.randomiseQuestions,
+            is_published: publish,
+            questions,
+          }),
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+      } else {
+        // ── Create new module via POST ──
+        const res = await fetch('/api/training/modules', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ crew_member_id: currentUser.id, crew_member_ids: assignIds, deadline: b.deadline || null }),
+          body: JSON.stringify({
+            crew_member_id: currentUser.id,
+            vessel_id: currentUser.vesselId,
+            title: b.title,
+            description: b.description,
+            content: cleanContent,
+            pass_mark: b.passMark,
+            time_limit_minutes: b.timeLimitMinutes ? parseInt(b.timeLimitMinutes) : null,
+            randomise_questions: b.randomiseQuestions,
+            is_published: publish,
+            questions,
+          }),
         });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        moduleId = data.module.id;
       }
-      setShowModuleBuilder(false);
-      setModuleBuilderData({ title: '', description: '', content: [], passMark: 80, timeLimitMinutes: '', randomiseQuestions: false, isPublished: false, questions: [], assignTo: 'none', assignDept: 'All', assignIds: [], deadline: '' });
+
+      // ── Assign if selected (both create & edit) ──
+      if (b.assignTo !== 'none' && publish && moduleId) {
+        const assignTarget = b.assignTo === 'all' ? 'all'
+          : b.assignTo === 'department' ? `department:${b.assignDept}`
+          : b.assignIds;
+        const assignRes = await fetch(`/api/training/modules/${moduleId}/assign`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            crew_member_id: currentUser.id,
+            crew_member_ids: assignTarget,
+            vessel_id: currentUser.vesselId,
+            deadline: b.deadline || null,
+          }),
+        });
+        const assignData = await assignRes.json();
+        if (assignData.error) {
+          console.error('[module-builder] assign failed', assignData.error);
+          alert(`Module saved but assignment failed: ${assignData.error}`);
+        } else if (assignData.assigned === 0 && assignData.skipped > 0) {
+          // All targets already assigned — not an error, just info
+        } else if (assignData.assigned === 0 && assignData.skipped === 0) {
+          alert('Module saved but no crew members found to assign.');
+        }
+      }
+
+      resetModuleBuilder();
       refreshTraining();
     } catch (err) {
       console.error('[module-builder] save failed', err);
@@ -2874,6 +2950,45 @@ export default function CrewBoard({ user }) {
     } catch (err) {
       console.error('[admin-training] load results failed', err);
       setAdminTrainingResults(null);
+    }
+  };
+
+  const handleEditModule = async (mod) => {
+    try {
+      const modId = mod.id || mod.moduleId;
+      const res = await fetch(`/api/training/modules/${modId}?crew_member_id=${currentUser.id}&role=admin`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      const m = data.module;
+      // Resolve image URLs for preview in builder
+      const resolvedContent = await resolveContentUrls(m.content || []);
+      setEditingModuleId(m.id);
+      setModuleBuilderData({
+        title: m.title || '',
+        description: m.description || '',
+        content: resolvedContent.map(c => ({ type: c.type, value: c.value || '', caption: c.caption || '', previewUrl: c.resolvedUrl || '' })),
+        passMark: m.passMark || 80,
+        timeLimitMinutes: m.timeLimitMinutes || '',
+        randomiseQuestions: m.randomiseQuestions || false,
+        isPublished: m.isPublished || false,
+        questions: (m.questions || []).map(q => ({
+          questionText: q.question_text,
+          questionType: q.question_type,
+          explanation: q.explanation || '',
+          options: (q.options || []).map(o => ({ ...o })),
+        })),
+        assignTo: 'none',
+        assignDept: 'All',
+        assignIds: [],
+        deadline: '',
+      });
+      setShowModuleBuilder(true);
+      // Close the results view
+      setTrainingView('dashboard');
+      setAdminTrainingResults(null);
+    } catch (err) {
+      console.error('[training] edit load failed', err);
+      alert('Failed to load module for editing');
     }
   };
 
@@ -2934,7 +3049,7 @@ export default function CrewBoard({ user }) {
             );
             if (block.type === 'image') return (
               <div key={i} style={{ marginBottom: 16, borderRadius: 12, overflow: 'hidden', border: `1px solid ${T.border}` }}>
-                <img src={block.value} alt={block.caption || 'Training image'} style={{ width: '100%', display: 'block' }} />
+                <img src={block.resolvedUrl || block.value} alt={block.caption || 'Training image'} style={{ width: '100%', display: 'block' }} />
                 {block.caption && <div style={{ fontSize: 12, color: T.textMuted, padding: '10px 14px', background: T.bg }}>{block.caption}</div>}
               </div>
             );
@@ -3120,7 +3235,8 @@ export default function CrewBoard({ user }) {
         const res = await fetch(`/api/training/modules/${mod.id || mod.moduleId}?crew_member_id=${currentUser.id}`);
         const data = await res.json();
         if (data.error) throw new Error(data.error);
-        setSelectedModule({ ...mod, ...data.module });
+        const resolvedContent = await resolveContentUrls(data.module.content || []);
+        setSelectedModule({ ...mod, ...data.module, content: resolvedContent });
         setTrainingView('module');
       } catch (err) {
         console.error('[training] module load failed', err);
@@ -3223,7 +3339,12 @@ export default function CrewBoard({ user }) {
       return (
         <div style={{ padding: isDesktop ? '28px 36px' : 20 }}>
           <BackButton onClick={() => { setTrainingView('dashboard'); setSelectedModule(null); setAdminTrainingResults(null); }} label="Training" />
-          <h2 style={{ fontSize: isDesktop ? 22 : 18, fontWeight: 800, color: T.text, margin: '0 0 16px' }}>{r.title}</h2>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, gap: 12 }}>
+            <h2 style={{ fontSize: isDesktop ? 22 : 18, fontWeight: 800, color: T.text, margin: 0, flex: 1, minWidth: 0 }}>{r.title}</h2>
+            <button onClick={() => handleEditModule(r)} style={{ padding: '8px 16px', borderRadius: 10, border: `1px solid ${T.accent}`, background: T.accentTint, color: T.accentDark, fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, whiteSpace: 'nowrap' }}>
+              {Icons.file} Edit Module
+            </button>
+          </div>
           {/* Stats */}
           <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(4, 1fr)' : '1fr 1fr', gap: isDesktop ? 14 : 10, marginBottom: 20 }}>
             <StatCard label="Completion" value={`${r.stats?.completionRate ?? 0}%`} icon={Icons.checkCircle} color={T.success} />
@@ -3378,11 +3499,11 @@ export default function CrewBoard({ user }) {
     const labelStyle = { fontSize: 12, fontWeight: 600, color: T.textMuted, display: 'block', marginBottom: 6 };
 
     return (
-      <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(4px)', zIndex: 100, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '40px 16px', overflow: 'auto' }} onClick={() => setShowModuleBuilder(false)}>
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(4px)', zIndex: 100, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '40px 16px', overflow: 'auto' }} onClick={resetModuleBuilder}>
         <div onClick={e => e.stopPropagation()} style={{ background: T.bgModal, borderRadius: 20, width: '100%', maxWidth: 600, boxShadow: T.shadowLg, overflow: 'hidden' }}>
           <div style={{ padding: '20px 24px', borderBottom: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0 }}>New Training Module</h2>
-            <button onClick={() => setShowModuleBuilder(false)} style={{ background: 'none', border: 'none', color: T.textMuted, cursor: 'pointer' }}>{Icons.x}</button>
+            <h2 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0 }}>{editingModuleId ? 'Edit Training Module' : 'New Training Module'}</h2>
+            <button onClick={resetModuleBuilder} style={{ background: 'none', border: 'none', color: T.textMuted, cursor: 'pointer' }}>{Icons.x}</button>
           </div>
           <div style={{ padding: 24, maxHeight: 'calc(100vh - 180px)', overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Title & Description */}
@@ -3400,15 +3521,48 @@ export default function CrewBoard({ user }) {
               {b.content.map((block, i) => (
                 <div key={i} style={{ border: `1px solid ${T.border}`, borderRadius: 10, padding: 12, marginBottom: 8, background: T.bg }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, flex: 1 }}>{block.type === 'text' ? 'Text' : block.type === 'image' ? 'Image URL' : 'Video URL'}</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, flex: 1 }}>{block.type === 'text' ? 'Text' : block.type === 'image' ? 'Image' : 'Video URL'}</span>
                     <button onClick={() => moveContentBlock(i, -1)} style={{ background: 'none', border: 'none', color: T.textDim, cursor: 'pointer', padding: 2 }}>{Icons.arrowUp}</button>
                     <button onClick={() => moveContentBlock(i, 1)} style={{ background: 'none', border: 'none', color: T.textDim, cursor: 'pointer', padding: 2 }}>{Icons.arrowDown}</button>
                     <button onClick={() => removeContentBlock(i)} style={{ background: 'none', border: 'none', color: T.critical, cursor: 'pointer', padding: 2 }}>{Icons.x}</button>
                   </div>
                   {block.type === 'text' ? (
                     <textarea value={block.value} onChange={e => updateContentBlock(i, 'value', e.target.value)} rows={4} placeholder="Enter text content..." style={{ ...inputStyle, resize: 'vertical', fontSize: 13 }} />
+                  ) : block.type === 'image' ? (
+                    block.value ? (
+                      <div>
+                        <img src={block.previewUrl || block.resolvedUrl || block.value} alt="Preview" style={{ width: '100%', borderRadius: 8, marginBottom: 8, display: 'block' }} />
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                          <span style={{ fontSize: 11, color: T.success, flex: 1, fontWeight: 600 }}>{Icons.checkCircle} Image uploaded</span>
+                          <button onClick={() => { const next = [...b.content]; next[i] = { ...next[i], value: '', previewUrl: '' }; setB('content', next); }} style={{ fontSize: 11, color: T.critical, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Remove</button>
+                        </div>
+                        <input value={block.caption || ''} onChange={e => updateContentBlock(i, 'caption', e.target.value)} placeholder="Caption (optional)" style={{ ...inputStyle, fontSize: 12, padding: 8, marginTop: 8 }} />
+                      </div>
+                    ) : (
+                      <div>
+                        <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '20px 16px', border: `2px dashed ${T.border}`, borderRadius: 10, cursor: 'pointer', background: T.bgCard, transition: 'border-color 0.2s' }}>
+                          <span style={{ color: T.accent, display: 'flex' }}>{Icons.image}</span>
+                          <span style={{ fontSize: 13, color: T.textMuted, fontWeight: 600 }}>Choose image file</span>
+                          <span style={{ fontSize: 11, color: T.textDim }}>JPG, PNG, or WebP</span>
+                          <input type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            try {
+                              const path = await uploadTrainingImage(file);
+                              const { data: signedData } = await supabase.storage.from('vessel-documents').createSignedUrl(path, 3600);
+                              const next = [...b.content];
+                              next[i] = { ...next[i], value: path, previewUrl: signedData?.signedUrl || '' };
+                              setB('content', next);
+                            } catch (err) {
+                              console.error('[training] image upload failed', err);
+                              alert('Failed to upload image: ' + err.message);
+                            }
+                          }} />
+                        </label>
+                      </div>
+                    )
                   ) : (
-                    <input value={block.value} onChange={e => updateContentBlock(i, 'value', e.target.value)} placeholder={block.type === 'image' ? 'https://...' : 'https://...'} style={{ ...inputStyle, fontSize: 13 }} />
+                    <input value={block.value} onChange={e => updateContentBlock(i, 'value', e.target.value)} placeholder="https://..." style={{ ...inputStyle, fontSize: 13 }} />
                   )}
                 </div>
               ))}
@@ -3493,10 +3647,10 @@ export default function CrewBoard({ user }) {
             {/* Publish & Save */}
             <div style={{ display: 'flex', gap: 10, paddingTop: 8 }}>
               <button onClick={() => handleSaveModule(false)} disabled={!b.title.trim() || moduleBuilderSaving} style={{ flex: 1, padding: 14, borderRadius: 12, border: `1px solid ${T.border}`, background: T.bgCard, color: T.textMuted, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
-                Save Draft
+                {editingModuleId ? 'Save Changes' : 'Save Draft'}
               </button>
               <button onClick={() => handleSaveModule(true)} disabled={!b.title.trim() || moduleBuilderSaving} className="cb-btn-primary" style={{ flex: 1, padding: 14, borderRadius: 12, border: 'none', background: !b.title.trim() || moduleBuilderSaving ? T.border : T.accent, color: !b.title.trim() || moduleBuilderSaving ? T.textDim : '#fff', fontSize: 14, fontWeight: 700, cursor: !b.title.trim() || moduleBuilderSaving ? 'default' : 'pointer' }}>
-                {moduleBuilderSaving ? 'Saving...' : 'Publish'}
+                {moduleBuilderSaving ? 'Saving...' : editingModuleId ? 'Save & Publish' : 'Publish'}
               </button>
             </div>
           </div>

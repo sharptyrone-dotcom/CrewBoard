@@ -30,7 +30,7 @@ export async function POST(request, { params }) {
   try {
     const moduleId = params.id;
     const body = await request.json();
-    const { crew_member_id, crew_member_ids, deadline } = body;
+    const { crew_member_id, crew_member_ids, deadline, vessel_id } = body;
 
     if (!crew_member_id || !crew_member_ids) {
       return NextResponse.json(
@@ -57,7 +57,7 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Module not found' }, { status: 404 });
     }
 
-    const vesselId = caller?.vessel_id || mod.vessel_id;
+    const vesselId = vessel_id || caller?.vessel_id || mod.vessel_id;
 
     // ── Resolve target crew list ──
     let targetIds = [];
