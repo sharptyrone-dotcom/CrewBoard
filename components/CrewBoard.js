@@ -12,6 +12,9 @@ import usePresence from '@/hooks/usePresence';
 import useMediaQuery from '@/hooks/useMediaQuery';
 import { isPushSupported, getPushPermission, subscribeToPush, isSubscribed as checkPushSubscribed } from '@/lib/push';
 import { sendReminderChannels } from '@/lib/send-reminder';
+// reportGenerator is dynamically imported in handleExport to keep the
+// main bundle small — jspdf + autotable add ~140 kB that only admins
+// who click "Export Report" ever need.
 
 // ─── Data & Constants ────────────────────────────────────────────────
 const CATEGORIES = ['All', 'Safety', 'Operations', 'Guest Info', 'HR/Admin', 'Social', 'Departmental'];
@@ -567,6 +570,12 @@ export default function CrewBoard({ user }) {
   // different tab. Shape: { id, title, priority } | null. Auto-clears after
   // a few seconds or when the user clicks through to the notice.
   const [noticeToast, setNoticeToast] = useState(null);
+  // Export report modal state.
+  const [showExportReport, setShowExportReport] = useState(false);
+  const [exportType, setExportType] = useState('compliance_pdf');
+  const [exportDateFrom, setExportDateFrom] = useState('');
+  const [exportDateTo, setExportDateTo] = useState('');
+  const [exporting, setExporting] = useState(false);
   // Push notification state: tracks whether the user has subscribed to
   // Web Push so we can show an opt-in banner to those who haven't yet.
   const [pushState, setPushState] = useState('loading'); // loading | subscribed | prompt | denied | unsupported
@@ -1646,6 +1655,7 @@ export default function CrewBoard({ user }) {
                    setTimeout(() => { setDashReminderState('idle'); setDashReminderSentCount(0); }, 3000);
                  }],
                 ['Invite Crew', () => { window.location.href = '/admin/invites'; }],
+                ['Export Report', () => setShowExportReport(true)],
               ].map(([label, fn]) => {
                 const isReminder = label.startsWith('Send') || label.startsWith('Sent') || label === 'Sending...' || label.startsWith('All crew') || label.startsWith('Failed');
                 const reminderDone = isReminder && (dashReminderState === 'sent' || dashReminderState === 'empty');
@@ -2215,6 +2225,111 @@ export default function CrewBoard({ user }) {
     );
   };
 
+  // Admin export handler — generates the selected report client-side
+  // using data already in state. No API round-trip needed; the API
+  // route exists for programmatic / automated access.
+  const handleExport = async () => {
+    setExporting(true);
+    const dateRange = { from: exportDateFrom || undefined, to: exportDateTo || undefined };
+    const reportData = { crew: liveCrew, notices, docs, activity, dateRange };
+    try {
+      // Dynamic import keeps jspdf out of the main bundle (~140 kB).
+      const { generateComplianceReport, generateCSVExport, downloadPDF, downloadCSV } = await import('@/lib/reportGenerator');
+      const csvMap = {
+        notice_csv: { key: 'notice_read_receipts', filename: 'notice-read-receipts' },
+        document_csv: { key: 'document_acknowledgements', filename: 'document-acknowledgements' },
+        training_csv: { key: 'training_records', filename: 'training-records' },
+        activity_csv: { key: 'activity_log', filename: 'activity-log' },
+      };
+      if (exportType === 'compliance_pdf') {
+        const doc = generateComplianceReport({ vesselName: 'M/Y Serenity', ...reportData });
+        downloadPDF(doc, `compliance-report-${new Date().toISOString().slice(0, 10)}.pdf`);
+      } else if (csvMap[exportType]) {
+        const { key, filename } = csvMap[exportType];
+        const csv = generateCSVExport(key, reportData);
+        downloadCSV(csv, `${filename}-${new Date().toISOString().slice(0, 10)}.csv`);
+      }
+    } catch (err) {
+      console.error('[export] generation failed', err);
+      alert(`Export failed: ${err?.message || err}`);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const ExportReportModal = () => {
+    const reportTypes = [
+      { value: 'compliance_pdf', label: 'Full Compliance Report (PDF)', desc: 'Crew roster, notice & document compliance, individual summaries, activity log' },
+      { value: 'notice_csv', label: 'Notice Read Receipts (CSV)', desc: 'All notices with read/acknowledged status per crew member' },
+      { value: 'document_csv', label: 'Document Acknowledgements (CSV)', desc: 'All documents with acknowledgement status per crew member' },
+      { value: 'training_csv', label: 'Training Records (CSV)', desc: 'Training module completion and scores' },
+      { value: 'activity_csv', label: 'Activity Log (CSV)', desc: 'Timestamped log of all crew actions' },
+    ];
+    return (
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', zIndex: 100, display: 'flex', alignItems: isDesktop ? 'center' : 'flex-end', justifyContent: 'center' }}>
+        <div style={{ background: T.bgModal, borderRadius: isDesktop ? 20 : '24px 24px 0 0', width: '100%', maxWidth: 520, maxHeight: '90vh', overflow: 'auto', padding: 28, boxShadow: isDesktop ? '0 20px 60px rgba(15,23,42,0.2)' : '0 -20px 40px rgba(15,23,42,0.15)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0 }}>Export Report</h2>
+            <button onClick={() => setShowExportReport(false)} style={{ background: 'none', border: 'none', color: T.textMuted, cursor: 'pointer' }}>{Icons.x}</button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* Report type selector */}
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: T.textMuted, display: 'block', marginBottom: 8 }}>Report Type</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {reportTypes.map(rt => (
+                  <label key={rt.value} onClick={() => setExportType(rt.value)} style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px',
+                    borderRadius: 10, cursor: 'pointer', transition: 'all 0.15s',
+                    border: `1.5px solid ${exportType === rt.value ? T.accent : T.border}`,
+                    background: exportType === rt.value ? T.accentTint : T.bgCard,
+                  }}>
+                    <input type="radio" name="reportType" value={rt.value} checked={exportType === rt.value} onChange={() => setExportType(rt.value)} style={{ accentColor: T.accent, marginTop: 2 }} />
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{rt.label}</div>
+                      <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>{rt.desc}</div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+            {/* Date range picker */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: T.textMuted, display: 'block', marginBottom: 6 }}>From (optional)</label>
+                <input
+                  type="date"
+                  value={exportDateFrom}
+                  onChange={e => setExportDateFrom(e.target.value)}
+                  style={{ width: '100%', padding: 12, borderRadius: 10, border: `1px solid ${T.border}`, background: T.bgCard, color: T.text, fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: T.textMuted, display: 'block', marginBottom: 6 }}>To (optional)</label>
+                <input
+                  type="date"
+                  value={exportDateTo}
+                  onChange={e => setExportDateTo(e.target.value)}
+                  style={{ width: '100%', padding: 12, borderRadius: 10, border: `1px solid ${T.border}`, background: T.bgCard, color: T.text, fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+                />
+              </div>
+            </div>
+            <div style={{ fontSize: 11, color: T.textDim, marginTop: -8 }}>Leave blank to include all data.</div>
+            {/* Generate button */}
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              className="cb-btn-primary"
+              style={{ width: '100%', padding: 16, borderRadius: 12, border: 'none', background: exporting ? T.border : T.accent, color: exporting ? T.textDim : '#fff', fontSize: 15, fontWeight: 700, cursor: exporting ? 'default' : 'pointer', transition: 'background 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+            >
+              {exporting ? 'Generating...' : `Generate ${exportType.endsWith('pdf') ? 'PDF' : 'CSV'}`}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const NotificationsPanel = () => (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', zIndex: 100 }} onClick={() => setShowNotifications(false)}>
       <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', top: 0, right: 0, width: '100%', maxWidth: 380, height: '100%', background: T.bgModal, borderLeft: `1px solid ${T.border}`, overflow: 'auto', padding: 24, boxShadow: '-20px 0 40px rgba(15,23,42,0.15)' }}>
@@ -2470,6 +2585,7 @@ export default function CrewBoard({ user }) {
       {showNewNotice && NewNoticeModal()}
       {showNewDoc && NewDocumentModal()}
       {showReplaceDoc && ReplaceDocumentModal()}
+      {showExportReport && ExportReportModal()}
     </div>
   );
 }
