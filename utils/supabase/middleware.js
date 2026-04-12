@@ -2,10 +2,9 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-export const createClient = (request) => {
-  // Create an unmodified response
+export const createClient = async (request) => {
   let supabaseResponse = NextResponse.next({
     request: {
       headers: request.headers,
@@ -14,7 +13,7 @@ export const createClient = (request) => {
 
   const supabase = createServerClient(
     supabaseUrl,
-    supabaseKey,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {
@@ -34,6 +33,11 @@ export const createClient = (request) => {
       },
     },
   );
+
+  // Refresh the session so expired tokens get renewed on every request.
+  // IMPORTANT: do not remove this — it triggers the cookie setAll callback
+  // above, which keeps the session alive.
+  await supabase.auth.getUser();
 
   return supabaseResponse;
 };
