@@ -60,6 +60,8 @@ const Icons = {
   trash: <Icon d={<><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></>} />,
   poll: <Icon d={<><rect x="3" y="12" width="4" height="9" rx="1" /><rect x="10" y="5" width="4" height="16" rx="1" /><rect x="17" y="8" width="4" height="13" rx="1" /></>} fill="currentColor" strokeWidth={0} />,
   minus: <Icon d={<line x1="5" y1="12" x2="19" y2="12" />} />,
+  star: <Icon d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" />,
+  starFilled: <Icon d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" fill="currentColor" />,
 };
 
 // ─── Theme ───────────────────────────────────────────────────────────
@@ -321,7 +323,7 @@ function NoticeDetail({ notice, currentUser, onBack, onAcknowledge, onMarkRead, 
 // Legacy seeded rows still have `https://example.com/...` in their
 // file_url and there's no real file behind them, so for those we fall
 // back to the old "PDF document preview" placeholder tile.
-function DocDetail({ doc, currentUser, onBack, onAcknowledge, role, onDelete, onReplace, isDesktop }) {
+function DocDetail({ doc, currentUser, onBack, onAcknowledge, role, onDelete, onReplace, isDesktop, isQuickAccess, onToggleQuickAccess }) {
   const isAcked = doc.acknowledgedBy.includes(currentUser.id);
   const isRealFile = !!doc.fileUrl && !/^https?:\/\//i.test(doc.fileUrl);
   const isAdmin = role === 'admin';
@@ -362,7 +364,18 @@ function DocDetail({ doc, currentUser, onBack, onAcknowledge, role, onDelete, on
         <CategoryBadge category={doc.type} />
         <span style={{ fontSize: 10, fontWeight: 600, color: T.textMuted, background: `${T.textMuted}18`, padding: '3px 8px', borderRadius: 4 }}>{doc.dept}</span>
       </div>
-      <h2 style={{ fontSize: 20, fontWeight: 800, color: T.text, margin: '0 0 16px' }}>{doc.title}</h2>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 16 }}>
+        <h2 style={{ fontSize: 20, fontWeight: 800, color: T.text, margin: 0, flex: 1 }}>{doc.title}</h2>
+        {role === 'crew' && onToggleQuickAccess && (
+          <button
+            onClick={() => onToggleQuickAccess(doc.id)}
+            title={isQuickAccess ? 'Remove from Quick Access' : 'Add to Quick Access'}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, flexShrink: 0, color: isQuickAccess ? '#f59e0b' : T.textDim, transition: 'color 0.2s' }}
+          >
+            {isQuickAccess ? Icons.starFilled : Icons.star}
+          </button>
+        )}
+      </div>
       <div style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 16, padding: 20, marginBottom: 20, boxShadow: T.shadow }}>
         {[['Version', `v${doc.version}`], ['Last Updated', doc.updatedAt], ['Review Date', doc.reviewDate], ['Pages', doc.pages], ['Required', doc.required ? 'Yes' : 'No']].map(([label, val]) => (
           <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${T.border}` }}>
@@ -680,6 +693,15 @@ export default function CrewBoard({ user }) {
   const [noticeFilter, setNoticeFilter] = useState('All');
   const [docDeptFilter, setDocDeptFilter] = useState('All');
   const [docTypeFilter, setDocTypeFilter] = useState('All');
+  // Quick Access — per-crew-member document favorites stored in localStorage.
+  // Keyed by crew member id so multiple crew sharing a device each get their
+  // own list. Lazy-initialised from storage on first render.
+  const [quickAccessIds, setQuickAccessIds] = useState(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      return JSON.parse(localStorage.getItem(`crewboard_quickaccess_${user?.id}`) || '[]');
+    } catch { return []; }
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewNotice, setShowNewNotice] = useState(false);
   const [showNewDoc, setShowNewDoc] = useState(false);
@@ -1026,6 +1048,14 @@ export default function CrewBoard({ user }) {
         return { ...n, pollVotes: (n.pollVotes || []).filter(v => v.crewMemberId !== currentUser.id) };
       }));
     }
+  };
+
+  const toggleQuickAccess = (docId) => {
+    setQuickAccessIds(prev => {
+      const next = prev.includes(docId) ? prev.filter(id => id !== docId) : [...prev, docId];
+      try { localStorage.setItem(`crewboard_quickaccess_${currentUser.id}`, JSON.stringify(next)); } catch {}
+      return next;
+    });
   };
 
   const handleReadNotif = async (id) => {
@@ -1608,6 +1638,34 @@ export default function CrewBoard({ user }) {
           </button>
         ))}
       </div>
+      {/* Quick Access docs on crew home */}
+      {quickAccessIds.length > 0 && (() => {
+        const favDocs = quickAccessIds.map(id => docs.find(d => d.id === id)).filter(Boolean);
+        if (favDocs.length === 0) return null;
+        return (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <span style={{ color: '#f59e0b' }}>{Icons.starFilled}</span>
+              <h3 style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1.2, margin: 0 }}>Quick Access</h3>
+            </div>
+            <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4, marginBottom: 24, WebkitOverflowScrolling: 'touch' }}>
+              {favDocs.map(d => (
+                <button key={d.id} onClick={() => { setSelectedDoc(d); setTab('docs'); }} className="cb-card" style={{
+                  minWidth: 130, padding: '14px 16px', background: T.bgCard, border: `1px solid ${T.gold}30`,
+                  borderRadius: 14, cursor: 'pointer', textAlign: 'left', flexShrink: 0, boxShadow: T.shadow,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: 7, background: T.accentTint, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.accentDark }}><Icon d={<><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z" /><polyline points="13 2 13 9 20 9" /></>} size={14} /></div>
+                    <span style={{ color: '#f59e0b' }}><Icon d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" size={12} fill="#f59e0b" /></span>
+                  </div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: T.text, lineHeight: 1.3, marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{d.title}</div>
+                  <div style={{ fontSize: 10, color: T.textMuted }}>v{d.version}</div>
+                </button>
+              ))}
+            </div>
+          </>
+        );
+      })()}
       <h3 style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1.2, margin: '0 0 10px' }}>Recent Notices</h3>
       {notices.slice(0, 3).map(n => (
         <button key={n.id} onClick={() => { setSelectedNotice(n); setTab('notices'); }} className="cb-card" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 14, cursor: 'pointer', textAlign: 'left', width: '100%', marginBottom: 8, boxShadow: T.shadow }}>
@@ -1659,6 +1717,8 @@ export default function CrewBoard({ user }) {
         onAcknowledge={handleAckDoc}
         role={role}
         isDesktop={isDesktop}
+        isQuickAccess={quickAccessIds.includes(selectedDoc.id)}
+        onToggleQuickAccess={toggleQuickAccess}
         onDelete={role === 'admin' ? () => handleDeleteDoc(selectedDoc.id) : undefined}
         onReplace={role === 'admin' ? () => {
           // Prime the form with the current version so the admin can bump it
@@ -1690,6 +1750,34 @@ export default function CrewBoard({ user }) {
           <div style={{ fontSize: 11, fontWeight: 600, color: T.textMuted, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>Type</div>
           <FilterChips options={DOC_TYPES} selected={docTypeFilter} onChange={setDocTypeFilter} />
         </div>
+        {/* Quick Access section — crew only, shows when they have favourites */}
+        {role === 'crew' && quickAccessIds.length > 0 && docDeptFilter === 'All' && docTypeFilter === 'All' && (() => {
+          const favDocs = quickAccessIds.map(id => docs.find(d => d.id === id)).filter(Boolean);
+          if (favDocs.length === 0) return null;
+          return (
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <span style={{ color: '#f59e0b' }}>{Icons.starFilled}</span>
+                <h3 style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1.2, margin: 0 }}>Quick Access</h3>
+              </div>
+              <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4, WebkitOverflowScrolling: 'touch' }}>
+                {favDocs.map(d => (
+                  <button key={d.id} onClick={() => setSelectedDoc(d)} className="cb-card" style={{
+                    minWidth: 140, padding: '14px 16px', background: T.bgCard, border: `1px solid ${T.gold}30`,
+                    borderRadius: 14, cursor: 'pointer', textAlign: 'left', flexShrink: 0, boxShadow: T.shadow,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                      <div style={{ width: 30, height: 30, borderRadius: 8, background: T.accentTint, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.accentDark }}>{Icons.file}</div>
+                      <span style={{ color: '#f59e0b', flexShrink: 0 }}><Icon d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" size={12} fill="#f59e0b" /></span>
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: T.text, lineHeight: 1.3, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{d.title}</div>
+                    <div style={{ fontSize: 10, color: T.textMuted }}>v{d.version}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
         <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(2, 1fr)' : '1fr', gap: isDesktop ? 12 : 8 }}>
           {filtered.map(d => {
             const isAcked = d.acknowledgedBy.includes(currentUser.id);
@@ -1710,9 +1798,16 @@ export default function CrewBoard({ user }) {
                     </div>
                   )}
                 </div>
-                {role === 'crew' && d.required && (
-                  <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
-                    {isAcked ? <span style={{ color: T.success }}>{Icons.checkCircle}</span> : <span style={{ fontSize: 10, fontWeight: 700, color: T.gold, background: `${T.gold}18`, padding: '4px 8px', borderRadius: 4 }}>ACK</span>}
+                {role === 'crew' && (
+                  <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6, flexDirection: 'column' }}>
+                    <button
+                      onClick={e => { e.stopPropagation(); toggleQuickAccess(d.id); }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: quickAccessIds.includes(d.id) ? '#f59e0b' : T.textDim, transition: 'color 0.15s' }}
+                      title={quickAccessIds.includes(d.id) ? 'Remove from Quick Access' : 'Add to Quick Access'}
+                    >
+                      {quickAccessIds.includes(d.id) ? Icons.starFilled : Icons.star}
+                    </button>
+                    {d.required && (isAcked ? <span style={{ color: T.success }}>{Icons.checkCircle}</span> : <span style={{ fontSize: 10, fontWeight: 700, color: T.gold, background: `${T.gold}18`, padding: '4px 8px', borderRadius: 4 }}>ACK</span>)}
                   </div>
                 )}
               </button>
