@@ -10,6 +10,8 @@ import { ACTIVITY_ACTIONS, fetchActivity, logActivity } from '@/lib/activity';
 import useRealtime from '@/hooks/useRealtime';
 import usePresence from '@/hooks/usePresence';
 import useMediaQuery from '@/hooks/useMediaQuery';
+import { isPushSupported, getPushPermission, subscribeToPush, isSubscribed as checkPushSubscribed } from '@/lib/push';
+import { sendReminderChannels } from '@/lib/send-reminder';
 
 // ─── Data & Constants ────────────────────────────────────────────────
 const CATEGORIES = ['All', 'Safety', 'Operations', 'Guest Info', 'HR/Admin', 'Social', 'Departmental'];
@@ -565,6 +567,10 @@ export default function CrewBoard({ user }) {
   // different tab. Shape: { id, title, priority } | null. Auto-clears after
   // a few seconds or when the user clicks through to the notice.
   const [noticeToast, setNoticeToast] = useState(null);
+  // Push notification state: tracks whether the user has subscribed to
+  // Web Push so we can show an opt-in banner to those who haven't yet.
+  const [pushState, setPushState] = useState('loading'); // loading | subscribed | prompt | denied | unsupported
+  const [pushDismissed, setPushDismissed] = useState(false);
 
   // Derived from the authenticated session via fetchCurrentCrewMember in
   // app/app/page.js. Falls back to an empty object so destructuring stays
@@ -674,6 +680,18 @@ export default function CrewBoard({ user }) {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  // Check whether the user has subscribed to push notifications. We run
+  // this once on mount so the opt-in banner can decide whether to show.
+  useEffect(() => {
+    if (!currentUser.id) return;
+    if (!isPushSupported()) { setPushState('unsupported'); return; }
+    const perm = getPushPermission();
+    if (perm === 'denied') { setPushState('denied'); return; }
+    checkPushSubscribed().then(sub => {
+      setPushState(sub ? 'subscribed' : 'prompt');
+    });
+  }, [currentUser.id]);
 
   // Realtime fan-out: listens to Postgres changes on notices, notifications
   // and notice_reads for the current vessel, then merges each payload into
@@ -1073,19 +1091,26 @@ export default function CrewBoard({ user }) {
   };
 
   // Admin-only: sends a targeted 'reminder' notification to every crew
-  // member who hasn't read the given notice. Each crew member gets their
-  // own notification so it shows up in their personal bell panel. We use
-  // Promise.allSettled so one failed insert doesn't block the rest.
+  // member who hasn't read the given notice. Delivers via three channels:
+  //   1. In-app notification (Supabase insert, immediate)
+  //   2. Email via Resend (API route, best-effort)
+  //   3. Push notification via Web Push (API route, best-effort)
+  // Email+push are fire-and-forget — a failure there doesn't block the
+  // in-app notification or surface an error to the admin.
   const handleSendNoticeReminder = async (notice) => {
     const nonReaders = liveCrew.filter(cm => !notice.readBy.includes(cm.id));
     if (nonReaders.length === 0) return;
+    const reminderTitle = `Reminder: ${notice.priority === 'critical' ? 'CRITICAL — ' : ''}Please read "${notice.title}"`;
+    const reminderBody = `You have an unread ${notice.priority} notice that requires your attention.`;
+
+    // 1. In-app notifications (primary channel)
     const results = await Promise.allSettled(
       nonReaders.map(cm =>
         createTargetedNotification({
           targetCrewId: cm.id,
           type: 'reminder',
-          title: `Reminder: ${notice.priority === 'critical' ? 'CRITICAL — ' : ''}Please read "${notice.title}"`,
-          body: `You have an unread ${notice.priority} notice that requires your attention.`,
+          title: reminderTitle,
+          body: reminderBody,
           referenceType: 'notice',
           referenceId: notice.id,
         })
@@ -1093,22 +1118,31 @@ export default function CrewBoard({ user }) {
     );
     const sent = results.filter(r => r.status === 'fulfilled').length;
     if (sent === 0) throw new Error('All reminder sends failed — check your connection.');
-    if (sent > 0) {
-      recordActivity({
-        action: 'reminder_sent',
-        targetType: 'notice',
-        targetId: notice.id,
-        metadata: { title: notice.title, recipientCount: sent },
-      });
-    }
+
+    // 2. Email + Push (supplementary, fire-and-forget)
+    sendReminderChannels({
+      crewMemberIds: nonReaders.map(cm => cm.id),
+      title: reminderTitle,
+      body: reminderBody,
+      refType: 'notice',
+      refId: notice.id,
+    }).catch(err => console.error('[reminder] email+push failed (non-fatal)', err));
+
+    recordActivity({
+      action: 'reminder_sent',
+      targetType: 'notice',
+      targetId: notice.id,
+      metadata: { title: notice.title, recipientCount: sent },
+    });
   };
 
   // Admin-only: sends a compliance reminder to every crew member who has
   // outstanding items — unread critical notices and/or unacknowledged
   // required documents. Each crew member gets a single summary notification
-  // listing what they need to action. Skips crew who are fully caught up.
+  // listing what they need to action, plus email + push. Skips crew who
+  // are fully caught up.
   const handleSendDashboardReminder = async () => {
-    const targets = [];
+    const targetData = []; // { cm, title, body }
     for (const cm of liveCrew) {
       const unreadCritical = notices.filter(n => n.priority === 'critical' && !n.readBy.includes(cm.id));
       const unackedDocs = docs.filter(d => d.required && !d.acknowledgedBy.includes(cm.id));
@@ -1116,20 +1150,37 @@ export default function CrewBoard({ user }) {
       const parts = [];
       if (unreadCritical.length > 0) parts.push(`${unreadCritical.length} unread critical notice${unreadCritical.length > 1 ? 's' : ''}`);
       if (unackedDocs.length > 0) parts.push(`${unackedDocs.length} document${unackedDocs.length > 1 ? 's' : ''} pending acknowledgement`);
-      targets.push(
+      targetData.push({
+        cm,
+        body: `You have ${parts.join(' and ')} requiring your attention.`,
+      });
+    }
+    if (targetData.length === 0) return { targeted: 0, sent: 0 };
+
+    // 1. In-app notifications
+    const results = await Promise.allSettled(
+      targetData.map(({ cm, body }) =>
         createTargetedNotification({
           targetCrewId: cm.id,
           type: 'reminder',
           title: 'Compliance Reminder',
-          body: `You have ${parts.join(' and ')} requiring your attention.`,
+          body,
           referenceType: null,
           referenceId: null,
         })
-      );
-    }
-    if (targets.length === 0) return { targeted: 0, sent: 0 };
-    const results = await Promise.allSettled(targets);
+      )
+    );
     const sent = results.filter(r => r.status === 'fulfilled').length;
+
+    // 2. Email + Push (fire-and-forget)
+    sendReminderChannels({
+      crewMemberIds: targetData.map(({ cm }) => cm.id),
+      title: 'Compliance Reminder',
+      body: 'You have outstanding notices or documents requiring your attention. Please open CrewBoard to review.',
+      refType: null,
+      refId: null,
+    }).catch(err => console.error('[reminder] email+push failed (non-fatal)', err));
+
     if (sent > 0) {
       recordActivity({
         action: 'reminder_sent',
@@ -1138,7 +1189,7 @@ export default function CrewBoard({ user }) {
         metadata: { recipientCount: sent },
       });
     }
-    return { targeted: targets.length, sent };
+    return { targeted: targetData.length, sent };
   };
 
   // Admin-only: upload a PDF to the vessel-documents storage bucket and
@@ -2300,6 +2351,34 @@ export default function CrewBoard({ user }) {
 
       {/* Content */}
       <div style={{ flex: 1, overflow: 'auto', paddingBottom: isDesktop ? 24 : 88, marginLeft: isDesktop ? 240 : 0, maxWidth: isDesktop ? 1200 : undefined, width: isDesktop ? 'calc(100% - 240px)' : undefined }}>
+        {/* Push notification opt-in banner — shown once until the user
+            subscribes or dismisses it. Only appears when the browser
+            supports push and hasn't already granted/denied. */}
+        {pushState === 'prompt' && !pushDismissed && (
+          <div style={{ margin: isDesktop ? '16px 36px' : '12px 20px', padding: '14px 18px', background: T.accentTint, border: `1px solid ${T.accent}33`, borderRadius: 12, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 200px' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 2 }}>Enable push notifications</div>
+              <div style={{ fontSize: 12, color: T.textMuted }}>Get notified about new notices, documents, and reminders even when the app is closed.</div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={async () => {
+                  const sub = await subscribeToPush(currentUser.id);
+                  setPushState(sub ? 'subscribed' : 'denied');
+                }}
+                style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: T.accent, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+              >
+                Enable
+              </button>
+              <button
+                onClick={() => setPushDismissed(true)}
+                style={{ padding: '10px 16px', borderRadius: 10, border: `1px solid ${T.border}`, background: T.bgCard, color: T.textMuted, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+              >
+                Later
+              </button>
+            </div>
+          </div>
+        )}
         {renderScreen()}
       </div>
 
