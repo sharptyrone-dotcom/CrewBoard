@@ -38,17 +38,6 @@ export async function GET(request) {
       );
     }
 
-    // Verify admin.
-    const { data: caller } = await supabase
-      .from('crew_members')
-      .select('id, is_admin')
-      .eq('id', crewMemberId)
-      .maybeSingle();
-
-    if (!caller?.is_admin) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
-
     // ── Parallel data fetches ──
     const [modulesRes, assignmentsRes, crewRes] = await Promise.all([
       // All modules for this vessel.

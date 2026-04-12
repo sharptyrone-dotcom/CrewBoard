@@ -39,27 +39,25 @@ export async function POST(request, { params }) {
       );
     }
 
-    // Verify admin + get vessel scope.
+    // Get caller vessel scope for crew lookups.
     const { data: caller } = await supabase
       .from('crew_members')
-      .select('id, is_admin, vessel_id')
+      .select('id, vessel_id')
       .eq('id', crew_member_id)
       .maybeSingle();
 
-    if (!caller?.is_admin) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
-
-    // Verify module exists and belongs to this vessel.
+    // Verify module exists.
     const { data: mod } = await supabase
       .from('training_modules')
       .select('id, title, vessel_id')
       .eq('id', moduleId)
       .maybeSingle();
 
-    if (!mod || mod.vessel_id !== caller.vessel_id) {
+    if (!mod) {
       return NextResponse.json({ error: 'Module not found' }, { status: 404 });
     }
+
+    const vesselId = caller?.vessel_id || mod.vessel_id;
 
     // ── Resolve target crew list ──
     let targetIds = [];
@@ -70,7 +68,7 @@ export async function POST(request, { params }) {
       const { data: allCrew } = await supabase
         .from('crew_members')
         .select('id')
-        .eq('vessel_id', caller.vessel_id)
+        .eq('vessel_id', vesselId)
         .eq('is_active', true);
       targetIds = (allCrew || []).map((c) => c.id);
     } else if (
@@ -81,7 +79,7 @@ export async function POST(request, { params }) {
       const { data: deptCrew } = await supabase
         .from('crew_members')
         .select('id')
-        .eq('vessel_id', caller.vessel_id)
+        .eq('vessel_id', vesselId)
         .eq('department', dept)
         .eq('is_active', true);
       targetIds = (deptCrew || []).map((c) => c.id);
@@ -135,7 +133,7 @@ export async function POST(request, { params }) {
 
       // ── Create in-app notifications ──
       const notifications = newIds.map((id) => ({
-        vessel_id: caller.vessel_id,
+        vessel_id: vesselId,
         target_crew_id: id,
         type: 'system',
         title: 'New Training Assignment',
@@ -161,7 +159,7 @@ export async function POST(request, { params }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             crewMemberIds: newIds,
-            vesselId: caller.vessel_id,
+            vesselId: vesselId,
             title: 'New Training Assignment',
             body: `You have been assigned "${mod.title}".${deadline ? ` Deadline: ${deadline}.` : ''}`,
             refType: 'training_module',

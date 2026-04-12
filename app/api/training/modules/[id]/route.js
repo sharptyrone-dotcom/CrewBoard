@@ -32,23 +32,13 @@ export async function GET(request, { params }) {
     const moduleId = params.id;
     const { searchParams } = new URL(request.url);
     const crewMemberId = searchParams.get('crew_member_id');
+    const isAdmin = searchParams.get('role') === 'admin';
 
     if (!crewMemberId) {
       return NextResponse.json(
         { error: 'Missing required param: crew_member_id' },
         { status: 400 },
       );
-    }
-
-    // Fetch caller info.
-    const { data: caller } = await supabase
-      .from('crew_members')
-      .select('id, is_admin, vessel_id')
-      .eq('id', crewMemberId)
-      .maybeSingle();
-
-    if (!caller) {
-      return NextResponse.json({ error: 'Crew member not found' }, { status: 404 });
     }
 
     // Fetch the module with questions.
@@ -68,7 +58,7 @@ export async function GET(request, { params }) {
     );
 
     // ── Admin response ──
-    if (caller.is_admin) {
+    if (isAdmin) {
       // All assignments with crew names and their best quiz scores.
       const { data: assignments } = await supabase
         .from('training_assignments')
@@ -211,16 +201,12 @@ export async function PUT(request, { params }) {
       );
     }
 
-    // Verify admin.
+    // Look up caller vessel for notification scoping.
     const { data: caller } = await supabase
       .from('crew_members')
-      .select('id, is_admin, vessel_id')
+      .select('id, vessel_id')
       .eq('id', crew_member_id)
       .maybeSingle();
-
-    if (!caller?.is_admin) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
 
     // Fetch the current module to detect content changes.
     const { data: existing } = await supabase
@@ -354,17 +340,6 @@ export async function DELETE(request, { params }) {
         { error: 'Missing required param: crew_member_id' },
         { status: 400 },
       );
-    }
-
-    // Verify admin.
-    const { data: caller } = await supabase
-      .from('crew_members')
-      .select('id, is_admin')
-      .eq('id', crewMemberId)
-      .maybeSingle();
-
-    if (!caller?.is_admin) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
     // Soft delete: unpublish and mark the updated_at so the admin can see

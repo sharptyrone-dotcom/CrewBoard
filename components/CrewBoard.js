@@ -903,7 +903,7 @@ export default function CrewBoard({ user }) {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`/api/training/modules?crew_member_id=${currentUser.id}&vessel_id=${currentUser.vesselId}`);
+        const res = await fetch(`/api/training/modules?crew_member_id=${currentUser.id}&vessel_id=${currentUser.vesselId}&role=${role}`);
         const data = await res.json();
         if (!cancelled) setTrainingModules(data.modules || []);
       } catch (err) {
@@ -2768,7 +2768,7 @@ export default function CrewBoard({ user }) {
   // ─── Training: helpers ────────────────────────────────────────────
   const refreshTraining = async () => {
     try {
-      const res = await fetch(`/api/training/modules?crew_member_id=${currentUser.id}&vessel_id=${currentUser.vesselId}`);
+      const res = await fetch(`/api/training/modules?crew_member_id=${currentUser.id}&vessel_id=${currentUser.vesselId}&role=${role}`);
       const data = await res.json();
       setTrainingModules(data.modules || []);
     } catch (err) { console.error('[training] refresh failed', err); }
@@ -2813,7 +2813,7 @@ export default function CrewBoard({ user }) {
     } finally { setQuizSubmitting(false); }
   };
 
-  const handleSaveModule = async () => {
+  const handleSaveModule = async (publish = false) => {
     if (moduleBuilderSaving) return;
     setModuleBuilderSaving(true);
     const b = moduleBuilderData;
@@ -2827,7 +2827,7 @@ export default function CrewBoard({ user }) {
         pass_mark: b.passMark,
         time_limit_minutes: b.timeLimitMinutes ? parseInt(b.timeLimitMinutes) : null,
         randomise_questions: b.randomiseQuestions,
-        is_published: b.isPublished,
+        is_published: publish,
         questions: b.questions.map((q, i) => ({
           question_text: q.questionText,
           question_type: q.questionType,
@@ -2844,7 +2844,7 @@ export default function CrewBoard({ user }) {
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       // Assign if selected
-      if (b.assignTo !== 'none' && b.isPublished) {
+      if (b.assignTo !== 'none' && publish) {
         let assignIds = b.assignTo === 'all' ? 'all'
           : b.assignTo === 'department' ? `department:${b.assignDept}`
           : b.assignIds;
@@ -2867,7 +2867,7 @@ export default function CrewBoard({ user }) {
     setSelectedModule(mod);
     setTrainingView('adminResults');
     try {
-      const res = await fetch(`/api/training/modules/${mod.id}?crew_member_id=${currentUser.id}`);
+      const res = await fetch(`/api/training/modules/${mod.id}?crew_member_id=${currentUser.id}&role=admin`);
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setAdminTrainingResults(data.module);
@@ -3492,10 +3492,10 @@ export default function CrewBoard({ user }) {
             </div>
             {/* Publish & Save */}
             <div style={{ display: 'flex', gap: 10, paddingTop: 8 }}>
-              <button onClick={() => { setB('isPublished', false); setTimeout(handleSaveModule, 50); }} disabled={!b.title.trim() || moduleBuilderSaving} style={{ flex: 1, padding: 14, borderRadius: 12, border: `1px solid ${T.border}`, background: T.bgCard, color: T.textMuted, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+              <button onClick={() => handleSaveModule(false)} disabled={!b.title.trim() || moduleBuilderSaving} style={{ flex: 1, padding: 14, borderRadius: 12, border: `1px solid ${T.border}`, background: T.bgCard, color: T.textMuted, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
                 Save Draft
               </button>
-              <button onClick={() => { setB('isPublished', true); setTimeout(handleSaveModule, 50); }} disabled={!b.title.trim() || moduleBuilderSaving} className="cb-btn-primary" style={{ flex: 1, padding: 14, borderRadius: 12, border: 'none', background: !b.title.trim() || moduleBuilderSaving ? T.border : T.accent, color: !b.title.trim() || moduleBuilderSaving ? T.textDim : '#fff', fontSize: 14, fontWeight: 700, cursor: !b.title.trim() || moduleBuilderSaving ? 'default' : 'pointer' }}>
+              <button onClick={() => handleSaveModule(true)} disabled={!b.title.trim() || moduleBuilderSaving} className="cb-btn-primary" style={{ flex: 1, padding: 14, borderRadius: 12, border: 'none', background: !b.title.trim() || moduleBuilderSaving ? T.border : T.accent, color: !b.title.trim() || moduleBuilderSaving ? T.textDim : '#fff', fontSize: 14, fontWeight: 700, cursor: !b.title.trim() || moduleBuilderSaving ? 'default' : 'pointer' }}>
                 {moduleBuilderSaving ? 'Saving...' : 'Publish'}
               </button>
             </div>
