@@ -2779,17 +2779,34 @@ export default function CrewBoard({ user }) {
     } catch (err) { console.error('[training] refresh failed', err); }
   };
 
-  const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(new Error('Failed to read file'));
-    reader.readAsDataURL(file);
+  // Resizes an image to a max dimension and compresses as JPEG so the
+  // base64 data URL stays well under the ~4 MB Vercel body limit.
+  const compressImage = (file, maxDim = 1200, quality = 0.8) => new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        const scale = maxDim / Math.max(width, height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Failed to load image')); };
+    img.src = url;
   });
 
-  // Content images are stored as data URLs (base64) directly in the
-  // JSONB content blocks. This avoids the vessel-documents storage
-  // bucket which is currently restricted to PDFs only. For the small
-  // number of training modules on a yacht the extra payload is fine.
+  // Content images are stored as compressed data URLs (base64 JPEG)
+  // directly in the JSONB content blocks. Images are resized to max
+  // 1200px and compressed to ~80% quality to stay under Vercel's
+  // ~4 MB body limit while keeping good visual fidelity.
   const resolveContentUrls = async (content) => {
     // Data URLs and https URLs render directly — nothing to resolve.
     return content || [];
@@ -3534,7 +3551,7 @@ export default function CrewBoard({ user }) {
                   ) : block.type === 'image' ? (
                     block.value ? (
                       <div>
-                        <img src={block.previewUrl || block.resolvedUrl || block.value} alt="Preview" style={{ width: '100%', borderRadius: 8, marginBottom: 8, display: 'block' }} />
+                        <img src={block.value} alt="Preview" style={{ width: '100%', borderRadius: 8, marginBottom: 8, display: 'block' }} />
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                           <span style={{ fontSize: 11, color: T.success, flex: 1, fontWeight: 600 }}>{Icons.checkCircle} Image uploaded</span>
                           <button onClick={() => { const next = [...b.content]; next[i] = { ...next[i], value: '', previewUrl: '' }; setB('content', next); }} style={{ fontSize: 11, color: T.critical, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Remove</button>
@@ -3551,9 +3568,9 @@ export default function CrewBoard({ user }) {
                             const file = e.target.files?.[0];
                             if (!file) return;
                             try {
-                              const dataUrl = await readFileAsDataUrl(file);
+                              const dataUrl = await compressImage(file);
                               const next = [...b.content];
-                              next[i] = { ...next[i], value: dataUrl, previewUrl: dataUrl };
+                              next[i] = { ...next[i], value: dataUrl };
                               setB('content', next);
                             } catch (err) {
                               console.error('[training] image read failed', err);
