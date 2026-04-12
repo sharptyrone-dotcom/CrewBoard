@@ -9,6 +9,7 @@ import { createBroadcastNotification, fetchNotifications, markNotificationRead, 
 import { ACTIVITY_ACTIONS, fetchActivity, logActivity } from '@/lib/activity';
 import useRealtime from '@/hooks/useRealtime';
 import usePresence from '@/hooks/usePresence';
+import useMediaQuery from '@/hooks/useMediaQuery';
 
 // ─── Data & Constants ────────────────────────────────────────────────
 const CATEGORIES = ['All', 'Safety', 'Operations', 'Guest Info', 'HR/Admin', 'Social', 'Departmental'];
@@ -242,7 +243,7 @@ function NoticeDetail({ notice, currentUser, onBack, onAcknowledge, onMarkRead }
 // Legacy seeded rows still have `https://example.com/...` in their
 // file_url and there's no real file behind them, so for those we fall
 // back to the old "PDF document preview" placeholder tile.
-function DocDetail({ doc, currentUser, onBack, onAcknowledge, role, onDelete, onReplace }) {
+function DocDetail({ doc, currentUser, onBack, onAcknowledge, role, onDelete, onReplace, isDesktop }) {
   const isAcked = doc.acknowledgedBy.includes(currentUser.id);
   const isRealFile = !!doc.fileUrl && !/^https?:\/\//i.test(doc.fileUrl);
   const isAdmin = role === 'admin';
@@ -379,10 +380,10 @@ function DocDetail({ doc, currentUser, onBack, onAcknowledge, role, onDelete, on
 }
 
 // ─── Admin Notice Read Receipts ──────────────────────────────────────
-function AdminNoticeDetail({ notice, onBack, crew, onDelete }) {
+function AdminNoticeDetail({ notice, onBack, crew, onDelete, isDesktop }) {
   const totalCrew = crew.length;
   return (
-    <div style={{ padding: 20 }}>
+    <div style={{ padding: isDesktop ? '28px 36px' : 20 }}>
       <BackButton onClick={onBack} />
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
         <PriorityBadge priority={notice.priority} />
@@ -390,12 +391,12 @@ function AdminNoticeDetail({ notice, onBack, crew, onDelete }) {
         <ValidityPill validUntil={notice.validUntil} />
       </div>
       <h2 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: '0 0 20px' }}>{notice.title}</h2>
-      <div style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 24, maxWidth: isDesktop ? 400 : undefined }}>
         <StatCard label="Read" value={`${notice.readBy.length}/${totalCrew}`} color={T.accent} icon={Icons.eye} />
         <StatCard label="Acknowledged" value={`${notice.acknowledgedBy.length}/${totalCrew}`} color={notice.priority === 'critical' ? T.critical : T.success} icon={Icons.checkCircle} />
       </div>
       <h3 style={{ fontSize: 13, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 12px' }}>Crew Status</h3>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(3, 1fr)' : '1fr', gap: 6 }}>
         {crew.map(cm => {
           const hasRead = notice.readBy.includes(cm.id);
           const hasAcked = notice.acknowledgedBy.includes(cm.id);
@@ -413,43 +414,69 @@ function AdminNoticeDetail({ notice, onBack, crew, onDelete }) {
           );
         })}
       </div>
-      {notice.readBy.length < totalCrew && (
-        <button style={{ width: '100%', marginTop: 16, padding: 14, borderRadius: 12, border: `1px solid ${T.gold}`, background: T.goldTint, color: '#b45309', fontSize: 14, fontWeight: 700, cursor: 'pointer', transition: 'background 0.2s' }}>
-          Send Reminder to Non-Readers
-        </button>
-      )}
-      {onDelete && (
-        <button onClick={onDelete} style={{ width: '100%', marginTop: 10, padding: 14, borderRadius: 12, border: `1px solid ${T.critical}`, background: T.criticalTint, color: T.critical, fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'background 0.2s' }}>
-          {Icons.trash} Delete Notice
-        </button>
-      )}
+      <div style={{ display: 'flex', gap: 10, marginTop: 16, maxWidth: isDesktop ? 500 : undefined }}>
+        {notice.readBy.length < totalCrew && (
+          <button style={{ flex: 1, padding: 14, borderRadius: 12, border: `1px solid ${T.gold}`, background: T.goldTint, color: '#b45309', fontSize: 14, fontWeight: 700, cursor: 'pointer', transition: 'background 0.2s' }}>
+            Send Reminder to Non-Readers
+          </button>
+        )}
+        {onDelete && (
+          <button onClick={onDelete} style={{ flex: 1, padding: 14, borderRadius: 12, border: `1px solid ${T.critical}`, background: T.criticalTint, color: T.critical, fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'background 0.2s' }}>
+            {Icons.trash} Delete Notice
+          </button>
+        )}
+      </div>
     </div>
   );
 }
 
 // ─── Notice Card ─────────────────────────────────────────────────────
-function NoticeCard({ notice, currentUser, role, onClick, isPinned, crewCount }) {
+function NoticeCard({ notice, currentUser, role, onClick, isPinned, crewCount, isDesktop }) {
   const isRead = notice.readBy.includes(currentUser.id);
+  const isAdminDesktop = role === 'admin' && isDesktop;
   return (
-    <button onClick={onClick} className="cb-card" style={{ display: 'flex', gap: 14, padding: '18px 20px', background: T.bgCard, border: `1px solid ${isPinned ? T.gold : T.border}`, borderRadius: 16, cursor: 'pointer', textAlign: 'left', width: '100%', boxShadow: T.shadow }}>
+    <button onClick={onClick} className="cb-card" style={{ display: 'flex', gap: isAdminDesktop ? 18 : 14, padding: isAdminDesktop ? '16px 22px' : '18px 20px', background: T.bgCard, border: `1px solid ${isPinned ? T.gold : T.border}`, borderRadius: isAdminDesktop ? 12 : 16, cursor: 'pointer', textAlign: 'left', width: '100%', boxShadow: T.shadow, alignItems: isAdminDesktop ? 'center' : 'stretch' }}>
       <div style={{ width: 4, borderRadius: 2, background: PRIORITIES[notice.priority], flexShrink: 0, alignSelf: 'stretch' }} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
-          <PriorityBadge priority={notice.priority} />
-          <CategoryBadge category={notice.category} />
-          <ValidityPill validUntil={notice.validUntil} />
-          {isPinned && <span style={{ color: T.gold, display: 'flex' }}><Icon d={<><line x1="12" y1="17" x2="12" y2="22" /><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1V2H8v4h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24z" /></>} size={14} /></span>}
-        </div>
-        <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 4, lineHeight: 1.3 }}>{notice.title}</div>
-        <div style={{ fontSize: 12, color: T.textMuted }}>{new Date(notice.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</div>
-        {role === 'admin' && (
-          <div style={{ display: 'flex', gap: 12, marginTop: 8, fontSize: 11 }}>
-            <span style={{ color: T.accent }}>{notice.readBy.length}/{crewCount} read</span>
-            <span style={{ color: T.success }}>{notice.acknowledgedBy.length} acknowledged</span>
+      {isAdminDesktop ? (
+        /* Desktop admin: single-row layout with columns */
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, minWidth: 120 }}>
+            <PriorityBadge priority={notice.priority} />
+            <CategoryBadge category={notice.category} />
           </div>
-        )}
-      </div>
-      {role === 'crew' && !isRead && <div style={{ width: 10, height: 10, borderRadius: '50%', background: T.accent, flexShrink: 0, marginTop: 4 }} />}
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+            {isPinned && <span style={{ color: T.gold, display: 'flex', flexShrink: 0 }}><Icon d={<><line x1="12" y1="17" x2="12" y2="22" /><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1V2H8v4h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24z" /></>} size={14} /></span>}
+            <span style={{ fontSize: 14, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{notice.title}</span>
+            <ValidityPill validUntil={notice.validUntil} />
+          </div>
+          <div style={{ fontSize: 12, color: T.textMuted, flexShrink: 0, minWidth: 70, textAlign: 'right' }}>{new Date(notice.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</div>
+          <div style={{ display: 'flex', gap: 16, fontSize: 12, flexShrink: 0, minWidth: 150, justifyContent: 'flex-end' }}>
+            <span style={{ color: T.accent, fontWeight: 600 }}>{notice.readBy.length}/{crewCount} read</span>
+            <span style={{ color: T.success, fontWeight: 600 }}>{notice.acknowledgedBy.length} ack</span>
+          </div>
+        </>
+      ) : (
+        /* Mobile: original stacked layout */
+        <>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
+              <PriorityBadge priority={notice.priority} />
+              <CategoryBadge category={notice.category} />
+              <ValidityPill validUntil={notice.validUntil} />
+              {isPinned && <span style={{ color: T.gold, display: 'flex' }}><Icon d={<><line x1="12" y1="17" x2="12" y2="22" /><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1V2H8v4h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24z" /></>} size={14} /></span>}
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 4, lineHeight: 1.3 }}>{notice.title}</div>
+            <div style={{ fontSize: 12, color: T.textMuted }}>{new Date(notice.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</div>
+            {role === 'admin' && (
+              <div style={{ display: 'flex', gap: 12, marginTop: 8, fontSize: 11 }}>
+                <span style={{ color: T.accent }}>{notice.readBy.length}/{crewCount} read</span>
+                <span style={{ color: T.success }}>{notice.acknowledgedBy.length} acknowledged</span>
+              </div>
+            )}
+          </div>
+          {role === 'crew' && !isRead && <div style={{ width: 10, height: 10, borderRadius: '50%', background: T.accent, flexShrink: 0, marginTop: 4 }} />}
+        </>
+      )}
     </button>
   );
 }
@@ -508,6 +535,11 @@ export default function CrewBoard({ user }) {
   // safe during the initial paint (the page gate never actually renders
   // CrewBoard without a user, but belt-and-braces).
   const currentUser = user || { id: null, name: '', role: '', dept: '', avatar: '', isAdmin: false, vesselId: null };
+
+  // Desktop breakpoint: only admin role gets the wide layout. Crew always
+  // stays in the 480px mobile shell regardless of screen size.
+  const mqDesktop = useMediaQuery('(min-width: 768px)');
+  const isDesktop = role === 'admin' && mqDesktop;
 
   // Realtime presence: websocket channel keyed on the crew id, exposes a Set
   // of crew ids that are currently connected so the online dots update
@@ -1233,16 +1265,16 @@ export default function CrewBoard({ user }) {
     const pinned = filtered.filter(n => n.pinned);
     const unpinned = filtered.filter(n => !n.pinned);
     return (
-      <div style={{ padding: 20 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 800, color: T.text, margin: '0 0 16px' }}>Notices</h2>
+      <div style={{ padding: isDesktop ? '28px 36px' : 20 }}>
+        <h2 style={{ fontSize: isDesktop ? 26 : 20, fontWeight: 800, color: T.text, margin: '0 0 16px' }}>Notices</h2>
         <div style={{ position: 'relative', marginBottom: 12 }}>
           <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: T.textDim }}>{Icons.search}</div>
           <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search notices..." style={{ width: '100%', padding: '12px 14px 12px 42px', borderRadius: 12, border: `1px solid ${T.border}`, background: T.bgCard, color: T.text, fontSize: 14, outline: 'none', boxSizing: 'border-box', boxShadow: T.shadow }} />
         </div>
         <FilterChips options={CATEGORIES} selected={noticeFilter} onChange={setNoticeFilter} />
         <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {pinned.map(n => <NoticeCard key={n.id} notice={n} currentUser={currentUser} role={role} onClick={() => role === 'admin' ? setAdminNoticeView(n) : setSelectedNotice(n)} crewCount={crew.length} isPinned />)}
-          {unpinned.map(n => <NoticeCard key={n.id} notice={n} currentUser={currentUser} role={role} onClick={() => role === 'admin' ? setAdminNoticeView(n) : setSelectedNotice(n)} crewCount={crew.length} />)}
+          {pinned.map(n => <NoticeCard key={n.id} notice={n} currentUser={currentUser} role={role} onClick={() => role === 'admin' ? setAdminNoticeView(n) : setSelectedNotice(n)} crewCount={crew.length} isPinned isDesktop={isDesktop} />)}
+          {unpinned.map(n => <NoticeCard key={n.id} notice={n} currentUser={currentUser} role={role} onClick={() => role === 'admin' ? setAdminNoticeView(n) : setSelectedNotice(n)} crewCount={crew.length} isDesktop={isDesktop} />)}
           {noticesLoading && filtered.length === 0 && <p style={{ fontSize: 13, color: T.textMuted, textAlign: 'center', padding: 30 }}>Loading notices…</p>}
           {noticesError && <p style={{ fontSize: 13, color: T.critical, textAlign: 'center', padding: 30 }}>Error loading notices: {noticesError}</p>}
           {!noticesLoading && !noticesError && filtered.length === 0 && <p style={{ fontSize: 13, color: T.textMuted, textAlign: 'center', padding: 30 }}>No notices found</p>}
@@ -1260,6 +1292,7 @@ export default function CrewBoard({ user }) {
         onBack={() => setSelectedDoc(null)}
         onAcknowledge={handleAckDoc}
         role={role}
+        isDesktop={isDesktop}
         onDelete={role === 'admin' ? () => handleDeleteDoc(selectedDoc.id) : undefined}
         onReplace={role === 'admin' ? () => {
           // Prime the form with the current version so the admin can bump it
@@ -1281,8 +1314,8 @@ export default function CrewBoard({ user }) {
       .filter(d => docDeptFilter === 'All' || d.dept === docDeptFilter)
       .filter(d => docTypeFilter === 'All' || d.type === docTypeFilter);
     return (
-      <div style={{ padding: 20 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 800, color: T.text, margin: '0 0 16px' }}>{role === 'admin' ? 'Document Management' : 'Document Library'}</h2>
+      <div style={{ padding: isDesktop ? '28px 36px' : 20 }}>
+        <h2 style={{ fontSize: isDesktop ? 26 : 20, fontWeight: 800, color: T.text, margin: '0 0 16px' }}>{role === 'admin' ? 'Document Management' : 'Document Library'}</h2>
         <div style={{ marginBottom: 8 }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: T.textMuted, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>Department</div>
           <FilterChips options={DEPARTMENTS} selected={docDeptFilter} onChange={setDocDeptFilter} />
@@ -1291,12 +1324,13 @@ export default function CrewBoard({ user }) {
           <div style={{ fontSize: 11, fontWeight: 600, color: T.textMuted, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>Type</div>
           <FilterChips options={DOC_TYPES} selected={docTypeFilter} onChange={setDocTypeFilter} />
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(2, 1fr)' : '1fr', gap: isDesktop ? 12 : 8 }}>
           {filtered.map(d => {
             const isAcked = d.acknowledgedBy.includes(currentUser.id);
             const ackRatio = `${d.acknowledgedBy.length}/${crew.length}`;
+            const ackPercent = crew.length > 0 ? (d.acknowledgedBy.length / crew.length) * 100 : 0;
             return (
-              <button key={d.id} onClick={() => setSelectedDoc(d)} className="cb-card" style={{ display: 'flex', gap: 14, padding: '18px 20px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 16, cursor: 'pointer', textAlign: 'left', width: '100%', boxShadow: T.shadow }}>
+              <button key={d.id} onClick={() => setSelectedDoc(d)} className="cb-card" style={{ display: 'flex', gap: 14, padding: isDesktop ? '18px 22px' : '18px 20px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: isDesktop ? 14 : 16, cursor: 'pointer', textAlign: 'left', width: '100%', boxShadow: T.shadow }}>
                 <div style={{ width: 44, height: 50, borderRadius: 10, background: T.accentTint, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.accentDark, flexShrink: 0 }}>{Icons.file}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 4 }}>{d.title}</div>
@@ -1304,9 +1338,9 @@ export default function CrewBoard({ user }) {
                     <span>v{d.version}</span><span>{d.dept}</span><span>{d.type}</span>
                   </div>
                   {role === 'admin' && (
-                    <div style={{ marginTop: 8 }}>
-                      <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 4 }}>Acknowledged: {ackRatio}</div>
-                      <ComplianceBar value={(d.acknowledgedBy.length / crew.length) * 100} />
+                    <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ flex: 1 }}><ComplianceBar value={ackPercent} /></div>
+                      <span style={{ fontSize: 11, color: T.textMuted, flexShrink: 0 }}>{ackRatio}</span>
                     </div>
                   )}
                 </div>
@@ -1388,50 +1422,98 @@ export default function CrewBoard({ user }) {
       }, 0) / (liveCrew.length || 1)
     );
 
+    const requiredDocs = docs.filter(d => d.required);
+
+    // Per-crew compliance rows, computed once and shared between the
+    // mobile card list and the desktop table.
+    const crewRows = liveCrew.map(cm => {
+      const read = notices.filter(n => n.readBy.includes(cm.id)).length;
+      const acked = docs.filter(d => d.required && d.acknowledgedBy.includes(cm.id)).length;
+      const total = notices.length + requiredDocs.length;
+      const score = total > 0 ? Math.round(((read + acked) / total) * 100) : 0;
+      return { cm, read, acked, total, score };
+    });
+
     return (
-      <div style={{ padding: 20 }}>
+      <div style={{ padding: isDesktop ? '28px 36px' : 20 }}>
         <div style={{ marginBottom: 20 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text, margin: 0 }}>Dashboard</h1>
+          <h1 style={{ fontSize: isDesktop ? 26 : 22, fontWeight: 800, color: T.text, margin: 0 }}>Dashboard</h1>
           <p style={{ fontSize: 13, color: T.textMuted, margin: '4px 0 0' }}>M/Y Serenity — {liveCrew.length} crew on board</p>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+        {/* Stat cards: 2x2 mobile, 4-column desktop */}
+        <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(4, 1fr)' : '1fr 1fr', gap: isDesktop ? 16 : 10, marginBottom: isDesktop ? 24 : 20 }}>
           <StatCard label="Active Notices" value={notices.length} icon={Icons.notices} />
           <StatCard label="Crew Online" value={liveCrew.filter(c => c.online).length} color={T.success} icon={Icons.crew} />
           <StatCard label="Critical Unack." value={criticalUnacked} color={T.critical} icon={Icons.alert} />
           <StatCard label="Doc. Pending Ack." value={docsUnacked} color={T.gold} icon={Icons.docs} />
         </div>
-        <div style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 16, padding: 20, marginBottom: 20, boxShadow: T.shadow }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: T.text }}>Overall Compliance</span>
-            <span style={{ fontSize: 20, fontWeight: 800, color: overallCompliance > 70 ? T.success : T.gold, fontFamily: "'JetBrains Mono', monospace" }}>{overallCompliance}%</span>
+        {/* Compliance + Quick Actions: stacked mobile, side-by-side desktop */}
+        <div style={{ display: isDesktop ? 'grid' : 'block', gridTemplateColumns: isDesktop ? '1fr 1fr' : undefined, gap: isDesktop ? 20 : undefined, marginBottom: isDesktop ? 28 : 20 }}>
+          <div style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 16, padding: 20, marginBottom: isDesktop ? 0 : 20, boxShadow: T.shadow }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: T.text }}>Overall Compliance</span>
+              <span style={{ fontSize: 20, fontWeight: 800, color: overallCompliance > 70 ? T.success : T.gold, fontFamily: "'JetBrains Mono', monospace" }}>{overallCompliance}%</span>
+            </div>
+            <ComplianceBar value={overallCompliance} />
+            <p style={{ fontSize: 11, color: T.textMuted, margin: '8px 0 0' }}>Based on notice reads and document acknowledgements across all crew</p>
           </div>
-          <ComplianceBar value={overallCompliance} />
-          <p style={{ fontSize: 11, color: T.textMuted, margin: '8px 0 0' }}>Based on notice reads and document acknowledgements across all crew</p>
-        </div>
-        <div style={{ marginBottom: 12 }}>
-          <h3 style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1, margin: 0 }}>Quick Actions</h3>
-        </div>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
-          {[
-            ['New Notice', () => setShowNewNotice(true)],
-            ['Upload Doc', () => setShowNewDoc(true)],
-            ['Send Reminder', () => {}],
-            // Navigates via window.location.href rather than next/link so we
-            // get a full page load — the admin invites page owns its own
-            // AuthProvider and a hard navigation keeps the two trees
-            // cleanly separated.
-            ['Invite Crew', () => { window.location.href = '/admin/invites'; }],
-          ].map(([label, fn]) => (
-            <button key={label} onClick={fn} className="cb-btn-secondary" style={{ flex: '1 1 140px', padding: '14px 10px', borderRadius: 12, border: `1px solid ${T.border}`, background: T.bgCard, color: T.accentDark, fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: T.shadow }}>{label}</button>
-          ))}
+          <div>
+            <div style={{ marginBottom: 12 }}>
+              <h3 style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1, margin: 0 }}>Quick Actions</h3>
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {[
+                ['New Notice', () => setShowNewNotice(true)],
+                ['Upload Doc', () => setShowNewDoc(true)],
+                ['Send Reminder', () => {}],
+                ['Invite Crew', () => { window.location.href = '/admin/invites'; }],
+              ].map(([label, fn]) => (
+                <button key={label} onClick={fn} className="cb-btn-secondary" style={{ flex: '1 1 140px', padding: '14px 10px', borderRadius: 12, border: `1px solid ${T.border}`, background: T.bgCard, color: T.accentDark, fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: T.shadow }}>{label}</button>
+              ))}
+            </div>
+          </div>
         </div>
         <h3 style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 12px' }}>Crew Compliance</h3>
-        {liveCrew.map(cm => {
-          const read = notices.filter(n => n.readBy.includes(cm.id)).length;
-          const acked = docs.filter(d => d.required && d.acknowledgedBy.includes(cm.id)).length;
-          const total = notices.length + docs.filter(d => d.required).length;
-          const score = total > 0 ? Math.round(((read + acked) / total) * 100) : 0;
-          return (
+        {/* Desktop: proper table. Mobile: stacked cards. */}
+        {isDesktop ? (
+          <div style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 16, overflow: 'hidden', boxShadow: T.shadow }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${T.border}`, background: T.bg }}>
+                  {['Name', 'Role', 'Department', 'Notices Read', 'Docs Ack.', 'Compliance'].map(h => (
+                    <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 0.8 }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {crewRows.map(({ cm, read, acked, score }) => (
+                  <tr key={cm.id} onClick={() => setSelectedCrewMember(cm)} className="cb-table-row" style={{ borderBottom: `1px solid ${T.border}`, cursor: 'pointer', transition: 'background 0.15s' }}
+                    onMouseEnter={e => e.currentTarget.style.background = T.bg}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <td style={{ padding: '14px 16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <Avatar initials={cm.avatar} online={cm.online} size={32} />
+                        <span style={{ fontWeight: 700, color: T.text }}>{cm.name}</span>
+                      </div>
+                    </td>
+                    <td style={{ padding: '14px 16px', color: T.textMuted }}>{cm.role}</td>
+                    <td style={{ padding: '14px 16px', color: T.textMuted }}>{cm.dept}</td>
+                    <td style={{ padding: '14px 16px', color: T.accent, fontWeight: 600 }}>{read}/{notices.length}</td>
+                    <td style={{ padding: '14px 16px', color: T.gold, fontWeight: 600 }}>{acked}/{requiredDocs.length}</td>
+                    <td style={{ padding: '14px 16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ flex: 1 }}><ComplianceBar value={score} /></div>
+                        <span style={{ fontWeight: 800, color: score > 70 ? T.success : score > 40 ? T.gold : T.critical, fontFamily: "'JetBrains Mono', monospace", fontSize: 13, minWidth: 36, textAlign: 'right' }}>{score}%</span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          crewRows.map(({ cm, score }) => (
             <button key={cm.id} onClick={() => setSelectedCrewMember(cm)} className="cb-card" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 14, width: '100%', cursor: 'pointer', textAlign: 'left', marginBottom: 8, boxShadow: T.shadow }}>
               <Avatar initials={cm.avatar} online={cm.online} size={36} />
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -1443,8 +1525,8 @@ export default function CrewBoard({ user }) {
                 <ComplianceBar value={score} />
               </div>
             </button>
-          );
-        })}
+          ))
+        )}
       </div>
     );
   };
@@ -1452,22 +1534,11 @@ export default function CrewBoard({ user }) {
   // ─── Crew Management ───────────────────────────────────────────────
   const CrewManagement = () => {
     if (selectedCrewMember) {
-      // Re-hydrate from liveCrew so the detail view's online dot reacts to
-      // presence changes even while this screen is open. Falls back to the
-      // captured snapshot if the row is no longer on the roster.
       const cm = liveCrew.find(c => c.id === selectedCrewMember.id) || selectedCrewMember;
-      return (
-        <div style={{ padding: 20 }}>
-          <BackButton onClick={() => setSelectedCrewMember(null)} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
-            <Avatar initials={cm.avatar} online={cm.online} size={56} />
-            <div>
-              <h2 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0 }}>{cm.name}</h2>
-              <p style={{ fontSize: 13, color: T.textMuted, margin: '2px 0 0' }}>{cm.role} — {cm.dept}</p>
-            </div>
-          </div>
+      const noticeCol = (
+        <div>
           <h3 style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 10px' }}>Notice Status</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {notices.map(n => {
               const hasRead = n.readBy.includes(cm.id);
               const hasAcked = n.acknowledgedBy.includes(cm.id);
@@ -1481,6 +1552,10 @@ export default function CrewBoard({ user }) {
               );
             })}
           </div>
+        </div>
+      );
+      const docCol = (
+        <div>
           <h3 style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 10px' }}>Document Acknowledgements</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {docs.filter(d => d.required).map(d => {
@@ -1495,24 +1570,100 @@ export default function CrewBoard({ user }) {
           </div>
         </div>
       );
+      return (
+        <div style={{ padding: isDesktop ? '28px 36px' : 20 }}>
+          <BackButton onClick={() => setSelectedCrewMember(null)} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
+            <Avatar initials={cm.avatar} online={cm.online} size={56} />
+            <div>
+              <h2 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0 }}>{cm.name}</h2>
+              <p style={{ fontSize: 13, color: T.textMuted, margin: '2px 0 0' }}>{cm.role} — {cm.dept}</p>
+            </div>
+          </div>
+          {/* Desktop: notice + doc columns side by side. Mobile: stacked. */}
+          {isDesktop ? (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, alignItems: 'start' }}>
+              {noticeCol}
+              {docCol}
+            </div>
+          ) : (
+            <>
+              <div style={{ marginBottom: 20 }}>{noticeCol}</div>
+              {docCol}
+            </>
+          )}
+        </div>
+      );
     }
+
+    // Crew roster
+    const requiredDocs = docs.filter(d => d.required);
     return (
-      <div style={{ padding: 20 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 800, color: T.text, margin: '0 0 16px' }}>Crew Management</h2>
-        <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+      <div style={{ padding: isDesktop ? '28px 36px' : 20 }}>
+        <h2 style={{ fontSize: isDesktop ? 26 : 20, fontWeight: 800, color: T.text, margin: '0 0 16px' }}>Crew Management</h2>
+        <div style={{ display: 'flex', gap: 10, marginBottom: 20, maxWidth: isDesktop ? 320 : undefined }}>
           <StatCard label="On Board" value={liveCrew.length} icon={Icons.crew} />
           <StatCard label="Online" value={liveCrew.filter(c => c.online).length} color={T.success} icon={Icons.checkCircle} />
         </div>
-        {liveCrew.map(cm => (
-          <button key={cm.id} onClick={() => setSelectedCrewMember(cm)} className="cb-card" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '18px 20px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 16, width: '100%', cursor: 'pointer', textAlign: 'left', marginBottom: 10, boxShadow: T.shadow }}>
-            <Avatar initials={cm.avatar} online={cm.online} size={40} />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{cm.name}</div>
-              <div style={{ fontSize: 12, color: T.textMuted }}>{cm.role} — {cm.dept}</div>
-            </div>
-            <span style={{ color: T.textDim, fontSize: 18 }}>&rsaquo;</span>
-          </button>
-        ))}
+        {/* Desktop: table. Mobile: cards. */}
+        {isDesktop ? (
+          <div style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 16, overflow: 'hidden', boxShadow: T.shadow }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${T.border}`, background: T.bg }}>
+                  {['Name', 'Role', 'Department', 'Status', 'Compliance'].map(h => (
+                    <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 0.8 }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {liveCrew.map(cm => {
+                  const read = notices.filter(n => n.readBy.includes(cm.id)).length;
+                  const acked = docs.filter(d => d.required && d.acknowledgedBy.includes(cm.id)).length;
+                  const total = notices.length + requiredDocs.length;
+                  const score = total > 0 ? Math.round(((read + acked) / total) * 100) : 0;
+                  return (
+                    <tr key={cm.id} onClick={() => setSelectedCrewMember(cm)} style={{ borderBottom: `1px solid ${T.border}`, cursor: 'pointer', transition: 'background 0.15s' }}
+                      onMouseEnter={e => e.currentTarget.style.background = T.bg}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <td style={{ padding: '14px 16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <Avatar initials={cm.avatar} online={cm.online} size={32} />
+                          <span style={{ fontWeight: 700, color: T.text }}>{cm.name}</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: '14px 16px', color: T.textMuted }}>{cm.role}</td>
+                      <td style={{ padding: '14px 16px', color: T.textMuted }}>{cm.dept}</td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: cm.online ? T.success : T.textDim, background: cm.online ? T.successTint : '#f1f5f9', padding: '3px 8px', borderRadius: 6 }}>
+                          {cm.online ? 'Online' : 'Offline'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div style={{ flex: 1 }}><ComplianceBar value={score} /></div>
+                          <span style={{ fontWeight: 800, color: score > 70 ? T.success : score > 40 ? T.gold : T.critical, fontFamily: "'JetBrains Mono', monospace", fontSize: 13, minWidth: 36, textAlign: 'right' }}>{score}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          liveCrew.map(cm => (
+            <button key={cm.id} onClick={() => setSelectedCrewMember(cm)} className="cb-card" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '18px 20px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 16, width: '100%', cursor: 'pointer', textAlign: 'left', marginBottom: 10, boxShadow: T.shadow }}>
+              <Avatar initials={cm.avatar} online={cm.online} size={40} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{cm.name}</div>
+                <div style={{ fontSize: 12, color: T.textMuted }}>{cm.role} — {cm.dept}</div>
+              </div>
+              <span style={{ color: T.textDim, fontSize: 18 }}>&rsaquo;</span>
+            </button>
+          ))
+        )}
       </div>
     );
   };
@@ -1622,8 +1773,8 @@ export default function CrewBoard({ user }) {
     });
 
     return (
-      <div style={{ padding: 20 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 800, color: T.text, margin: '0 0 4px' }}>Activity Log</h2>
+      <div style={{ padding: isDesktop ? '28px 36px' : 20 }}>
+        <h2 style={{ fontSize: isDesktop ? 26 : 20, fontWeight: 800, color: T.text, margin: '0 0 4px' }}>Activity Log</h2>
         <p style={{ fontSize: 12, color: T.textMuted, margin: '0 0 20px' }}>Every notice posted and every acknowledgement across the vessel.</p>
 
         {activityLoading && <div style={{ color: T.textMuted, fontSize: 13, padding: '20px 0', textAlign: 'center' }}>Loading activity…</div>}
@@ -1916,7 +2067,7 @@ export default function CrewBoard({ user }) {
   // AdminNoticeDetail is a genuine component (defined outside CrewBoard)
   // with its own hooks, so it stays as `<AdminNoticeDetail ... />`.
   const renderScreen = () => {
-    if (role === 'admin' && adminNoticeView) return <AdminNoticeDetail notice={adminNoticeView} onBack={() => setAdminNoticeView(null)} crew={liveCrew} onDelete={() => handleDeleteNotice(adminNoticeView.id)} />;
+    if (role === 'admin' && adminNoticeView) return <AdminNoticeDetail notice={adminNoticeView} onBack={() => setAdminNoticeView(null)} crew={liveCrew} onDelete={() => handleDeleteNotice(adminNoticeView.id)} isDesktop={isDesktop} />;
     if (role === 'admin') {
       switch (tab) {
         case 'home': return AdminDashboard();
@@ -1936,21 +2087,61 @@ export default function CrewBoard({ user }) {
     }
   };
 
+  // ─── Sidebar (admin desktop only) ──────────────────────────────────
+  const Sidebar = () => (
+    <div style={{ position: 'fixed', left: 0, top: 0, bottom: 0, width: 240, background: '#fff', borderRight: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', zIndex: 60 }}>
+      {/* Sidebar header / logo */}
+      <div style={{ padding: '20px 22px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: `1px solid ${T.border}` }}>
+        <div style={{ width: 32, height: 32, borderRadius: 8, background: `linear-gradient(135deg, ${T.accent} 0%, ${T.accentDark} 100%)`, display: 'grid', placeItems: 'center', color: '#fff', boxShadow: '0 4px 10px rgba(59,130,246,0.35)' }}>
+          <Icon d={<><circle cx="12" cy="5" r="3" /><line x1="12" y1="22" x2="12" y2="8" /><path d="M5 12H2a10 10 0 0020 0h-3" /></>} size={18} strokeWidth={2.5} />
+        </div>
+        <span style={{ fontSize: 18, fontWeight: 700, color: T.text, letterSpacing: -0.3 }}>CrewBoard</span>
+      </div>
+      {/* Nav items */}
+      <nav style={{ flex: 1, padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {tabs.map(t => {
+          const active = tab === t.id;
+          return (
+            <button key={t.id} onClick={() => { setTab(t.id); resetNav(); }} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', borderRadius: 10, border: 'none', background: active ? T.accentTint : 'transparent', color: active ? T.accent : T.textMuted, cursor: 'pointer', fontSize: 14, fontWeight: active ? 700 : 500, transition: 'all 0.15s', width: '100%', textAlign: 'left' }}
+              onMouseEnter={e => { if (!active) e.currentTarget.style.background = T.bg; }}
+              onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+            >
+              {t.icon}
+              <span>{t.label}</span>
+              {t.badge > 0 && <span style={{ marginLeft: 'auto', minWidth: 20, height: 20, borderRadius: 10, background: T.critical, fontSize: 11, fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px' }}>{t.badge}</span>}
+            </button>
+          );
+        })}
+      </nav>
+      {/* Sidebar footer: user info */}
+      <div style={{ padding: '14px 16px', borderTop: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <Avatar initials={currentUser.avatar} online size={32} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentUser.name}</div>
+          <div style={{ fontSize: 11, color: T.textMuted }}>{currentUser.role}</div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
-    <div style={{ background: T.bg, color: T.text, minHeight: '100vh', maxWidth: 480, margin: '0 auto', position: 'relative', display: 'flex', flexDirection: 'column', boxShadow: '0 0 80px rgba(15,23,42,0.06)' }}>
+    <div style={{ background: T.bg, color: T.text, minHeight: '100vh', maxWidth: isDesktop ? undefined : 480, margin: isDesktop ? undefined : '0 auto', position: 'relative', display: 'flex', flexDirection: 'column', boxShadow: isDesktop ? 'none' : '0 0 80px rgba(15,23,42,0.06)' }}>
+
+      {/* Desktop sidebar — admin only */}
+      {isDesktop && Sidebar()}
 
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 22px', borderBottom: `1px solid ${T.border}`, background: 'rgba(255,255,255,0.85)', backdropFilter: 'saturate(180%) blur(12px)', WebkitBackdropFilter: 'saturate(180%) blur(12px)', position: 'sticky', top: 0, zIndex: 50 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 8, background: `linear-gradient(135deg, ${T.accent} 0%, ${T.accentDark} 100%)`, display: 'grid', placeItems: 'center', color: '#fff', boxShadow: '0 4px 10px rgba(59,130,246,0.35)' }}>
-            <Icon d={<><circle cx="12" cy="5" r="3" /><line x1="12" y1="22" x2="12" y2="8" /><path d="M5 12H2a10 10 0 0020 0h-3" /></>} size={18} strokeWidth={2.5} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: isDesktop ? '14px 36px' : '16px 22px', borderBottom: `1px solid ${T.border}`, background: 'rgba(255,255,255,0.85)', backdropFilter: 'saturate(180%) blur(12px)', WebkitBackdropFilter: 'saturate(180%) blur(12px)', position: 'sticky', top: 0, zIndex: 50, marginLeft: isDesktop ? 240 : 0 }}>
+        {/* On desktop, the sidebar already shows the logo — so we show nothing on the left */}
+        {isDesktop ? <div /> : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: `linear-gradient(135deg, ${T.accent} 0%, ${T.accentDark} 100%)`, display: 'grid', placeItems: 'center', color: '#fff', boxShadow: '0 4px 10px rgba(59,130,246,0.35)' }}>
+              <Icon d={<><circle cx="12" cy="5" r="3" /><line x1="12" y1="22" x2="12" y2="8" /><path d="M5 12H2a10 10 0 0020 0h-3" /></>} size={18} strokeWidth={2.5} />
+            </div>
+            <span style={{ fontSize: 18, fontWeight: 700, color: T.text, letterSpacing: -0.3 }}>CrewBoard</span>
           </div>
-          <span style={{ fontSize: 18, fontWeight: 700, color: T.text, letterSpacing: -0.3 }}>CrewBoard</span>
-        </div>
+        )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          {/* Role toggle only appears for admins so non-admin crew can't
-              pretend to be admins. The RLS policies would block most admin
-              actions anyway, but hiding the toggle removes the confusion. */}
           {currentUser.isAdmin && (
             <div style={{ display: 'flex', background: T.bg, borderRadius: 10, border: `1px solid ${T.border}`, overflow: 'hidden', padding: 2 }}>
               {['crew', 'admin'].map(r => (
@@ -1966,26 +2157,28 @@ export default function CrewBoard({ user }) {
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, overflow: 'auto', paddingBottom: 88 }}>
+      <div style={{ flex: 1, overflow: 'auto', paddingBottom: isDesktop ? 24 : 88, marginLeft: isDesktop ? 240 : 0, maxWidth: isDesktop ? 1200 : undefined, width: isDesktop ? 'calc(100% - 240px)' : undefined }}>
         {renderScreen()}
       </div>
 
-      {/* Bottom Navigation */}
-      <div style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 480, background: 'rgba(255,255,255,0.92)', borderTop: `1px solid ${T.border}`, display: 'flex', zIndex: 50, backdropFilter: 'saturate(180%) blur(14px)', WebkitBackdropFilter: 'saturate(180%) blur(14px)', boxShadow: '0 -8px 24px rgba(15,23,42,0.04)' }}>
-        {tabs.map(t => (
-          <button key={t.id} onClick={() => { setTab(t.id); resetNav(); }} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '12px 4px 14px', border: 'none', background: 'none', cursor: 'pointer', position: 'relative', color: tab === t.id ? T.accent : T.textDim, transition: 'color 0.2s' }}>
-            {tab === t.id && <div style={{ position: 'absolute', top: 0, left: '30%', right: '30%', height: 3, background: T.accent, borderRadius: '0 0 3px 3px' }} />}
-            <div style={{ position: 'relative' }}>
-              {t.icon}
-              {t.badge > 0 && <div style={{ position: 'absolute', top: -6, right: -8, minWidth: 16, height: 16, borderRadius: 8, background: T.critical, fontSize: 10, fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', border: '2px solid #fff' }}>{t.badge}</div>}
-            </div>
-            <span style={{ fontSize: 10, fontWeight: 600 }}>{t.label}</span>
-          </button>
-        ))}
-      </div>
+      {/* Bottom Navigation — mobile only (on desktop the sidebar replaces it) */}
+      {!isDesktop && (
+        <div style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 480, background: 'rgba(255,255,255,0.92)', borderTop: `1px solid ${T.border}`, display: 'flex', zIndex: 50, backdropFilter: 'saturate(180%) blur(14px)', WebkitBackdropFilter: 'saturate(180%) blur(14px)', boxShadow: '0 -8px 24px rgba(15,23,42,0.04)' }}>
+          {tabs.map(t => (
+            <button key={t.id} onClick={() => { setTab(t.id); resetNav(); }} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '12px 4px 14px', border: 'none', background: 'none', cursor: 'pointer', position: 'relative', color: tab === t.id ? T.accent : T.textDim, transition: 'color 0.2s' }}>
+              {tab === t.id && <div style={{ position: 'absolute', top: 0, left: '30%', right: '30%', height: 3, background: T.accent, borderRadius: '0 0 3px 3px' }} />}
+              <div style={{ position: 'relative' }}>
+                {t.icon}
+                {t.badge > 0 && <div style={{ position: 'absolute', top: -6, right: -8, minWidth: 16, height: 16, borderRadius: 8, background: T.critical, fontSize: 10, fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', border: '2px solid #fff' }}>{t.badge}</div>}
+              </div>
+              <span style={{ fontSize: 10, fontWeight: 600 }}>{t.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
-      {/* Admin FAB */}
-      {role === 'admin' && tab === 'notices' && !adminNoticeView && (
+      {/* Admin FAB — mobile only */}
+      {role === 'admin' && !isDesktop && tab === 'notices' && !adminNoticeView && (
         <button onClick={() => setShowNewNotice(true)} className="cb-btn-primary" style={{ position: 'fixed', bottom: 100, right: 'calc(50% - 214px)', width: 56, height: 56, borderRadius: '50%', background: T.accent, border: 'none', color: '#fff', cursor: 'pointer', boxShadow: '0 10px 30px rgba(59,130,246,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
           {Icons.plus}
         </button>
