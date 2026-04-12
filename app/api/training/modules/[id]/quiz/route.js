@@ -30,6 +30,18 @@ const supabaseKey =
   '';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// Parses question_text which may be a plain string or a JSON-encoded
+// {text, image} object (for questions with an attached image).
+function parseQuestionText(raw) {
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.text === 'string') {
+      return { text: parsed.text, image: parsed.image || null };
+    }
+  } catch {}
+  return { text: raw, image: null };
+}
+
 // Fisher-Yates shuffle (non-mutating).
 function shuffle(arr) {
   const a = [...arr];
@@ -95,15 +107,20 @@ export async function GET(request, { params }) {
     }
 
     // Strip is_correct from each option so crew can't peek at answers.
-    const safeQuestions = questions.map((q) => ({
-      id: q.id,
-      questionText: q.question_text,
-      questionType: q.question_type,
-      options: (q.options || []).map((opt) => ({
-        id: opt.id,
-        text: opt.text,
-      })),
-    }));
+    // Also parse question_text in case it contains a JSON {text, image}.
+    const safeQuestions = questions.map((q) => {
+      const qt = parseQuestionText(q.question_text);
+      return {
+        id: q.id,
+        questionText: qt.text,
+        questionImage: qt.image,
+        questionType: q.question_type,
+        options: (q.options || []).map((opt) => ({
+          id: opt.id,
+          text: opt.text,
+        })),
+      };
+    });
 
     // Mark assignment as in_progress if it's still in 'assigned' state.
     if (assignment.status === 'assigned') {
@@ -200,9 +217,10 @@ export async function POST(request, { params }) {
 
       if (isCorrect) correct++;
 
+      const qt = parseQuestionText(question.question_text);
       return {
         questionId: ans.question_id,
-        questionText: question.question_text,
+        questionText: qt.text,
         selectedOptionId: ans.selected_option_id,
         isCorrect,
         correctOptionId: correctOption?.id || null,

@@ -2866,7 +2866,9 @@ export default function CrewBoard({ user }) {
       // Strip ephemeral preview URLs from content before saving
       const cleanContent = (b.content || []).map(({ previewUrl, resolvedUrl, ...rest }) => rest);
       const questions = b.questions.map((q, i) => ({
-        question_text: q.questionText,
+        question_text: q.questionImage
+          ? JSON.stringify({ text: q.questionText, image: q.questionImage })
+          : q.questionText,
         question_type: q.questionType,
         options: q.options,
         explanation: q.explanation || null,
@@ -2991,12 +2993,11 @@ export default function CrewBoard({ user }) {
         timeLimitMinutes: m.timeLimitMinutes || '',
         randomiseQuestions: m.randomiseQuestions || false,
         isPublished: m.isPublished || false,
-        questions: (m.questions || []).map(q => ({
-          questionText: q.question_text,
-          questionType: q.question_type,
-          explanation: q.explanation || '',
-          options: (q.options || []).map(o => ({ ...o })),
-        })),
+        questions: (m.questions || []).map(q => {
+          let qText = q.question_text, qImage = '';
+          try { const p = JSON.parse(q.question_text); if (p?.text) { qText = p.text; qImage = p.image || ''; } } catch {}
+          return { questionText: qText, questionImage: qImage, questionType: q.question_type, explanation: q.explanation || '', options: (q.options || []).map(o => ({ ...o })) };
+        }),
         assignTo: 'none',
         assignDept: 'All',
         assignIds: [],
@@ -3131,6 +3132,12 @@ export default function CrewBoard({ user }) {
           <div style={{ height: 6, background: T.border, borderRadius: 3, overflow: 'hidden', marginBottom: 24 }}>
             <div style={{ height: '100%', width: `${progress}%`, background: T.accent, borderRadius: 3, transition: 'width 0.3s ease' }} />
           </div>
+          {/* Question image */}
+          {q.questionImage && (
+            <div style={{ marginBottom: 16, borderRadius: 12, overflow: 'hidden', border: `1px solid ${T.border}` }}>
+              <img src={q.questionImage} alt="Question" style={{ width: '100%', display: 'block' }} />
+            </div>
+          )}
           {/* Question */}
           <h3 style={{ fontSize: 17, fontWeight: 700, color: T.text, margin: '0 0 20px', lineHeight: 1.4 }}>{q.questionText}</h3>
           {/* Answer options */}
@@ -3486,7 +3493,7 @@ export default function CrewBoard({ user }) {
     };
 
     const addQuestion = () => setB('questions', [...b.questions, {
-      questionText: '', questionType: 'multiple_choice', explanation: '',
+      questionText: '', questionImage: '', questionType: 'multiple_choice', explanation: '',
       options: [{ id: `o_${Date.now()}_0`, text: '', is_correct: false }, { id: `o_${Date.now()}_1`, text: '', is_correct: false }],
     }]);
     const updateQuestion = (qi, field, val) => {
@@ -3606,6 +3613,25 @@ export default function CrewBoard({ user }) {
                     <button onClick={() => removeQuestion(qi)} style={{ background: 'none', border: 'none', color: T.critical, cursor: 'pointer', padding: 2 }}>{Icons.x}</button>
                   </div>
                   <input value={q.questionText} onChange={e => updateQuestion(qi, 'questionText', e.target.value)} placeholder="Question text..." style={{ ...inputStyle, marginBottom: 8, fontSize: 13 }} />
+                  {/* Question image */}
+                  {q.questionImage ? (
+                    <div style={{ marginBottom: 8, borderRadius: 8, overflow: 'hidden', border: `1px solid ${T.border}`, position: 'relative' }}>
+                      <img src={q.questionImage} alt="Question" style={{ width: '100%', display: 'block', maxHeight: 200, objectFit: 'cover' }} />
+                      <button onClick={() => updateQuestion(qi, 'questionImage', '')} style={{ position: 'absolute', top: 6, right: 6, width: 24, height: 24, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>{Icons.x}</button>
+                    </div>
+                  ) : (
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', border: `1px dashed ${T.border}`, borderRadius: 8, cursor: 'pointer', marginBottom: 8, fontSize: 11, color: T.textMuted, fontWeight: 600 }}>
+                      {Icons.image} <span>Add image</span>
+                      <input type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        try {
+                          const dataUrl = await compressImage(file);
+                          updateQuestion(qi, 'questionImage', dataUrl);
+                        } catch (err) { alert('Failed to load image: ' + err.message); }
+                      }} />
+                    </label>
+                  )}
                   {/* Options */}
                   {q.options.map((opt, oi) => (
                     <div key={oi} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
