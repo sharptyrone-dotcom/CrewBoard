@@ -62,6 +62,16 @@ const Icons = {
   minus: <Icon d={<line x1="5" y1="12" x2="19" y2="12" />} />,
   star: <Icon d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" />,
   starFilled: <Icon d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" fill="currentColor" />,
+  training: <Icon d={<><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z" /><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" /></>} />,
+  award: <Icon d={<><circle cx="12" cy="8" r="7" /><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" /></>} />,
+  play: <Icon d="M5 3l14 9-14 9V3z" />,
+  check: <Icon d={<polyline points="20 6 9 17 4 12" />} />,
+  arrowUp: <Icon d={<><line x1="12" y1="19" x2="12" y2="5" /><polyline points="5 12 12 5 19 12" /></>} />,
+  arrowDown: <Icon d={<><line x1="12" y1="5" x2="12" y2="19" /><polyline points="19 12 12 19 5 12" /></>} />,
+  send: <Icon d={<><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></>} />,
+  image: <Icon d={<><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></>} />,
+  video: <Icon d={<><polygon points="23 7 16 12 23 17 23 7" /><rect x="1" y="5" width="15" height="14" rx="2" ry="2" /></>} />,
+  userPlus: <Icon d={<><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="8.5" cy="7" r="4" /><line x1="20" y1="8" x2="20" y2="14" /><line x1="23" y1="11" x2="17" y2="11" /></>} />,
 };
 
 // ─── Theme ───────────────────────────────────────────────────────────
@@ -741,6 +751,29 @@ export default function CrewBoard({ user }) {
   const [pushState, setPushState] = useState('loading'); // loading | subscribed | prompt | denied | unsupported
   const [pushDismissed, setPushDismissed] = useState(false);
 
+  // ── Training system state ──
+  const [trainingModules, setTrainingModules] = useState([]);
+  const [trainingLoading, setTrainingLoading] = useState(true);
+  const [selectedModule, setSelectedModule] = useState(null);
+  // 'dashboard' | 'module' | 'quiz' | 'results' | 'builder' | 'adminResults'
+  const [trainingView, setTrainingView] = useState('dashboard');
+  const [quizAnswers, setQuizAnswers] = useState({});
+  const [quizQuestions, setQuizQuestions] = useState([]);
+  const [quizCurrent, setQuizCurrent] = useState(0);
+  const [quizResults, setQuizResults] = useState(null);
+  const [quizSubmitting, setQuizSubmitting] = useState(false);
+  const [quizTimerLeft, setQuizTimerLeft] = useState(null);
+  const [adminTrainingResults, setAdminTrainingResults] = useState(null);
+  const [adminTrainDeptFilter, setAdminTrainDeptFilter] = useState('All');
+  const [showModuleBuilder, setShowModuleBuilder] = useState(false);
+  const [moduleBuilderData, setModuleBuilderData] = useState({
+    title: '', description: '', content: [], passMark: 80, timeLimitMinutes: '',
+    randomiseQuestions: false, isPublished: false,
+    questions: [], assignTo: 'none', assignDept: 'All', assignIds: [], deadline: '',
+  });
+  const [moduleBuilderSaving, setModuleBuilderSaving] = useState(false);
+  const [trainingReminderState, setTrainingReminderState] = useState('idle');
+
   // Derived from the authenticated session via fetchCurrentCrewMember in
   // app/app/page.js. Falls back to an empty object so destructuring stays
   // safe during the initial paint (the page gate never actually renders
@@ -863,6 +896,24 @@ export default function CrewBoard({ user }) {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  // ── Training data fetch ──
+  useEffect(() => {
+    if (!currentUser.id || !currentUser.vesselId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/training/modules?crew_member_id=${currentUser.id}&vessel_id=${currentUser.vesselId}`);
+        const data = await res.json();
+        if (!cancelled) setTrainingModules(data.modules || []);
+      } catch (err) {
+        console.error('[training] fetch failed', err);
+      } finally {
+        if (!cancelled) setTrainingLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [currentUser.id, currentUser.vesselId, role]);
 
   // Check whether the user has subscribed to push notifications. We run
   // this once on mount so the opt-in banner can decide whether to show.
@@ -1578,7 +1629,19 @@ export default function CrewBoard({ user }) {
     setSelectedDoc(null);
     setAdminNoticeView(null);
     setSelectedCrewMember(null);
+    setSelectedModule(null);
+    setTrainingView('dashboard');
+    setQuizResults(null);
+    setQuizQuestions([]);
+    setQuizAnswers({});
+    setQuizCurrent(0);
+    setAdminTrainingResults(null);
   };
+
+  // Training badge: count of pending (non-completed) assignments for crew
+  const pendingTraining = role === 'crew'
+    ? trainingModules.filter(m => m.status && m.status !== 'completed').length
+    : 0;
 
   const handleLogout = async () => {
     try {
@@ -1593,13 +1656,14 @@ export default function CrewBoard({ user }) {
     { id: 'home', label: 'Home', icon: Icons.home },
     { id: 'notices', label: 'Notices', icon: Icons.notices, badge: unreadNotices },
     { id: 'docs', label: 'Library', icon: Icons.docs, badge: pendingDocAcks },
-    { id: 'profile', label: 'Profile', icon: Icons.crew },
+    { id: 'training', label: 'Training', icon: Icons.training, badge: pendingTraining },
   ];
 
   const adminTabs = [
     { id: 'home', label: 'Dashboard', icon: Icons.dashboard },
     { id: 'notices', label: 'Notices', icon: Icons.notices },
     { id: 'docs', label: 'Documents', icon: Icons.docs },
+    { id: 'training', label: 'Training', icon: Icons.training },
     { id: 'crew', label: 'Crew', icon: Icons.crew },
     { id: 'activity', label: 'Activity', icon: Icons.clock },
   ];
@@ -2701,6 +2765,746 @@ export default function CrewBoard({ user }) {
     </div>
   );
 
+  // ─── Training: helpers ────────────────────────────────────────────
+  const refreshTraining = async () => {
+    try {
+      const res = await fetch(`/api/training/modules?crew_member_id=${currentUser.id}&vessel_id=${currentUser.vesselId}`);
+      const data = await res.json();
+      setTrainingModules(data.modules || []);
+    } catch (err) { console.error('[training] refresh failed', err); }
+  };
+
+  const handleStartQuiz = async (mod) => {
+    try {
+      const res = await fetch(`/api/training/modules/${mod.id || mod.moduleId}/quiz?crew_member_id=${currentUser.id}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setQuizQuestions(data.quiz.questions || []);
+      setQuizAnswers({});
+      setQuizCurrent(0);
+      setQuizResults(null);
+      setQuizSubmitting(false);
+      setQuizTimerLeft(data.quiz.timeLimitMinutes ? data.quiz.timeLimitMinutes * 60 : null);
+      setTrainingView('quiz');
+    } catch (err) { console.error('[quiz] start failed', err); alert('Failed to load quiz: ' + err.message); }
+  };
+
+  const handleSubmitQuiz = async (mod) => {
+    if (quizSubmitting) return;
+    setQuizSubmitting(true);
+    try {
+      const answersArr = quizQuestions.map(q => ({
+        question_id: q.id,
+        selected_option_id: quizAnswers[q.id] || null,
+      }));
+      const res = await fetch(`/api/training/modules/${mod.id || mod.moduleId}/quiz`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ crew_member_id: currentUser.id, answers: answersArr }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setQuizResults(data.result);
+      setTrainingView('results');
+      refreshTraining();
+    } catch (err) {
+      console.error('[quiz] submit failed', err);
+      alert('Failed to submit quiz: ' + err.message);
+    } finally { setQuizSubmitting(false); }
+  };
+
+  const handleSaveModule = async () => {
+    if (moduleBuilderSaving) return;
+    setModuleBuilderSaving(true);
+    const b = moduleBuilderData;
+    try {
+      const modulePayload = {
+        crew_member_id: currentUser.id,
+        vessel_id: currentUser.vesselId,
+        title: b.title,
+        description: b.description,
+        content: b.content,
+        pass_mark: b.passMark,
+        time_limit_minutes: b.timeLimitMinutes ? parseInt(b.timeLimitMinutes) : null,
+        randomise_questions: b.randomiseQuestions,
+        is_published: b.isPublished,
+        questions: b.questions.map((q, i) => ({
+          question_text: q.questionText,
+          question_type: q.questionType,
+          options: q.options,
+          explanation: q.explanation || null,
+          sort_order: i,
+        })),
+      };
+      const res = await fetch('/api/training/modules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(modulePayload),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      // Assign if selected
+      if (b.assignTo !== 'none' && b.isPublished) {
+        let assignIds = b.assignTo === 'all' ? 'all'
+          : b.assignTo === 'department' ? `department:${b.assignDept}`
+          : b.assignIds;
+        await fetch(`/api/training/modules/${data.module.id}/assign`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ crew_member_id: currentUser.id, crew_member_ids: assignIds, deadline: b.deadline || null }),
+        });
+      }
+      setShowModuleBuilder(false);
+      setModuleBuilderData({ title: '', description: '', content: [], passMark: 80, timeLimitMinutes: '', randomiseQuestions: false, isPublished: false, questions: [], assignTo: 'none', assignDept: 'All', assignIds: [], deadline: '' });
+      refreshTraining();
+    } catch (err) {
+      console.error('[module-builder] save failed', err);
+      alert('Failed to save module: ' + err.message);
+    } finally { setModuleBuilderSaving(false); }
+  };
+
+  const handleLoadAdminModuleResults = async (mod) => {
+    setSelectedModule(mod);
+    setTrainingView('adminResults');
+    try {
+      const res = await fetch(`/api/training/modules/${mod.id}?crew_member_id=${currentUser.id}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setAdminTrainingResults(data.module);
+    } catch (err) {
+      console.error('[admin-training] load results failed', err);
+      setAdminTrainingResults(null);
+    }
+  };
+
+  const handleSendTrainingReminder = async (mod, crewIds) => {
+    try {
+      await fetch('/api/notifications/send-reminder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          crewMemberIds: crewIds,
+          vesselId: currentUser.vesselId,
+          title: 'Training Reminder',
+          body: `Please complete the training module "${mod.title || mod.moduleTitle}".`,
+          refType: 'training_module',
+          refId: mod.id || mod.moduleId,
+        }),
+      });
+      // Create in-app notifications too
+      for (const cid of crewIds) {
+        createTargetedNotification({
+          targetCrewId: cid,
+          type: 'system',
+          title: 'Training Reminder',
+          body: `Please complete "${mod.title || mod.moduleTitle}".`,
+          referenceType: 'training_module',
+          referenceId: mod.id || mod.moduleId,
+        }).catch(() => {});
+      }
+    } catch (err) { console.error('[training] reminder failed', err); }
+  };
+
+  // ─── Quiz Timer ───────────────────────────────────────────────────
+  useEffect(() => {
+    if (quizTimerLeft === null || trainingView !== 'quiz') return;
+    if (quizTimerLeft <= 0) {
+      handleSubmitQuiz(selectedModule);
+      return;
+    }
+    const t = setTimeout(() => setQuizTimerLeft(prev => prev - 1), 1000);
+    return () => clearTimeout(t);
+  }, [quizTimerLeft, trainingView]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ─── Crew Training Screen ────────────────────────────────────────
+  const CrewTrainingScreen = () => {
+    // ── Module Viewer ──
+    if (trainingView === 'module' && selectedModule) {
+      const mod = selectedModule;
+      const hasFailed = mod.totalAttempts > 0 && !mod.passed;
+      return (
+        <div style={{ padding: 20 }}>
+          <BackButton onClick={() => { setTrainingView('dashboard'); setSelectedModule(null); }} label="Training" />
+          <h2 style={{ fontSize: 20, fontWeight: 800, color: T.text, margin: '0 0 8px', lineHeight: 1.3 }}>{mod.title || mod.moduleTitle}</h2>
+          <p style={{ fontSize: 13, color: T.textMuted, margin: '0 0 20px', lineHeight: 1.6 }}>{mod.description || mod.moduleDescription}</p>
+          {/* Content blocks */}
+          {(mod.content || []).map((block, i) => {
+            if (block.type === 'text') return (
+              <div key={i} style={{ fontSize: 14, color: T.text, lineHeight: 1.7, marginBottom: 16, whiteSpace: 'pre-wrap' }}>{block.value}</div>
+            );
+            if (block.type === 'image') return (
+              <div key={i} style={{ marginBottom: 16, borderRadius: 12, overflow: 'hidden', border: `1px solid ${T.border}` }}>
+                <img src={block.value} alt={block.caption || 'Training image'} style={{ width: '100%', display: 'block' }} />
+                {block.caption && <div style={{ fontSize: 12, color: T.textMuted, padding: '10px 14px', background: T.bg }}>{block.caption}</div>}
+              </div>
+            );
+            if (block.type === 'video') return (
+              <div key={i} style={{ marginBottom: 16, borderRadius: 12, overflow: 'hidden', border: `1px solid ${T.border}`, background: T.bg, padding: 40, textAlign: 'center' }}>
+                <div style={{ color: T.accent, marginBottom: 8 }}>{Icons.video}</div>
+                <div style={{ fontSize: 13, color: T.textMuted }}>{block.value || 'Video content'}</div>
+              </div>
+            );
+            return null;
+          })}
+          {/* Attachments */}
+          {(mod.attachments || []).length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <h3 style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 10px' }}>Attachments</h3>
+              {mod.attachments.map((att, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 10, marginBottom: 6, boxShadow: T.shadow }}>
+                  {Icons.file}
+                  <span style={{ fontSize: 13, color: T.text, flex: 1 }}>{att.name || att.url || `Attachment ${i + 1}`}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {/* Quiz button */}
+          {(mod.questionCount || 0) > 0 && (
+            <button onClick={() => handleStartQuiz(mod)} className="cb-btn-primary" style={{ width: '100%', padding: 16, borderRadius: 12, border: 'none', background: T.accent, color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              {Icons.play} {hasFailed ? 'Retake Quiz' : 'Start Quiz'}
+            </button>
+          )}
+          {mod.passed && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: 16, color: T.success, fontWeight: 600, fontSize: 14, marginTop: 8 }}>
+              {Icons.checkCircle} Completed — Score: {mod.bestScore}%
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ── Quiz Screen ──
+    if (trainingView === 'quiz' && quizQuestions.length > 0) {
+      const q = quizQuestions[quizCurrent];
+      const progress = ((quizCurrent + 1) / quizQuestions.length) * 100;
+      const isLast = quizCurrent === quizQuestions.length - 1;
+      const hasAnswer = !!quizAnswers[q.id];
+      const timerMins = quizTimerLeft !== null ? Math.floor(quizTimerLeft / 60) : null;
+      const timerSecs = quizTimerLeft !== null ? quizTimerLeft % 60 : null;
+      return (
+        <div style={{ padding: 20 }}>
+          {/* Header with counter and optional timer */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: T.textMuted }}>Question {quizCurrent + 1} of {quizQuestions.length}</span>
+            {quizTimerLeft !== null && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 700, color: quizTimerLeft < 60 ? T.critical : T.text, fontFamily: "'JetBrains Mono', monospace" }}>
+                {Icons.clock} {timerMins}:{String(timerSecs).padStart(2, '0')}
+              </div>
+            )}
+          </div>
+          {/* Progress bar */}
+          <div style={{ height: 6, background: T.border, borderRadius: 3, overflow: 'hidden', marginBottom: 24 }}>
+            <div style={{ height: '100%', width: `${progress}%`, background: T.accent, borderRadius: 3, transition: 'width 0.3s ease' }} />
+          </div>
+          {/* Question */}
+          <h3 style={{ fontSize: 17, fontWeight: 700, color: T.text, margin: '0 0 20px', lineHeight: 1.4 }}>{q.questionText}</h3>
+          {/* Answer options */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
+            {(q.options || []).map(opt => {
+              const selected = quizAnswers[q.id] === opt.id;
+              return (
+                <button key={opt.id} onClick={() => setQuizAnswers(prev => ({ ...prev, [q.id]: opt.id }))} className="cb-card" style={{
+                  width: '100%', padding: '16px 18px', borderRadius: 14, cursor: 'pointer', textAlign: 'left',
+                  border: `2px solid ${selected ? T.accent : T.border}`,
+                  background: selected ? T.accentTint : T.bgCard,
+                  color: T.text, fontSize: 15, fontWeight: selected ? 700 : 500,
+                  transition: 'all 0.15s', boxShadow: selected ? `0 0 0 3px ${T.accentGlow}` : T.shadow,
+                }}>
+                  {opt.text}
+                </button>
+              );
+            })}
+          </div>
+          {/* Navigation */}
+          <div style={{ display: 'flex', gap: 10 }}>
+            {quizCurrent > 0 && (
+              <button onClick={() => setQuizCurrent(prev => prev - 1)} style={{ flex: 1, padding: 14, borderRadius: 12, border: `1px solid ${T.border}`, background: T.bgCard, color: T.textMuted, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                Previous
+              </button>
+            )}
+            {isLast ? (
+              <button onClick={() => handleSubmitQuiz(selectedModule)} disabled={!hasAnswer || quizSubmitting} className="cb-btn-primary" style={{
+                flex: 1, padding: 14, borderRadius: 12, border: 'none',
+                background: !hasAnswer || quizSubmitting ? T.border : T.accent,
+                color: !hasAnswer || quizSubmitting ? T.textDim : '#fff',
+                fontSize: 14, fontWeight: 700, cursor: !hasAnswer || quizSubmitting ? 'default' : 'pointer',
+              }}>
+                {quizSubmitting ? 'Submitting...' : 'Submit Quiz'}
+              </button>
+            ) : (
+              <button onClick={() => setQuizCurrent(prev => prev + 1)} disabled={!hasAnswer} style={{
+                flex: 1, padding: 14, borderRadius: 12, border: 'none',
+                background: hasAnswer ? T.accent : T.border,
+                color: hasAnswer ? '#fff' : T.textDim,
+                fontSize: 14, fontWeight: 700, cursor: hasAnswer ? 'pointer' : 'default',
+              }}>
+                Next Question
+              </button>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ── Results Screen ──
+    if (trainingView === 'results' && quizResults) {
+      const r = quizResults;
+      const passed = r.passed;
+      return (
+        <div style={{ padding: 20 }}>
+          {/* Score */}
+          <div style={{ textAlign: 'center', padding: '30px 0 20px' }}>
+            <div style={{
+              width: 100, height: 100, borderRadius: '50%', margin: '0 auto 16px',
+              background: passed ? T.successTint : T.criticalTint,
+              border: `4px solid ${passed ? T.success : T.critical}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 32, fontWeight: 800, color: passed ? T.success : T.critical,
+              fontFamily: "'JetBrains Mono', monospace",
+            }}>
+              {r.score}%
+            </div>
+            <h2 style={{ fontSize: 22, fontWeight: 800, color: T.text, margin: '0 0 6px' }}>
+              {passed ? 'You passed!' : 'Not quite \u2014 try again'}
+            </h2>
+            <p style={{ fontSize: 13, color: T.textMuted, margin: 0 }}>
+              {r.correctCount} of {r.totalQuestions} correct \u00b7 Pass mark: {r.passMark}%
+            </p>
+          </div>
+          {/* Answer breakdown */}
+          <h3 style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 12px' }}>Question Breakdown</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
+            {(r.answers || []).map((a, i) => (
+              <div key={a.questionId || i} style={{ padding: '14px 16px', borderRadius: 12, border: `1px solid ${a.isCorrect ? T.success : T.critical}30`, background: a.isCorrect ? '#f0fdf4' : '#fef2f2', boxShadow: T.shadow }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
+                  <span style={{ color: a.isCorrect ? T.success : T.critical, flexShrink: 0, marginTop: 1 }}>
+                    {a.isCorrect ? Icons.checkCircle : Icons.x}
+                  </span>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: T.text, lineHeight: 1.4 }}>
+                    {a.questionText || `Question ${i + 1}`}
+                  </span>
+                </div>
+                {!a.isCorrect && a.correctOptionId && (
+                  <div style={{ fontSize: 12, color: T.textMuted, marginLeft: 30, marginBottom: 4 }}>
+                    Correct answer: {quizQuestions.find(q => q.id === a.questionId)?.options?.find(o => o.id === a.correctOptionId)?.text || a.correctOptionId}
+                  </div>
+                )}
+                {a.explanation && (
+                  <div style={{ fontSize: 12, color: T.textMuted, marginLeft: 30, fontStyle: 'italic', lineHeight: 1.4 }}>
+                    {a.explanation}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          {/* Actions */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {!passed && (
+              <button onClick={() => handleStartQuiz(selectedModule)} className="cb-btn-primary" style={{ width: '100%', padding: 16, borderRadius: 12, border: 'none', background: T.accent, color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
+                Retake Quiz
+              </button>
+            )}
+            <button onClick={() => { setTrainingView('dashboard'); setSelectedModule(null); setQuizResults(null); }} style={{ width: '100%', padding: 14, borderRadius: 12, border: `1px solid ${T.border}`, background: T.bgCard, color: T.textMuted, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+              Back to Training
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // ── Training Dashboard ──
+    const active = trainingModules.filter(m => m.status !== 'completed');
+    const completed = trainingModules.filter(m => m.status === 'completed');
+    const handleOpenModule = async (mod) => {
+      try {
+        const res = await fetch(`/api/training/modules/${mod.id || mod.moduleId}?crew_member_id=${currentUser.id}`);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        setSelectedModule({ ...mod, ...data.module });
+        setTrainingView('module');
+      } catch (err) {
+        console.error('[training] module load failed', err);
+        setSelectedModule(mod);
+        setTrainingView('module');
+      }
+    };
+
+    const statusColor = (s) => s === 'overdue' ? T.critical : s === 'in_progress' ? T.gold : T.accent;
+    const statusBg = (s) => s === 'overdue' ? T.criticalTint : s === 'in_progress' ? T.goldTint : T.accentGlow;
+    const statusLabel = (s) => s === 'overdue' ? 'Overdue' : s === 'in_progress' ? 'In Progress' : s === 'completed' ? 'Completed' : 'Assigned';
+
+    return (
+      <div style={{ padding: 20 }}>
+        <h2 style={{ fontSize: 20, fontWeight: 800, color: T.text, margin: '0 0 16px' }}>Training</h2>
+        <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+          <StatCard label="Assigned" value={active.length} icon={Icons.training} />
+          <StatCard label="Completed" value={completed.length} color={T.success} icon={Icons.award} />
+        </div>
+        {/* Active assignments */}
+        {active.length > 0 && (
+          <>
+            <h3 style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 10px' }}>Active</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
+              {active.map(m => (
+                <button key={m.id || m.assignmentId} onClick={() => handleOpenModule(m)} className="cb-card" style={{ display: 'flex', gap: 14, padding: '18px 20px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 16, cursor: 'pointer', textAlign: 'left', width: '100%', boxShadow: T.shadow }}>
+                  <div style={{ width: 44, height: 50, borderRadius: 10, background: `${statusColor(m.status)}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: statusColor(m.status), flexShrink: 0 }}>
+                    {Icons.training}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 4, lineHeight: 1.3 }}>{m.title || m.moduleTitle}</div>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, color: statusColor(m.status), background: statusBg(m.status), padding: '3px 8px', borderRadius: 6 }}>
+                        {statusLabel(m.status)}
+                      </span>
+                      {m.deadline && (
+                        <span style={{ fontSize: 11, color: T.textMuted, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          {Icons.calendar} {new Date(m.deadline).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                        </span>
+                      )}
+                      {m.questionCount > 0 && <span style={{ fontSize: 11, color: T.textDim }}>{m.questionCount} questions</span>}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+        {/* Completed */}
+        {completed.length > 0 && (
+          <>
+            <h3 style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 10px' }}>Completed</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {completed.map(m => (
+                <button key={m.id || m.assignmentId} onClick={() => handleOpenModule(m)} className="cb-card" style={{ display: 'flex', gap: 14, padding: '16px 18px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 14, cursor: 'pointer', textAlign: 'left', width: '100%', boxShadow: T.shadow }}>
+                  <div style={{ width: 40, height: 44, borderRadius: 8, background: T.successTint, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.success, flexShrink: 0 }}>
+                    {Icons.award}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 3 }}>{m.title || m.moduleTitle}</div>
+                    <div style={{ display: 'flex', gap: 10, fontSize: 11, color: T.textMuted }}>
+                      <span style={{ color: T.success, fontWeight: 700 }}>Score: {m.bestScore ?? '—'}%</span>
+                      {m.completedAt && <span>{new Date(m.completedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>}
+                    </div>
+                  </div>
+                  <span style={{ color: T.success, flexShrink: 0 }}>{Icons.checkCircle}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+        {trainingLoading && trainingModules.length === 0 && <p style={{ fontSize: 13, color: T.textMuted, textAlign: 'center', padding: 30 }}>Loading training modules...</p>}
+        {!trainingLoading && trainingModules.length === 0 && <p style={{ fontSize: 13, color: T.textMuted, textAlign: 'center', padding: 30 }}>No training modules assigned yet</p>}
+      </div>
+    );
+  };
+
+  // ─── Admin Training Screen ─────────────────────────────────────────
+  const AdminTrainingScreen = () => {
+    // ── Module Results Dashboard ──
+    if (trainingView === 'adminResults' && adminTrainingResults) {
+      const r = adminTrainingResults;
+      const deptFilteredAssignments = (r.assignments || []).filter(a => adminTrainDeptFilter === 'All' || a.department === adminTrainDeptFilter);
+      const incompleteCrew = deptFilteredAssignments.filter(a => a.status !== 'completed');
+
+      const sendReminder = async () => {
+        if (trainingReminderState !== 'idle') return;
+        const ids = incompleteCrew.map(a => a.crewMemberId);
+        if (ids.length === 0) return;
+        setTrainingReminderState('sending');
+        try {
+          await handleSendTrainingReminder(r, ids);
+          setTrainingReminderState('sent');
+          setTimeout(() => setTrainingReminderState('idle'), 3000);
+        } catch { setTrainingReminderState('idle'); }
+      };
+
+      const departments = [...new Set((r.assignments || []).map(a => a.department).filter(Boolean))];
+
+      return (
+        <div style={{ padding: isDesktop ? '28px 36px' : 20 }}>
+          <BackButton onClick={() => { setTrainingView('dashboard'); setSelectedModule(null); setAdminTrainingResults(null); }} label="Training" />
+          <h2 style={{ fontSize: isDesktop ? 22 : 18, fontWeight: 800, color: T.text, margin: '0 0 16px' }}>{r.title}</h2>
+          {/* Stats */}
+          <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(4, 1fr)' : '1fr 1fr', gap: isDesktop ? 14 : 10, marginBottom: 20 }}>
+            <StatCard label="Completion" value={`${r.stats?.completionRate ?? 0}%`} icon={Icons.checkCircle} color={T.success} />
+            <StatCard label="Avg Score" value={r.stats?.averageScore != null ? `${r.stats.averageScore}%` : '—'} icon={Icons.award} color={T.accent} />
+            <StatCard label="Pass Rate" value={r.stats?.passRate != null ? `${r.stats.passRate}%` : '—'} icon={Icons.training} color={T.gold} />
+            <StatCard label="Assigned" value={r.stats?.totalAssigned ?? 0} icon={Icons.crew} />
+          </div>
+          {/* Department filter */}
+          {departments.length > 1 && (
+            <div style={{ marginBottom: 16 }}>
+              <FilterChips options={['All', ...departments]} selected={adminTrainDeptFilter} onChange={setAdminTrainDeptFilter} />
+            </div>
+          )}
+          {/* Per-crew results */}
+          <h3 style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 10px' }}>Crew Results</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
+            {deptFilteredAssignments.map(a => (
+              <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 12, boxShadow: T.shadow }}>
+                <Avatar initials={(a.crewName || '').split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase()} size={32} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{a.crewName}</div>
+                  <div style={{ fontSize: 11, color: T.textMuted }}>{a.role} — {a.department}</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                  {a.bestScore != null && (
+                    <span style={{ fontSize: 14, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: a.passed ? T.success : T.critical }}>{a.bestScore}%</span>
+                  )}
+                  <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6, padding: '3px 8px', borderRadius: 6, color: a.status === 'completed' ? T.success : a.status === 'overdue' ? T.critical : a.status === 'in_progress' ? T.gold : T.accent, background: a.status === 'completed' ? T.successTint : a.status === 'overdue' ? T.criticalTint : a.status === 'in_progress' ? T.goldTint : T.accentGlow }}>
+                    {a.status === 'in_progress' ? 'In Prog.' : a.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Send reminder */}
+          {incompleteCrew.length > 0 && (
+            <button onClick={sendReminder} disabled={trainingReminderState !== 'idle'} style={{
+              width: '100%', padding: 14, borderRadius: 12,
+              border: `1px solid ${trainingReminderState === 'sent' ? T.success : T.gold}`,
+              background: trainingReminderState === 'sent' ? '#f0fdf4' : T.goldTint,
+              color: trainingReminderState === 'sent' ? T.success : '#b45309',
+              fontSize: 14, fontWeight: 700,
+              cursor: trainingReminderState === 'idle' ? 'pointer' : 'default',
+              opacity: trainingReminderState === 'sending' ? 0.7 : 1,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            }}>
+              {trainingReminderState === 'sending' ? 'Sending...' :
+               trainingReminderState === 'sent' ? `${Icons.checkCircle} Reminder Sent` :
+               `${Icons.send} Send Reminder to ${incompleteCrew.length} Crew`}
+            </button>
+          )}
+        </div>
+      );
+    }
+
+    // ── Admin Training Dashboard ──
+    return (
+      <div style={{ padding: isDesktop ? '28px 36px' : 20 }}>
+        <h2 style={{ fontSize: isDesktop ? 26 : 20, fontWeight: 800, color: T.text, margin: '0 0 16px' }}>Manage Training</h2>
+        {trainingModules.length === 0 && !trainingLoading && (
+          <div style={{ textAlign: 'center', padding: '40px 20px', color: T.textMuted }}>
+            <div style={{ color: T.accent, marginBottom: 12, display: 'flex', justifyContent: 'center' }}>{Icons.training}</div>
+            <p style={{ fontSize: 14, fontWeight: 600, margin: '0 0 6px' }}>No training modules yet</p>
+            <p style={{ fontSize: 12, margin: 0 }}>Tap + to create your first module</p>
+          </div>
+        )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {trainingModules.map(m => {
+            const stats = m.stats || {};
+            return (
+              <button key={m.id} onClick={() => handleLoadAdminModuleResults(m)} className="cb-card" style={{ display: 'flex', gap: isDesktop ? 18 : 14, padding: isDesktop ? '18px 22px' : '18px 20px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: isDesktop ? 14 : 16, cursor: 'pointer', textAlign: 'left', width: '100%', boxShadow: T.shadow, alignItems: isDesktop ? 'center' : 'stretch' }}>
+                <div style={{ width: 44, height: 50, borderRadius: 10, background: m.isPublished ? T.accentTint : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: m.isPublished ? T.accentDark : T.textDim, flexShrink: 0 }}>
+                  {Icons.training}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{m.title}</span>
+                    {!m.isPublished && <span style={{ fontSize: 9, fontWeight: 700, color: T.textDim, background: '#f1f5f9', padding: '2px 6px', borderRadius: 4 }}>DRAFT</span>}
+                  </div>
+                  <div style={{ display: 'flex', gap: 12, fontSize: 11, color: T.textMuted }}>
+                    <span>{m.questionCount || 0} questions</span>
+                    {stats.totalAssigned > 0 && (
+                      <>
+                        <span style={{ color: T.success }}>{stats.completed}/{stats.totalAssigned} completed</span>
+                        {stats.completionRate !== undefined && <span>({stats.completionRate}%)</span>}
+                      </>
+                    )}
+                    {stats.totalAssigned === 0 && <span>Not assigned</span>}
+                  </div>
+                  {stats.totalAssigned > 0 && (
+                    <div style={{ marginTop: 8 }}><ComplianceBar value={stats.completionRate || 0} /></div>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  // ─── Module Builder Modal ─────────────────────────────────────────
+  const ModuleBuilderModal = () => {
+    const b = moduleBuilderData;
+    const setB = (key, val) => setModuleBuilderData(prev => ({ ...prev, [key]: val }));
+    const addContentBlock = (type) => setB('content', [...b.content, { type, value: '', caption: '' }]);
+    const updateContentBlock = (idx, field, val) => {
+      const next = [...b.content];
+      next[idx] = { ...next[idx], [field]: val };
+      setB('content', next);
+    };
+    const removeContentBlock = (idx) => setB('content', b.content.filter((_, i) => i !== idx));
+    const moveContentBlock = (idx, dir) => {
+      const next = [...b.content];
+      const swap = idx + dir;
+      if (swap < 0 || swap >= next.length) return;
+      [next[idx], next[swap]] = [next[swap], next[idx]];
+      setB('content', next);
+    };
+
+    const addQuestion = () => setB('questions', [...b.questions, {
+      questionText: '', questionType: 'multiple_choice', explanation: '',
+      options: [{ id: `o_${Date.now()}_0`, text: '', is_correct: false }, { id: `o_${Date.now()}_1`, text: '', is_correct: false }],
+    }]);
+    const updateQuestion = (qi, field, val) => {
+      const next = [...b.questions];
+      next[qi] = { ...next[qi], [field]: val };
+      setB('questions', next);
+    };
+    const removeQuestion = (qi) => setB('questions', b.questions.filter((_, i) => i !== qi));
+    const addOption = (qi) => {
+      const next = [...b.questions];
+      next[qi].options = [...next[qi].options, { id: `o_${Date.now()}_${next[qi].options.length}`, text: '', is_correct: false }];
+      setB('questions', next);
+    };
+    const removeOption = (qi, oi) => {
+      const next = [...b.questions];
+      next[qi].options = next[qi].options.filter((_, i) => i !== oi);
+      setB('questions', next);
+    };
+    const updateOption = (qi, oi, field, val) => {
+      const next = [...b.questions];
+      if (field === 'is_correct' && val) {
+        next[qi].options = next[qi].options.map((o, i) => ({ ...o, is_correct: i === oi }));
+      } else {
+        next[qi].options = next[qi].options.map((o, i) => i === oi ? { ...o, [field]: val } : o);
+      }
+      setB('questions', next);
+    };
+
+    const inputStyle = { width: '100%', padding: 12, borderRadius: 10, border: `1px solid ${T.border}`, background: T.bgCard, color: T.text, fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' };
+    const labelStyle = { fontSize: 12, fontWeight: 600, color: T.textMuted, display: 'block', marginBottom: 6 };
+
+    return (
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(4px)', zIndex: 100, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '40px 16px', overflow: 'auto' }} onClick={() => setShowModuleBuilder(false)}>
+        <div onClick={e => e.stopPropagation()} style={{ background: T.bgModal, borderRadius: 20, width: '100%', maxWidth: 600, boxShadow: T.shadowLg, overflow: 'hidden' }}>
+          <div style={{ padding: '20px 24px', borderBottom: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0 }}>New Training Module</h2>
+            <button onClick={() => setShowModuleBuilder(false)} style={{ background: 'none', border: 'none', color: T.textMuted, cursor: 'pointer' }}>{Icons.x}</button>
+          </div>
+          <div style={{ padding: 24, maxHeight: 'calc(100vh - 180px)', overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* Title & Description */}
+            <div>
+              <label style={labelStyle}>Module Title *</label>
+              <input value={b.title} onChange={e => setB('title', e.target.value)} placeholder="e.g. Fire Safety Procedures" style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Description</label>
+              <textarea value={b.description} onChange={e => setB('description', e.target.value)} rows={3} placeholder="Brief overview of the module..." style={{ ...inputStyle, resize: 'vertical' }} />
+            </div>
+            {/* Content Blocks */}
+            <div>
+              <label style={labelStyle}>Content Blocks</label>
+              {b.content.map((block, i) => (
+                <div key={i} style={{ border: `1px solid ${T.border}`, borderRadius: 10, padding: 12, marginBottom: 8, background: T.bg }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, flex: 1 }}>{block.type === 'text' ? 'Text' : block.type === 'image' ? 'Image URL' : 'Video URL'}</span>
+                    <button onClick={() => moveContentBlock(i, -1)} style={{ background: 'none', border: 'none', color: T.textDim, cursor: 'pointer', padding: 2 }}>{Icons.arrowUp}</button>
+                    <button onClick={() => moveContentBlock(i, 1)} style={{ background: 'none', border: 'none', color: T.textDim, cursor: 'pointer', padding: 2 }}>{Icons.arrowDown}</button>
+                    <button onClick={() => removeContentBlock(i)} style={{ background: 'none', border: 'none', color: T.critical, cursor: 'pointer', padding: 2 }}>{Icons.x}</button>
+                  </div>
+                  {block.type === 'text' ? (
+                    <textarea value={block.value} onChange={e => updateContentBlock(i, 'value', e.target.value)} rows={4} placeholder="Enter text content..." style={{ ...inputStyle, resize: 'vertical', fontSize: 13 }} />
+                  ) : (
+                    <input value={block.value} onChange={e => updateContentBlock(i, 'value', e.target.value)} placeholder={block.type === 'image' ? 'https://...' : 'https://...'} style={{ ...inputStyle, fontSize: 13 }} />
+                  )}
+                </div>
+              ))}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => addContentBlock('text')} style={{ flex: 1, padding: '10px 14px', borderRadius: 8, border: `1px dashed ${T.border}`, background: 'none', color: T.textMuted, fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>{Icons.plus} Text</button>
+                <button onClick={() => addContentBlock('image')} style={{ flex: 1, padding: '10px 14px', borderRadius: 8, border: `1px dashed ${T.border}`, background: 'none', color: T.textMuted, fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>{Icons.image} Image</button>
+                <button onClick={() => addContentBlock('video')} style={{ flex: 1, padding: '10px 14px', borderRadius: 8, border: `1px dashed ${T.border}`, background: 'none', color: T.textMuted, fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>{Icons.video} Video</button>
+              </div>
+            </div>
+            {/* Quiz Questions */}
+            <div>
+              <label style={labelStyle}>Quiz Questions</label>
+              {b.questions.map((q, qi) => (
+                <div key={qi} style={{ border: `1px solid ${T.border}`, borderRadius: 10, padding: 14, marginBottom: 10, background: T.bg }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: T.text, flex: 1 }}>Q{qi + 1}</span>
+                    <select value={q.questionType} onChange={e => updateQuestion(qi, 'questionType', e.target.value)} style={{ padding: '4px 8px', borderRadius: 6, border: `1px solid ${T.border}`, fontSize: 11, color: T.textMuted, background: T.bgCard }}>
+                      <option value="multiple_choice">Multiple Choice</option>
+                      <option value="true_false">True / False</option>
+                      <option value="scenario">Scenario</option>
+                    </select>
+                    <button onClick={() => removeQuestion(qi)} style={{ background: 'none', border: 'none', color: T.critical, cursor: 'pointer', padding: 2 }}>{Icons.x}</button>
+                  </div>
+                  <input value={q.questionText} onChange={e => updateQuestion(qi, 'questionText', e.target.value)} placeholder="Question text..." style={{ ...inputStyle, marginBottom: 8, fontSize: 13 }} />
+                  {/* Options */}
+                  {q.options.map((opt, oi) => (
+                    <div key={oi} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                      <input type="radio" name={`correct_${qi}`} checked={opt.is_correct} onChange={() => updateOption(qi, oi, 'is_correct', true)} style={{ cursor: 'pointer', accentColor: T.accent }} title="Mark as correct" />
+                      <input value={opt.text} onChange={e => updateOption(qi, oi, 'text', e.target.value)} placeholder={`Option ${oi + 1}`} style={{ ...inputStyle, fontSize: 12, padding: 8, flex: 1 }} />
+                      {q.options.length > 2 && (
+                        <button onClick={() => removeOption(qi, oi)} style={{ background: 'none', border: 'none', color: T.critical, cursor: 'pointer', padding: 2, flexShrink: 0 }}>{Icons.minus}</button>
+                      )}
+                    </div>
+                  ))}
+                  {q.options.length < 6 && (
+                    <button onClick={() => addOption(qi)} style={{ fontSize: 11, color: T.accent, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>{Icons.plus} Add Option</button>
+                  )}
+                  <input value={q.explanation} onChange={e => updateQuestion(qi, 'explanation', e.target.value)} placeholder="Explanation (shown after quiz)" style={{ ...inputStyle, marginTop: 8, fontSize: 12, padding: 8 }} />
+                </div>
+              ))}
+              <button onClick={addQuestion} style={{ width: '100%', padding: '12px 14px', borderRadius: 8, border: `1px dashed ${T.accent}`, background: T.accentTint, color: T.accentDark, fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>{Icons.plus} Add Question</button>
+            </div>
+            {/* Settings */}
+            <div>
+              <label style={labelStyle}>Settings</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <label style={{ fontSize: 13, color: T.text, flex: 1 }}>Pass Mark</label>
+                  <input type="range" min={0} max={100} value={b.passMark} onChange={e => setB('passMark', parseInt(e.target.value))} style={{ flex: 1, accentColor: T.accent }} />
+                  <span style={{ fontSize: 13, fontWeight: 700, color: T.accent, minWidth: 36, textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>{b.passMark}%</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <label style={{ fontSize: 13, color: T.text, flex: 1 }}>Time Limit (minutes)</label>
+                  <input type="number" min={1} value={b.timeLimitMinutes} onChange={e => setB('timeLimitMinutes', e.target.value)} placeholder="None" style={{ ...inputStyle, width: 80, padding: 8, textAlign: 'center' }} />
+                </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={b.randomiseQuestions} onChange={e => setB('randomiseQuestions', e.target.checked)} style={{ accentColor: T.accent }} />
+                  <span style={{ fontSize: 13, color: T.text }}>Randomise question order</span>
+                </label>
+              </div>
+            </div>
+            {/* Assign */}
+            <div>
+              <label style={labelStyle}>Assign To</label>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {[{ v: 'none', l: 'None' }, { v: 'all', l: 'All Crew' }, { v: 'department', l: 'Department' }].map(o => (
+                  <button key={o.v} onClick={() => setB('assignTo', o.v)} style={{ padding: '8px 16px', borderRadius: 20, border: `1px solid ${b.assignTo === o.v ? T.accent : T.border}`, background: b.assignTo === o.v ? T.accentTint : T.bgCard, color: b.assignTo === o.v ? T.accentDark : T.textMuted, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{o.l}</button>
+                ))}
+              </div>
+              {b.assignTo === 'department' && (
+                <div style={{ marginTop: 8 }}>
+                  <FilterChips options={DEPARTMENTS.filter(d => d !== 'All')} selected={b.assignDept} onChange={v => setB('assignDept', v)} />
+                </div>
+              )}
+              {b.assignTo !== 'none' && (
+                <div style={{ marginTop: 10 }}>
+                  <label style={labelStyle}>Deadline (optional)</label>
+                  <input type="date" value={b.deadline} onChange={e => setB('deadline', e.target.value)} style={{ ...inputStyle, width: 180 }} />
+                </div>
+              )}
+            </div>
+            {/* Publish & Save */}
+            <div style={{ display: 'flex', gap: 10, paddingTop: 8 }}>
+              <button onClick={() => { setB('isPublished', false); setTimeout(handleSaveModule, 50); }} disabled={!b.title.trim() || moduleBuilderSaving} style={{ flex: 1, padding: 14, borderRadius: 12, border: `1px solid ${T.border}`, background: T.bgCard, color: T.textMuted, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+                Save Draft
+              </button>
+              <button onClick={() => { setB('isPublished', true); setTimeout(handleSaveModule, 50); }} disabled={!b.title.trim() || moduleBuilderSaving} className="cb-btn-primary" style={{ flex: 1, padding: 14, borderRadius: 12, border: 'none', background: !b.title.trim() || moduleBuilderSaving ? T.border : T.accent, color: !b.title.trim() || moduleBuilderSaving ? T.textDim : '#fff', fontSize: 14, fontWeight: 700, cursor: !b.title.trim() || moduleBuilderSaving ? 'default' : 'pointer' }}>
+                {moduleBuilderSaving ? 'Saving...' : 'Publish'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // ─── Router ────────────────────────────────────────────────────────
   // Screen factories are defined above as arrow functions that close over
   // local state instead of taking props. We intentionally CALL them here
@@ -2728,6 +3532,7 @@ export default function CrewBoard({ user }) {
         case 'home': return AdminDashboard();
         case 'notices': return NoticesScreen();
         case 'docs': return DocsScreen();
+        case 'training': return AdminTrainingScreen();
         case 'crew': return CrewManagement();
         case 'activity': return AdminActivityLog();
         default: return AdminDashboard();
@@ -2737,6 +3542,7 @@ export default function CrewBoard({ user }) {
       case 'home': return CrewHome();
       case 'notices': return NoticesScreen();
       case 'docs': return DocsScreen();
+      case 'training': return CrewTrainingScreen();
       case 'profile': return CrewProfile();
       default: return CrewHome();
     }
@@ -2808,6 +3614,11 @@ export default function CrewBoard({ user }) {
             {Icons.bell}
             {unreadNotifs > 0 && <div style={{ position: 'absolute', top: -4, right: -4, width: 18, height: 18, borderRadius: '50%', background: T.critical, fontSize: 10, fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff' }}>{unreadNotifs}</div>}
           </button>
+          {role === 'crew' && (
+            <button onClick={() => { setTab('profile'); resetNav(); }} style={{ background: T.bg, border: `1px solid ${tab === 'profile' ? T.accent : T.border}`, color: tab === 'profile' ? T.accent : T.textMuted, cursor: 'pointer', padding: 8, borderRadius: 10, display: 'flex' }}>
+              {Icons.crew}
+            </button>
+          )}
         </div>
       </div>
 
@@ -2860,9 +3671,14 @@ export default function CrewBoard({ user }) {
         </div>
       )}
 
-      {/* Admin FAB — mobile only */}
+      {/* Admin FAB — mobile only (notices + training) */}
       {role === 'admin' && !isDesktop && tab === 'notices' && !adminNoticeView && (
         <button onClick={() => setShowNewNotice(true)} className="cb-btn-primary" style={{ position: 'fixed', bottom: 100, right: 'calc(50% - 214px)', width: 56, height: 56, borderRadius: '50%', background: T.accent, border: 'none', color: '#fff', cursor: 'pointer', boxShadow: '0 10px 30px rgba(59,130,246,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
+          {Icons.plus}
+        </button>
+      )}
+      {role === 'admin' && tab === 'training' && trainingView === 'dashboard' && (
+        <button onClick={() => setShowModuleBuilder(true)} className="cb-btn-primary" style={{ position: 'fixed', bottom: isDesktop ? 32 : 100, right: isDesktop ? 48 : 'calc(50% - 214px)', width: 56, height: 56, borderRadius: '50%', background: T.accent, border: 'none', color: '#fff', cursor: 'pointer', boxShadow: '0 10px 30px rgba(59,130,246,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
           {Icons.plus}
         </button>
       )}
@@ -2933,6 +3749,7 @@ export default function CrewBoard({ user }) {
       {showNewDoc && NewDocumentModal()}
       {showReplaceDoc && ReplaceDocumentModal()}
       {showExportReport && ExportReportModal()}
+      {showModuleBuilder && ModuleBuilderModal()}
     </div>
   );
 }
