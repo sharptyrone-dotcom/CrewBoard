@@ -5,7 +5,7 @@ import { signOut } from '@/lib/auth';
 import { fetchCrew } from '@/lib/crew';
 import { acknowledgeDocument, deleteDocument, fetchDocuments, getDocumentSignedUrl, replaceDocument, uploadDocument } from '@/lib/documents';
 import { acknowledgeNotice, createNotice, deleteNotice, fetchNotices, markNoticeRead, rowToNotice } from '@/lib/notices';
-import { createBroadcastNotification, fetchNotifications, markNotificationRead, rowToNotification } from '@/lib/notifications';
+import { createBroadcastNotification, createTargetedNotification, fetchNotifications, markNotificationRead, rowToNotification } from '@/lib/notifications';
 import { ACTIVITY_ACTIONS, fetchActivity, logActivity } from '@/lib/activity';
 import useRealtime from '@/hooks/useRealtime';
 import usePresence from '@/hooks/usePresence';
@@ -380,8 +380,24 @@ function DocDetail({ doc, currentUser, onBack, onAcknowledge, role, onDelete, on
 }
 
 // ─── Admin Notice Read Receipts ──────────────────────────────────────
-function AdminNoticeDetail({ notice, onBack, crew, onDelete, isDesktop }) {
+function AdminNoticeDetail({ notice, onBack, crew, onDelete, onSendReminder, isDesktop }) {
+  const [reminderState, setReminderState] = useState('idle'); // idle | sending | sent | error
   const totalCrew = crew.length;
+  const nonReaderCount = crew.filter(cm => !notice.readBy.includes(cm.id)).length;
+
+  const handleReminder = async () => {
+    if (reminderState !== 'idle' || !onSendReminder) return;
+    setReminderState('sending');
+    try {
+      await onSendReminder(notice);
+      setReminderState('sent');
+    } catch (err) {
+      console.error('[AdminNoticeDetail] reminder failed', err);
+      setReminderState('error');
+      setTimeout(() => setReminderState('idle'), 3000);
+    }
+  };
+
   return (
     <div style={{ padding: isDesktop ? '28px 36px' : 20 }}>
       <BackButton onClick={onBack} />
@@ -415,9 +431,26 @@ function AdminNoticeDetail({ notice, onBack, crew, onDelete, isDesktop }) {
         })}
       </div>
       <div style={{ display: 'flex', gap: 10, marginTop: 16, maxWidth: isDesktop ? 500 : undefined }}>
-        {notice.readBy.length < totalCrew && (
-          <button style={{ flex: 1, padding: 14, borderRadius: 12, border: `1px solid ${T.gold}`, background: T.goldTint, color: '#b45309', fontSize: 14, fontWeight: 700, cursor: 'pointer', transition: 'background 0.2s' }}>
-            Send Reminder to Non-Readers
+        {nonReaderCount > 0 && (
+          <button
+            onClick={handleReminder}
+            disabled={reminderState !== 'idle'}
+            style={{
+              flex: 1, padding: 14, borderRadius: 12,
+              border: `1px solid ${reminderState === 'sent' ? T.success : reminderState === 'error' ? T.critical : T.gold}`,
+              background: reminderState === 'sent' ? '#f0fdf4' : reminderState === 'error' ? T.criticalTint : T.goldTint,
+              color: reminderState === 'sent' ? T.success : reminderState === 'error' ? T.critical : '#b45309',
+              fontSize: 14, fontWeight: 700,
+              cursor: reminderState === 'idle' ? 'pointer' : 'default',
+              opacity: reminderState === 'sending' ? 0.7 : 1,
+              transition: 'all 0.2s',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            }}
+          >
+            {reminderState === 'sending' ? 'Sending...' :
+             reminderState === 'sent' ? `${Icons.checkCircle} Sent to ${nonReaderCount} crew` :
+             reminderState === 'error' ? 'Failed — try again' :
+             `Send Reminder to ${nonReaderCount} Non-Reader${nonReaderCount > 1 ? 's' : ''}`}
           </button>
         )}
         {onDelete && (
@@ -509,6 +542,9 @@ export default function CrewBoard({ user }) {
   const [showNewDoc, setShowNewDoc] = useState(false);
   const [selectedCrewMember, setSelectedCrewMember] = useState(null);
   const [adminNoticeView, setAdminNoticeView] = useState(null);
+  // Dashboard "Send Reminder" button state: idle → sending → sent/empty → idle
+  const [dashReminderState, setDashReminderState] = useState('idle');
+  const [dashReminderSentCount, setDashReminderSentCount] = useState(0);
   const [newNotice, setNewNotice] = useState({ title: '', body: '', category: 'Safety', priority: 'routine', dept: 'All', pinned: false, requireAck: false, validUntil: '' });
   // New document upload form state. `file` holds a browser File object
   // picked via <input type="file">; the rest are plain text inputs.
@@ -1036,6 +1072,75 @@ export default function CrewBoard({ user }) {
     }
   };
 
+  // Admin-only: sends a targeted 'reminder' notification to every crew
+  // member who hasn't read the given notice. Each crew member gets their
+  // own notification so it shows up in their personal bell panel. We use
+  // Promise.allSettled so one failed insert doesn't block the rest.
+  const handleSendNoticeReminder = async (notice) => {
+    const nonReaders = liveCrew.filter(cm => !notice.readBy.includes(cm.id));
+    if (nonReaders.length === 0) return;
+    const results = await Promise.allSettled(
+      nonReaders.map(cm =>
+        createTargetedNotification({
+          targetCrewId: cm.id,
+          type: 'reminder',
+          title: `Reminder: ${notice.priority === 'critical' ? 'CRITICAL — ' : ''}Please read "${notice.title}"`,
+          body: `You have an unread ${notice.priority} notice that requires your attention.`,
+          referenceType: 'notice',
+          referenceId: notice.id,
+        })
+      )
+    );
+    const sent = results.filter(r => r.status === 'fulfilled').length;
+    if (sent === 0) throw new Error('All reminder sends failed — check your connection.');
+    if (sent > 0) {
+      recordActivity({
+        action: 'reminder_sent',
+        targetType: 'notice',
+        targetId: notice.id,
+        metadata: { title: notice.title, recipientCount: sent },
+      });
+    }
+  };
+
+  // Admin-only: sends a compliance reminder to every crew member who has
+  // outstanding items — unread critical notices and/or unacknowledged
+  // required documents. Each crew member gets a single summary notification
+  // listing what they need to action. Skips crew who are fully caught up.
+  const handleSendDashboardReminder = async () => {
+    const targets = [];
+    for (const cm of liveCrew) {
+      const unreadCritical = notices.filter(n => n.priority === 'critical' && !n.readBy.includes(cm.id));
+      const unackedDocs = docs.filter(d => d.required && !d.acknowledgedBy.includes(cm.id));
+      if (unreadCritical.length === 0 && unackedDocs.length === 0) continue;
+      const parts = [];
+      if (unreadCritical.length > 0) parts.push(`${unreadCritical.length} unread critical notice${unreadCritical.length > 1 ? 's' : ''}`);
+      if (unackedDocs.length > 0) parts.push(`${unackedDocs.length} document${unackedDocs.length > 1 ? 's' : ''} pending acknowledgement`);
+      targets.push(
+        createTargetedNotification({
+          targetCrewId: cm.id,
+          type: 'reminder',
+          title: 'Compliance Reminder',
+          body: `You have ${parts.join(' and ')} requiring your attention.`,
+          referenceType: null,
+          referenceId: null,
+        })
+      );
+    }
+    if (targets.length === 0) return { targeted: 0, sent: 0 };
+    const results = await Promise.allSettled(targets);
+    const sent = results.filter(r => r.status === 'fulfilled').length;
+    if (sent > 0) {
+      recordActivity({
+        action: 'reminder_sent',
+        targetType: 'compliance',
+        targetId: null,
+        metadata: { recipientCount: sent },
+      });
+    }
+    return { targeted: targets.length, sent };
+  };
+
   // Admin-only: upload a PDF to the vessel-documents storage bucket and
   // insert the matching metadata row. Both writes are admin-gated at the
   // database layer (see migration 012), so the catch here covers RLS
@@ -1465,11 +1570,48 @@ export default function CrewBoard({ user }) {
               {[
                 ['New Notice', () => setShowNewNotice(true)],
                 ['Upload Doc', () => setShowNewDoc(true)],
-                ['Send Reminder', () => {}],
+                [dashReminderState === 'sending' ? 'Sending...' :
+                 dashReminderState === 'sent' ? `Sent to ${dashReminderSentCount} crew` :
+                 dashReminderState === 'empty' ? 'All crew compliant!' :
+                 dashReminderState === 'error' ? 'Failed — try again' :
+                 'Send Reminder',
+                 async () => {
+                   if (dashReminderState !== 'idle') return;
+                   setDashReminderState('sending');
+                   try {
+                     const { targeted, sent } = await handleSendDashboardReminder();
+                     if (targeted === 0) {
+                       setDashReminderState('empty');
+                     } else if (sent === 0) {
+                       setDashReminderState('error');
+                     } else {
+                       setDashReminderSentCount(sent);
+                       setDashReminderState('sent');
+                     }
+                   } catch (err) {
+                     console.error('[dashboard] reminder failed', err);
+                     setDashReminderState('error');
+                   }
+                   setTimeout(() => { setDashReminderState('idle'); setDashReminderSentCount(0); }, 3000);
+                 }],
                 ['Invite Crew', () => { window.location.href = '/admin/invites'; }],
-              ].map(([label, fn]) => (
-                <button key={label} onClick={fn} className="cb-btn-secondary" style={{ flex: '1 1 140px', padding: '14px 10px', borderRadius: 12, border: `1px solid ${T.border}`, background: T.bgCard, color: T.accentDark, fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: T.shadow }}>{label}</button>
-              ))}
+              ].map(([label, fn]) => {
+                const isReminder = label.startsWith('Send') || label.startsWith('Sent') || label === 'Sending...' || label.startsWith('All crew') || label.startsWith('Failed');
+                const reminderDone = isReminder && (dashReminderState === 'sent' || dashReminderState === 'empty');
+                const reminderError = isReminder && dashReminderState === 'error';
+                return (
+                  <button key={isReminder ? 'reminder' : label} onClick={fn} className="cb-btn-secondary" style={{
+                    flex: '1 1 140px', padding: '14px 10px', borderRadius: 12,
+                    border: `1px solid ${reminderError ? T.critical : reminderDone ? T.success : T.border}`,
+                    background: reminderError ? T.criticalTint : reminderDone ? '#f0fdf4' : T.bgCard,
+                    color: reminderError ? T.critical : reminderDone ? T.success : T.accentDark,
+                    fontSize: 12, fontWeight: 700,
+                    cursor: (isReminder && dashReminderState !== 'idle') ? 'default' : 'pointer',
+                    opacity: (isReminder && dashReminderState === 'sending') ? 0.7 : 1,
+                    boxShadow: T.shadow, transition: 'all 0.2s',
+                  }}>{label}</button>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -2067,7 +2209,7 @@ export default function CrewBoard({ user }) {
   // AdminNoticeDetail is a genuine component (defined outside CrewBoard)
   // with its own hooks, so it stays as `<AdminNoticeDetail ... />`.
   const renderScreen = () => {
-    if (role === 'admin' && adminNoticeView) return <AdminNoticeDetail notice={adminNoticeView} onBack={() => setAdminNoticeView(null)} crew={liveCrew} onDelete={() => handleDeleteNotice(adminNoticeView.id)} isDesktop={isDesktop} />;
+    if (role === 'admin' && adminNoticeView) return <AdminNoticeDetail notice={adminNoticeView} onBack={() => setAdminNoticeView(null)} crew={liveCrew} onDelete={() => handleDeleteNotice(adminNoticeView.id)} onSendReminder={handleSendNoticeReminder} isDesktop={isDesktop} />;
     if (role === 'admin') {
       switch (tab) {
         case 'home': return AdminDashboard();
