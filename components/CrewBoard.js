@@ -10,6 +10,8 @@ import { ACTIVITY_ACTIONS, fetchActivity, logActivity } from '@/lib/activity';
 import useRealtime from '@/hooks/useRealtime';
 import usePresence from '@/hooks/usePresence';
 import useMediaQuery from '@/hooks/useMediaQuery';
+import useOfflineDocuments from '@/hooks/useOfflineDocuments';
+import OfflineIndicator from '@/components/OfflineIndicator';
 import { isPushSupported, getPushPermission, subscribeToPush, isSubscribed as checkPushSubscribed } from '@/lib/push';
 // supabase client import removed — training images are stored as data
 // URLs in the JSONB content blocks rather than in the Storage bucket
@@ -337,7 +339,7 @@ function NoticeDetail({ notice, currentUser, onBack, onAcknowledge, onMarkRead, 
 // Legacy seeded rows still have `https://example.com/...` in their
 // file_url and there's no real file behind them, so for those we fall
 // back to the old "PDF document preview" placeholder tile.
-function DocDetail({ doc, currentUser, onBack, onAcknowledge, role, onDelete, onReplace, isDesktop, isQuickAccess, onToggleQuickAccess }) {
+function DocDetail({ doc, currentUser, onBack, onAcknowledge, role, onDelete, onReplace, isDesktop, isQuickAccess, onToggleQuickAccess, isOfflineCached, onCacheOffline, cachingOffline }) {
   const isAcked = doc.acknowledgedBy.includes(currentUser.id);
   const isRealFile = !!doc.fileUrl && !/^https?:\/\//i.test(doc.fileUrl);
   const isAdmin = role === 'admin';
@@ -476,6 +478,26 @@ function DocDetail({ doc, currentUser, onBack, onAcknowledge, role, onDelete, on
           {onDelete && (
             <button onClick={onDelete} style={{ width: '100%', padding: 14, borderRadius: 12, border: `1px solid ${T.critical}`, background: T.criticalTint, color: T.critical, fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'background 0.2s' }}>
               {Icons.trash} Delete document
+            </button>
+          )}
+        </div>
+      )}
+      {/* Offline cache button — crew only */}
+      {!isAdmin && isRealFile && onCacheOffline && (
+        <div style={{ marginTop: 12 }}>
+          {isOfflineCached ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12, background: T.successTint, borderRadius: 10, border: `1px solid ${T.success}30` }}>
+              <Icon d={<><path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></>} size={16} color={T.success} />
+              <span style={{ fontSize: 13, fontWeight: 600, color: T.success }}>Available offline</span>
+            </div>
+          ) : (
+            <button
+              onClick={() => signedUrl && onCacheOffline(doc.id, signedUrl, doc.title)}
+              disabled={!signedUrl || cachingOffline}
+              style={{ width: '100%', padding: 12, borderRadius: 10, border: `1px solid ${T.border}`, background: T.bg, color: !signedUrl || cachingOffline ? T.textDim : T.text, fontSize: 13, fontWeight: 600, cursor: !signedUrl || cachingOffline ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+            >
+              <Icon d={<><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></>} size={16} />
+              {cachingOffline ? 'Saving...' : 'Save for offline'}
             </button>
           )}
         </div>
@@ -824,6 +846,14 @@ export default function CrewBoard({ user }) {
   // hook also owns the last_seen_at heartbeat now that the old 2-minute
   // touchLastSeen loop has been removed.
   const { onlineCrewIds } = usePresence({ vesselId: currentUser.vesselId, user: currentUser });
+
+  // Offline document caching via the Cache API.
+  const {
+    cacheDocument, isCached: isDocCached, getCachedUrl, clearCached: clearCachedDoc,
+    clearAll: clearAllCachedDocs, cachedIds: offlineCachedIds, formattedSize: offlineCacheSize,
+  } = useOfflineDocuments(currentUser.id);
+
+  const [cachingDocId, setCachingDocId] = useState(null);
 
   // Fold presence into the crew list so every Avatar that reads `cm.online`
   // reacts to join/leave events without having to know about presence. We
@@ -1860,6 +1890,13 @@ export default function CrewBoard({ user }) {
           });
           setShowReplaceDoc(true);
         } : undefined}
+        isOfflineCached={isDocCached(selectedDoc.id)}
+        cachingOffline={cachingDocId === selectedDoc.id}
+        onCacheOffline={role !== 'admin' ? async (docId, url, title) => {
+          setCachingDocId(docId);
+          await cacheDocument(docId, url, title);
+          setCachingDocId(null);
+        } : undefined}
       />
     );
     const filtered = docs
@@ -1933,6 +1970,18 @@ export default function CrewBoard({ user }) {
                     >
                       {quickAccessIds.includes(d.id) ? Icons.starFilled : Icons.star}
                     </button>
+                    {isDocCached(d.id) ? (
+                      <span style={{ fontSize: 9, fontWeight: 700, color: T.success, background: T.successTint, padding: '3px 6px', borderRadius: 4 }}>OFFLINE</span>
+                    ) : (
+                      <button
+                        onClick={async (ev) => { ev.stopPropagation(); setCachingDocId(d.id); const url = await getDocumentSignedUrl({ path: d.fileUrl, expiresInSeconds: 300 }).catch(() => null); if (url) await cacheDocument(d.id, url, d.title); setCachingDocId(null); }}
+                        disabled={cachingDocId === d.id || !d.fileUrl}
+                        style={{ background: 'none', border: 'none', cursor: cachingDocId === d.id || !d.fileUrl ? 'default' : 'pointer', padding: 2, color: cachingDocId === d.id ? T.accent : T.textDim, transition: 'color 0.15s' }}
+                        title="Save for offline"
+                      >
+                        <Icon d={<><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></>} size={16} />
+                      </button>
+                    )}
                     {d.required && (isAcked ? <span style={{ color: T.success }}>{Icons.checkCircle}</span> : <span style={{ fontSize: 10, fontWeight: 700, color: T.gold, background: `${T.gold}18`, padding: '4px 8px', borderRadius: 4 }}>ACK</span>)}
                   </div>
                 )}
@@ -1980,12 +2029,49 @@ export default function CrewBoard({ user }) {
           </div>
         ))}
       </div>
+      {/* Offline Documents section */}
+      <div style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 16, overflow: 'hidden', boxShadow: T.shadow, marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: `1px solid ${T.border}` }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>Offline Documents</div>
+            <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>{offlineCachedIds.size} doc{offlineCachedIds.size !== 1 ? 's' : ''} cached ({offlineCacheSize})</div>
+          </div>
+          {offlineCachedIds.size > 0 && (
+            <button onClick={() => { if (confirm('Clear all cached documents?')) clearAllCachedDocs(); }} style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${T.critical}40`, background: T.criticalTint, color: T.critical, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+              Clear All
+            </button>
+          )}
+        </div>
+        {offlineCachedIds.size === 0 ? (
+          <div style={{ padding: '20px 16px', textAlign: 'center', color: T.textDim, fontSize: 13 }}>
+            No documents saved for offline access. Use the download icon in the Document Library to cache documents.
+          </div>
+        ) : (
+          [...offlineCachedIds].map((docId, i) => {
+            const cachedDoc = docs.find(d => d.id === docId);
+            return (
+              <div key={docId} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderBottom: i < offlineCachedIds.size - 1 ? `1px solid ${T.border}` : 'none' }}>
+                <div style={{ width: 32, height: 36, borderRadius: 7, background: T.accentTint, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.accentDark, flexShrink: 0 }}>{Icons.file}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cachedDoc?.title || 'Unknown document'}</div>
+                  <div style={{ fontSize: 11, color: T.textMuted }}>{cachedDoc ? `v${cachedDoc.version}` : docId.slice(0, 8)}</div>
+                </div>
+                <span style={{ fontSize: 9, fontWeight: 700, color: T.success, background: T.successTint, padding: '3px 6px', borderRadius: 4, flexShrink: 0 }}>OFFLINE</span>
+                <button onClick={() => clearCachedDoc(docId)} style={{ background: 'none', border: 'none', color: T.textDim, cursor: 'pointer', padding: 4, flexShrink: 0 }} title="Remove from offline cache">
+                  {Icons.x}
+                </button>
+              </div>
+            );
+          })
+        )}
+      </div>
+
       <div style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 16, overflow: 'hidden', boxShadow: T.shadow }}>
-        {['Notification Preferences', 'Dark Mode', 'Offline Documents', 'Log Out'].map((item, i) => (
+        {['Notification Preferences', 'Dark Mode', 'Log Out'].map((item, i) => (
           <button
             key={item}
             onClick={item === 'Log Out' ? handleLogout : undefined}
-            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: i < 3 ? `1px solid ${T.border}` : 'none', width: '100%', background: 'none', border: 'none', cursor: item === 'Log Out' ? 'pointer' : 'default', color: item === 'Log Out' ? T.critical : T.text, fontSize: 14 }}
+            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: i < 2 ? `1px solid ${T.border}` : 'none', width: '100%', background: 'none', border: 'none', cursor: item === 'Log Out' ? 'pointer' : 'default', color: item === 'Log Out' ? T.critical : T.text, fontSize: 14 }}
           >
             {item}
             {item !== 'Log Out' && <span style={{ color: T.textDim, fontSize: 18 }}>&rsaquo;</span>}
@@ -4591,6 +4677,9 @@ export default function CrewBoard({ user }) {
 
   return (
     <div style={{ background: T.bg, color: T.text, minHeight: '100vh', maxWidth: isDesktop ? undefined : 480, margin: isDesktop ? undefined : '0 auto', position: 'relative', display: 'flex', flexDirection: 'column', boxShadow: isDesktop ? 'none' : '0 0 80px rgba(15,23,42,0.06)' }}>
+
+      {/* Offline indicator — shows when navigator.onLine is false */}
+      <OfflineIndicator />
 
       {/* Desktop sidebar — admin only */}
       {isDesktop && Sidebar()}
