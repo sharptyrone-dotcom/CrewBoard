@@ -2906,28 +2906,38 @@ export default function CrewBoard({ user }) {
       }
 
       // ── Assign if selected (both create & edit) ──
+      // Resolve crew targets client-side: the API route uses the anon key
+      // which can't SELECT from crew_members (no anon RLS policy after
+      // migration 007). The `crew` array is already loaded via the
+      // authenticated client so we resolve here and send UUIDs directly.
       if (b.assignTo !== 'none' && publish && moduleId) {
-        const assignTarget = b.assignTo === 'all' ? 'all'
-          : b.assignTo === 'department' ? `department:${b.assignDept}`
-          : b.assignIds;
-        const assignRes = await fetch(`/api/training/modules/${moduleId}/assign`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            crew_member_id: currentUser.id,
-            crew_member_ids: assignTarget,
-            vessel_id: currentUser.vesselId,
-            deadline: b.deadline || null,
-          }),
-        });
-        const assignData = await assignRes.json();
-        if (assignData.error) {
-          console.error('[module-builder] assign failed', assignData.error);
-          alert(`Module saved but assignment failed: ${assignData.error}`);
-        } else if (assignData.assigned === 0 && assignData.skipped > 0) {
-          // All targets already assigned — not an error, just info
-        } else if (assignData.assigned === 0 && assignData.skipped === 0) {
+        let assignTarget;
+        if (b.assignTo === 'all') {
+          assignTarget = crew.filter(c => c.id !== currentUser.id).map(c => c.id);
+        } else if (b.assignTo === 'department') {
+          assignTarget = crew.filter(c => c.dept === b.assignDept && c.id !== currentUser.id).map(c => c.id);
+        } else {
+          assignTarget = (b.assignIds || []).filter(id => id !== currentUser.id);
+        }
+
+        if (assignTarget.length === 0) {
           alert('Module saved but no crew members found to assign.');
+        } else {
+          const assignRes = await fetch(`/api/training/modules/${moduleId}/assign`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              crew_member_id: currentUser.id,
+              crew_member_ids: assignTarget,
+              vessel_id: currentUser.vesselId,
+              deadline: b.deadline || null,
+            }),
+          });
+          const assignData = await assignRes.json();
+          if (assignData.error) {
+            console.error('[module-builder] assign failed', assignData.error);
+            alert(`Module saved but assignment failed: ${assignData.error}`);
+          }
         }
       }
 
