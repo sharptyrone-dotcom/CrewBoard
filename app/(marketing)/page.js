@@ -378,6 +378,7 @@ export default function LandingPage() {
                 CrewNotice
               </Link>
               <p>The operational platform superyachts actually need. Built by crew, for crew.</p>
+              <p style={{ fontSize: 11, color: '#475569', marginTop: 10, lineHeight: 1.5 }}>Sharp Digital Solutions Ltd<br />71-75 Shelton Street, Covent Garden,<br />London, WC2H 9JQ</p>
             </div>
             <div className="footer-col">
               <h4>Product</h4>

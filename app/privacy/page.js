@@ -6,22 +6,21 @@ export const metadata = {
 };
 
 const S = {
-  page: { background: '#0f172a', color: '#e2e8f0', minHeight: '100vh', fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" },
+  page: { background: '#ffffff', color: '#0f172a', minHeight: '100vh', fontFamily: "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif" },
   wrap: { maxWidth: 720, margin: '0 auto', padding: '48px 24px 80px' },
-  back: { display: 'inline-flex', alignItems: 'center', gap: 6, color: '#94a3b8', fontSize: 13, fontWeight: 600, textDecoration: 'none', marginBottom: 32 },
-  h1: { fontSize: 32, fontWeight: 800, color: '#f8fafc', margin: '0 0 8px', letterSpacing: '-0.02em' },
-  updated: { fontSize: 13, color: '#64748b', margin: '0 0 40px' },
-  h2: { fontSize: 20, fontWeight: 700, color: '#f1f5f9', margin: '40px 0 12px', paddingBottom: 8, borderBottom: '1px solid #1e293b' },
-  h3: { fontSize: 15, fontWeight: 700, color: '#cbd5e1', margin: '24px 0 8px' },
-  p: { fontSize: 14, lineHeight: 1.75, color: '#94a3b8', margin: '0 0 14px' },
-  ul: { fontSize: 14, lineHeight: 1.75, color: '#94a3b8', margin: '0 0 14px', paddingLeft: 20 },
+  back: { display: 'inline-flex', alignItems: 'center', gap: 6, color: '#64748b', fontSize: 13, fontWeight: 600, textDecoration: 'none', marginBottom: 32 },
+  h1: { fontSize: 32, fontWeight: 800, color: '#0f172a', margin: '0 0 8px', letterSpacing: '-0.02em' },
+  updated: { fontSize: 13, color: '#94a3b8', margin: '0 0 40px' },
+  h2: { fontSize: 20, fontWeight: 700, color: '#0f172a', margin: '40px 0 12px', paddingBottom: 8, borderBottom: '1px solid #e2e8f0' },
+  p: { fontSize: 14, lineHeight: 1.75, color: '#475569', margin: '0 0 14px' },
+  ul: { fontSize: 14, lineHeight: 1.75, color: '#475569', margin: '0 0 14px', paddingLeft: 20 },
   li: { marginBottom: 6 },
-  strong: { color: '#cbd5e1', fontWeight: 600 },
+  strong: { color: '#0f172a', fontWeight: 600 },
   table: { width: '100%', borderCollapse: 'collapse', margin: '12px 0 20px', fontSize: 13 },
-  th: { textAlign: 'left', padding: '10px 14px', background: '#1e293b', color: '#cbd5e1', fontWeight: 700, borderBottom: '1px solid #334155' },
-  td: { padding: '10px 14px', borderBottom: '1px solid #1e293b', color: '#94a3b8' },
-  footer: { marginTop: 48, paddingTop: 24, borderTop: '1px solid #1e293b', display: 'flex', gap: 20, fontSize: 13, flexWrap: 'wrap' },
-  footerLink: { color: '#64748b', textDecoration: 'none' },
+  th: { textAlign: 'left', padding: '10px 14px', background: '#f1f5f9', color: '#334155', fontWeight: 700, borderBottom: '1px solid #e2e8f0' },
+  td: { padding: '10px 14px', borderBottom: '1px solid #f1f5f9', color: '#475569' },
+  footer: { marginTop: 48, paddingTop: 24, borderTop: '1px solid #e2e8f0', display: 'flex', gap: 20, fontSize: 13, flexWrap: 'wrap' },
+  footerLink: { color: '#94a3b8', textDecoration: 'none' },
 };
 
 export default function PrivacyPolicyPage() {
@@ -31,16 +30,25 @@ export default function PrivacyPolicyPage() {
         <Link href="/" style={S.back}>&larr; Back to CrewNotice</Link>
 
         <h1 style={S.h1}>Privacy Policy</h1>
-        <p style={S.updated}>Last updated: 12 April 2026</p>
+        <p style={S.updated}>Last updated: 13 April 2026</p>
 
         {/* ── 1 ──────────────────────────────────────────────────────── */}
         <h2 style={S.h2}>1. Who we are</h2>
         <p style={S.p}>
-          CrewNotice is an operational compliance platform for superyacht crew.
-          The <strong style={S.strong}>data controller</strong> for your personal data is
-          the vessel operator (your employer) who administers your vessel&rsquo;s CrewNotice
-          workspace. Sharp Digital Solutions Ltd acts as a <strong style={S.strong}>data processor</strong> on
-          their behalf.
+          CrewNotice is an operational compliance platform for superyacht crew, provided
+          by <strong style={S.strong}>Sharp Digital Solutions Ltd</strong>, a company registered
+          in England and Wales.
+        </p>
+        <p style={S.p}>
+          <strong style={S.strong}>Registered address:</strong> 71-75 Shelton Street,
+          Covent Garden, London, WC2H 9JQ
+        </p>
+        <p style={S.p}>
+          Sharp Digital Solutions Ltd is the <strong style={S.strong}>data controller</strong> for
+          personal data processed through CrewNotice. Where a vessel operator administers
+          their own workspace, they may also act as a data controller for their crew&rsquo;s
+          data, and Sharp Digital Solutions Ltd acts as a <strong style={S.strong}>data
+          processor</strong> on their behalf.
         </p>
 
         {/* ── 2 ──────────────────────────────────────────────────────── */}
@@ -50,8 +58,8 @@ export default function PrivacyPolicyPage() {
             <tr><th style={S.th}>Category</th><th style={S.th}>Data</th><th style={S.th}>Purpose</th></tr>
           </thead>
           <tbody>
-            <tr><td style={S.td}>Account</td><td style={S.td}>Full name, email address, role, department</td><td style={S.td}>Authentication and vessel crew management</td></tr>
-            <tr><td style={S.td}>Activity</td><td style={S.td}>Notice read receipts, document acknowledgements, training quiz scores</td><td style={S.td}>ISM/MLC compliance verification</td></tr>
+            <tr><td style={S.td}>Account</td><td style={S.td}>Name, email address, role, department</td><td style={S.td}>Authentication and vessel crew management</td></tr>
+            <tr><td style={S.td}>Activity</td><td style={S.td}>Activity logs, read receipts, document acknowledgements, training records</td><td style={S.td}>Operational compliance tracking</td></tr>
             <tr><td style={S.td}>Usage</td><td style={S.td}>Login timestamps, feature access logs</td><td style={S.td}>Audit trail and security</td></tr>
             <tr><td style={S.td}>Device</td><td style={S.td}>Push subscription endpoint (if opted in)</td><td style={S.td}>Delivering push notifications</td></tr>
           </tbody>
@@ -64,10 +72,10 @@ export default function PrivacyPolicyPage() {
         {/* ── 3 ──────────────────────────────────────────────────────── */}
         <h2 style={S.h2}>3. How we use your data</h2>
         <ul style={S.ul}>
-          <li style={S.li}>Providing the CrewNotice service to your vessel</li>
-          <li style={S.li}>Tracking operational compliance (notice reads, document acknowledgements, training completion)</li>
+          <li style={S.li}>Operational compliance tracking (notice reads, document acknowledgements, training completion)</li>
+          <li style={S.li}>Crew communications and notifications</li>
+          <li style={S.li}>Training delivery and progress tracking</li>
           <li style={S.li}>Generating compliance reports for vessel management</li>
-          <li style={S.li}>Sending notifications (in-app, email, and push) about operational matters</li>
           <li style={S.li}>Maintaining audit trails required under ISM Code and MLC 2006</li>
         </ul>
 
@@ -83,25 +91,18 @@ export default function PrivacyPolicyPage() {
 
         {/* ── 5 ──────────────────────────────────────────────────────── */}
         <h2 style={S.h2}>5. Data retention</h2>
-        <table style={S.table}>
-          <thead>
-            <tr><th style={S.th}>Data type</th><th style={S.th}>Retention period</th></tr>
-          </thead>
-          <tbody>
-            <tr><td style={S.td}>Account data</td><td style={S.td}>Duration of employment + 12 months</td></tr>
-            <tr><td style={S.td}>Compliance records (read receipts, quiz scores)</td><td style={S.td}>5 years (per ISM Code record-keeping requirements)</td></tr>
-            <tr><td style={S.td}>Activity logs</td><td style={S.td}>12 months rolling</td></tr>
-            <tr><td style={S.td}>Push subscriptions</td><td style={S.td}>Until revoked or device changes</td></tr>
-          </tbody>
-        </table>
+        <p style={S.p}>
+          Personal data is retained for the duration of the vessel&rsquo;s subscription
+          plus 12 months. After this period, data is securely deleted unless a longer
+          retention period is required by applicable maritime regulations.
+        </p>
 
         {/* ── 6 ──────────────────────────────────────────────────────── */}
-        <h2 style={S.h2}>6. Where your data is stored</h2>
+        <h2 style={S.h2}>6. Data processors</h2>
         <p style={S.p}>Your data is processed by the following sub-processors:</p>
         <ul style={S.ul}>
-          <li style={S.li}><strong style={S.strong}>Supabase</strong> (database and authentication) &mdash; hosted on AWS eu-west-2 (London)</li>
-          <li style={S.li}><strong style={S.strong}>Vercel</strong> (application hosting) &mdash; lhr1 region (London)</li>
-          <li style={S.li}><strong style={S.strong}>Resend</strong> (transactional email) &mdash; EU infrastructure</li>
+          <li style={S.li}><strong style={S.strong}>Supabase</strong> &mdash; database and authentication</li>
+          <li style={S.li}><strong style={S.strong}>Vercel</strong> &mdash; application hosting</li>
         </ul>
         <p style={S.p}>
           All data is stored within the European Economic Area. No personal data is transferred
@@ -110,35 +111,43 @@ export default function PrivacyPolicyPage() {
 
         {/* ── 7 ──────────────────────────────────────────────────────── */}
         <h2 style={S.h2}>7. Your rights</h2>
-        <p style={S.p}>Under the GDPR, you have the right to:</p>
+        <p style={S.p}>
+          As a crew member, you have the right to:
+        </p>
         <ul style={S.ul}>
           <li style={S.li}><strong style={S.strong}>Access</strong> &mdash; request a copy of all personal data we hold about you</li>
-          <li style={S.li}><strong style={S.strong}>Rectification</strong> &mdash; correct any inaccurate personal data</li>
-          <li style={S.li}><strong style={S.strong}>Erasure</strong> &mdash; request deletion of your data (subject to legal retention obligations)</li>
+          <li style={S.li}><strong style={S.strong}>Correction</strong> &mdash; correct any inaccurate personal data</li>
+          <li style={S.li}><strong style={S.strong}>Deletion</strong> &mdash; request deletion of your data upon request to your vessel administrator</li>
           <li style={S.li}><strong style={S.strong}>Portability</strong> &mdash; receive your data in a structured, machine-readable format</li>
           <li style={S.li}><strong style={S.strong}>Objection</strong> &mdash; object to processing based on legitimate interests</li>
           <li style={S.li}><strong style={S.strong}>Withdraw consent</strong> &mdash; for consent-based processing (e.g. push notifications)</li>
         </ul>
         <p style={S.p}>
-          To exercise any of these rights, contact your vessel&rsquo;s designated data controller
-          (typically the vessel operator or captain) or email us at the address below.
+          To exercise any of these rights, contact your vessel administrator in the first
+          instance, or contact us at the address below.
         </p>
 
         {/* ── 8 ──────────────────────────────────────────────────────── */}
-        <h2 style={S.h2}>8. Security</h2>
+        <h2 style={S.h2}>8. GDPR compliance</h2>
         <p style={S.p}>
-          We protect your data with encryption in transit (TLS 1.3), encryption at rest
-          (AES-256), row-level security policies on all database tables, and role-based
-          access controls. The service role key used for server-side operations is never
-          exposed to browser code.
+          Sharp Digital Solutions Ltd is a UK-registered company and is fully compliant
+          with the UK General Data Protection Regulation (UK GDPR) and the Data Protection
+          Act 2018 when processing crew data. We implement appropriate technical and
+          organisational measures to protect personal data, including encryption in transit
+          (TLS 1.3), encryption at rest (AES-256), row-level security policies on all
+          database tables, and role-based access controls.
         </p>
 
         {/* ── 9 ──────────────────────────────────────────────────────── */}
         <h2 style={S.h2}>9. Contact</h2>
         <p style={S.p}>
-          For privacy enquiries, contact your vessel operator in the first instance.
-          For questions about CrewNotice&rsquo;s data processing practices, email{' '}
-          <strong style={S.strong}>privacy@crewnotice.app</strong>.
+          For privacy enquiries, contact your vessel administrator in the first instance.
+          For questions about CrewNotice&rsquo;s data processing practices:
+        </p>
+        <p style={S.p}>
+          <strong style={S.strong}>Sharp Digital Solutions Ltd</strong><br />
+          71-75 Shelton Street, Covent Garden, London, WC2H 9JQ<br />
+          Email: <strong style={S.strong}>privacy@crewnotice.app</strong>
         </p>
 
         {/* Footer nav */}

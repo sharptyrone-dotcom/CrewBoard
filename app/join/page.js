@@ -91,6 +91,7 @@ export default function JoinPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState('');
   const [department, setDepartment] = useState('General');
+  const [agreed, setAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
@@ -143,6 +144,10 @@ export default function JoinPage() {
     }
     if (!fullName.trim() || !email.trim() || !role.trim()) {
       setSubmitError('Name, email and role are required.');
+      return;
+    }
+    if (!agreed) {
+      setSubmitError('You must agree to the Terms of Service and Privacy Policy.');
       return;
     }
 
@@ -386,6 +391,22 @@ export default function JoinPage() {
                 {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
               </select>
             </div>
+
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 18, cursor: submitting ? 'default' : 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={e => setAgreed(e.target.checked)}
+                disabled={submitting}
+                style={{ marginTop: 3, accentColor: T.accent, width: 16, height: 16, flexShrink: 0 }}
+              />
+              <span style={{ fontSize: 12, lineHeight: 1.5, color: T.textMuted }}>
+                I agree to the{' '}
+                <Link href="/terms" target="_blank" style={{ color: T.accent, textDecoration: 'underline' }}>Terms of Service</Link>
+                {' '}and{' '}
+                <Link href="/privacy" target="_blank" style={{ color: T.accent, textDecoration: 'underline' }}>Privacy Policy</Link>
+              </span>
+            </label>
 
             {submitError && (
               <div style={{ fontSize: 12, color: T.critical, background: `${T.critical}10`, border: `1px solid ${T.critical}30`, borderRadius: 8, padding: '10px 12px', marginBottom: 14 }}>

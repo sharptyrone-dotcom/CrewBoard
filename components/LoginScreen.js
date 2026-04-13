@@ -134,10 +134,13 @@ export default function LoginScreen() {
         </div>
 
         {/* Legal footer links */}
-        <div style={{ textAlign: 'center', marginTop: 24, paddingTop: 16, borderTop: `1px solid ${T.border}`, display: 'flex', justifyContent: 'center', gap: 18, fontSize: 12 }}>
-          <Link href="/privacy" style={{ color: T.textDim, textDecoration: 'none' }}>Privacy</Link>
-          <Link href="/terms" style={{ color: T.textDim, textDecoration: 'none' }}>Terms</Link>
-          <Link href="/cookies" style={{ color: T.textDim, textDecoration: 'none' }}>Cookies</Link>
+        <div style={{ textAlign: 'center', marginTop: 24, paddingTop: 16, borderTop: `1px solid ${T.border}` }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 18, fontSize: 12, marginBottom: 10 }}>
+            <Link href="/privacy" style={{ color: T.textDim, textDecoration: 'none' }}>Privacy</Link>
+            <Link href="/terms" style={{ color: T.textDim, textDecoration: 'none' }}>Terms</Link>
+            <Link href="/cookies" style={{ color: T.textDim, textDecoration: 'none' }}>Cookies</Link>
+          </div>
+          <div style={{ fontSize: 11, color: T.textDim }}>A product by Sharp Digital Solutions Ltd</div>
         </div>
       </div>
     </div>
