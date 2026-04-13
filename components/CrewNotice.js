@@ -53,7 +53,7 @@ import Avatar from './shared/Avatar';
 
 // ─────────────────────────────────────────────────────────────────────
 
-export default function CrewBoard({ user }) {
+export default function CrewNotice({ user }) {
   // Admins default to the admin view but can flip to the crew view to
   // preview what their crew sees. Non-admins are locked to 'crew'.
   const [role, setRole] = useState(user?.isAdmin ? 'admin' : 'crew');
@@ -79,7 +79,7 @@ export default function CrewBoard({ user }) {
   const [quickAccessIds, setQuickAccessIds] = useState(() => {
     if (typeof window === 'undefined') return [];
     try {
-      return JSON.parse(localStorage.getItem(`crewboard_quickaccess_${user?.id}`) || '[]');
+      return JSON.parse(localStorage.getItem(`crewnotice_quickaccess_${user?.id}`) || '[]');
     } catch { return []; }
   });
   const [searchQuery, setSearchQuery] = useState('');
@@ -478,7 +478,7 @@ export default function CrewBoard({ user }) {
   const toggleQuickAccess = (docId) => {
     setQuickAccessIds(prev => {
       const next = prev.includes(docId) ? prev.filter(id => id !== docId) : [...prev, docId];
-      try { localStorage.setItem(`crewboard_quickaccess_${currentUser.id}`, JSON.stringify(next)); } catch {}
+      try { localStorage.setItem(`crewnotice_quickaccess_${currentUser.id}`, JSON.stringify(next)); } catch {}
       return next;
     });
   };
@@ -733,7 +733,7 @@ export default function CrewBoard({ user }) {
     sendReminderChannels({
       crewMemberIds: targetData.map(({ cm }) => cm.id),
       title: 'Compliance Reminder',
-      body: 'You have outstanding notices or documents requiring your attention. Please open CrewBoard to review.',
+      body: 'You have outstanding notices or documents requiring your attention. Please open CrewNotice to review.',
       refType: null,
       refId: null,
     }).catch(err => console.error('[reminder] email+push failed (non-fatal)', err));
@@ -1435,7 +1435,7 @@ export default function CrewBoard({ user }) {
             <div style={{ width: 32, height: 32, borderRadius: 8, background: `linear-gradient(135deg, ${T.accent} 0%, ${T.accentDark} 100%)`, display: 'grid', placeItems: 'center', color: '#fff', boxShadow: '0 4px 10px rgba(59,130,246,0.35)' }}>
               <Icon d={<><circle cx="12" cy="5" r="3" /><line x1="12" y1="22" x2="12" y2="8" /><path d="M5 12H2a10 10 0 0020 0h-3" /></>} size={18} strokeWidth={2.5} />
             </div>
-            <span style={{ fontSize: 18, fontWeight: 700, color: T.text, letterSpacing: -0.3 }}>CrewBoard</span>
+            <span style={{ fontSize: 18, fontWeight: 700, color: T.text, letterSpacing: -0.3 }}>CrewNotice</span>
           </div>
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>

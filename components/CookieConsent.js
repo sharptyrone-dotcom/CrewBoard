@@ -58,7 +58,7 @@ export default function CookieConsent() {
         lineHeight: 1.5,
         maxWidth: 560,
       }}>
-        CrewBoard uses essential cookies to keep you signed in.
+        CrewNotice uses essential cookies to keep you signed in.
         No tracking or advertising cookies are used.{' '}
         <Link href="/cookies" style={{ color: '#60a5fa', textDecoration: 'underline', fontWeight: 600 }}>
           Learn more

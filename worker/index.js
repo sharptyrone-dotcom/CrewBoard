@@ -10,10 +10,10 @@ self.addEventListener('push', (event) => {
   try {
     payload = event.data.json();
   } catch {
-    payload = { title: 'CrewBoard', body: event.data.text() };
+    payload = { title: 'CrewNotice', body: event.data.text() };
   }
 
-  const { title = 'CrewBoard', body = '', icon, badge, data } = payload;
+  const { title = 'CrewNotice', body = '', icon, badge, data } = payload;
 
   event.waitUntil(
     self.registration.showNotification(title, {

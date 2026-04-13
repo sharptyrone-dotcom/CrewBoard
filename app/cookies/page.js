@@ -1,8 +1,8 @@
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Cookie Policy — CrewBoard',
-  description: 'How CrewBoard uses cookies and local storage.',
+  title: 'Cookie Policy — CrewNotice',
+  description: 'How CrewNotice uses cookies and local storage.',
 };
 
 const S = {
@@ -25,7 +25,7 @@ export default function CookiePolicyPage() {
   return (
     <div style={S.page}>
       <div style={S.wrap}>
-        <Link href="/" style={S.back}>&larr; Back to CrewBoard</Link>
+        <Link href="/" style={S.back}>&larr; Back to CrewNotice</Link>
 
         <h1 style={S.h1}>Cookie Policy</h1>
         <p style={S.updated}>Last updated: 12 April 2026</p>
@@ -34,7 +34,7 @@ export default function CookiePolicyPage() {
         <h2 style={S.h2}>1. What are cookies?</h2>
         <p style={S.p}>
           Cookies are small text files stored on your device by your web browser.
-          CrewBoard is a Progressive Web App (PWA) designed primarily for use on vessel
+          CrewNotice is a Progressive Web App (PWA) designed primarily for use on vessel
           networks, and uses a minimal number of cookies and local storage entries
           to function.
         </p>
@@ -69,7 +69,7 @@ export default function CookiePolicyPage() {
         {/* ── 3 ──────────────────────────────────────────────────────── */}
         <h2 style={S.h2}>3. Local storage</h2>
         <p style={S.p}>
-          In addition to cookies, CrewBoard uses browser local storage for:
+          In addition to cookies, CrewNotice uses browser local storage for:
         </p>
         <table style={S.table}>
           <thead>
@@ -93,7 +93,7 @@ export default function CookiePolicyPage() {
         {/* ── 4 ──────────────────────────────────────────────────────── */}
         <h2 style={S.h2}>4. Third-party cookies</h2>
         <p style={S.p}>
-          CrewBoard does <strong style={S.strong}>not</strong> use any third-party analytics,
+          CrewNotice does <strong style={S.strong}>not</strong> use any third-party analytics,
           advertising, or tracking cookies. We do not use Google Analytics, Facebook Pixel,
           or any similar services. No data is shared with advertising networks.
         </p>
@@ -103,7 +103,7 @@ export default function CookiePolicyPage() {
         <p style={S.p}>
           You can clear cookies at any time through your browser settings. Note that
           clearing the Supabase auth cookie will sign you out and you will need to log
-          in again. Since CrewBoard only uses essential cookies required for the service
+          in again. Since CrewNotice only uses essential cookies required for the service
           to function, disabling them may prevent you from using the platform.
         </p>
 
@@ -111,7 +111,7 @@ export default function CookiePolicyPage() {
         <h2 style={S.h2}>6. Contact</h2>
         <p style={S.p}>
           If you have questions about our use of cookies, contact us
-          at <strong style={S.strong}>privacy@crewboard.app</strong>.
+          at <strong style={S.strong}>privacy@crewnotice.app</strong>.
         </p>
 
         {/* Footer nav */}

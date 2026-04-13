@@ -6,7 +6,7 @@
 -- in migrations 002–006.
 --
 -- After this migration the app requires a real login. The POC dev
--- password is 'CrewBoard2026' for every seeded account — rotate it before
+-- password is 'CrewNotice2026' for every seeded account — rotate it before
 -- sharing the URL with anyone outside the dev team.
 --
 -- This migration was applied to the live DB via MCP during development.
@@ -50,7 +50,7 @@ select
   'authenticated',
   'authenticated',
   cm.email,
-  crypt('CrewBoard2026', gen_salt('bf')),
+  crypt('CrewNotice2026', gen_salt('bf')),
   now(), now(), now(),
   '{"provider":"email","providers":["email"]}'::jsonb,
   jsonb_build_object('full_name', cm.full_name),

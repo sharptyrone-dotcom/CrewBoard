@@ -7,7 +7,7 @@ import { signInWithPassword } from '@/lib/auth';
 // Lightweight email/password login. No sign-up flow — crew accounts are
 // created out-of-band by an admin (via migration 007 in dev).
 //
-// Styling deliberately mirrors CrewBoard's inline-style approach so we
+// Styling deliberately mirrors CrewNotice's inline-style approach so we
 // don't need to introduce a shared design system mid-refactor.
 const T = {
   bg: '#f8fafc',
@@ -49,7 +49,7 @@ export default function LoginScreen() {
 
   const useDevAccount = (devEmail) => {
     setEmail(devEmail);
-    setPassword('CrewBoard2026');
+    setPassword('CrewNotice2026');
     setError(null);
   };
 
@@ -64,7 +64,7 @@ export default function LoginScreen() {
               <path d="M5 12H2a10 10 0 0020 0h-3" />
             </svg>
           </div>
-          <h1 style={{ fontSize: 24, fontWeight: 800, color: T.text, margin: '0 0 4px' }}>CrewBoard</h1>
+          <h1 style={{ fontSize: 24, fontWeight: 800, color: T.text, margin: '0 0 4px' }}>CrewNotice</h1>
           <p style={{ fontSize: 13, color: T.textMuted, margin: 0 }}>Sign in to M/Y Serenity</p>
         </div>
 
@@ -119,7 +119,7 @@ export default function LoginScreen() {
 
         <div style={{ background: T.bgCard, border: `1px dashed ${T.border}`, borderRadius: 14, padding: 16 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Dev accounts</div>
-          <div style={{ fontSize: 11, color: T.textDim, marginBottom: 10 }}>Click to fill. Password for all seeded users: <code style={{ background: T.bg, padding: '1px 6px', borderRadius: 4 }}>CrewBoard2026</code></div>
+          <div style={{ fontSize: 11, color: T.textDim, marginBottom: 10 }}>Click to fill. Password for all seeded users: <code style={{ background: T.bg, padding: '1px 6px', borderRadius: 4 }}>CrewNotice2026</code></div>
           {DEV_ACCOUNTS.map(acc => (
             <button
               key={acc.email}

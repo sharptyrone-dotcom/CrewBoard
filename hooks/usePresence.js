@@ -21,7 +21,7 @@ const HEARTBEAT_MS = 60 * 1000;
 // Also takes care of heartbeating crew_members.last_seen_at on a 60-second
 // timer. This is independent of presence so that even if the websocket
 // drops, the fetchCrew()-derived `online` flag stays accurate while the tab
-// is open. Before this hook existed the CrewBoard component was running its
+// is open. Before this hook existed the CrewNotice component was running its
 // own 2-minute touchLastSeen + fetchCrew loop; that effect has been removed
 // now that presence owns the liveness story end-to-end.
 // ---------------------------------------------------------------------------

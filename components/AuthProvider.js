@@ -24,7 +24,7 @@ import { trackCrewLogin } from '@/lib/analytics';
 //
 // Realtime note: initialising the websocket here would start it even for the
 // auth/anon states, which is wasteful. Instead, we keep the provider stateful
-// only and let downstream components (CrewBoard) invoke useRealtime inside
+// only and let downstream components (CrewNotice) invoke useRealtime inside
 // their own render tree — they're only mounted after status flips to
 // 'authed', so realtime naturally starts post-auth and tears down on
 // sign-out.
@@ -57,7 +57,7 @@ export function AuthProvider({ children }) {
         if (cancelled) return;
         if (!crewMember) {
           // Signed in but no matching crew_members row — surface the
-          // mismatch instead of silently rendering a broken CrewBoard.
+          // mismatch instead of silently rendering a broken CrewNotice.
           setLoadError('No crew profile found for this account. Ask an admin to link it.');
           setUser(null);
           setStatus('anon');

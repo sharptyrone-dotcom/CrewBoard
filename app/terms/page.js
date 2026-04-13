@@ -1,8 +1,8 @@
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Terms of Service — CrewBoard',
-  description: 'Terms and conditions for using the CrewBoard platform.',
+  title: 'Terms of Service — CrewNotice',
+  description: 'Terms and conditions for using the CrewNotice platform.',
 };
 
 const S = {
@@ -24,7 +24,7 @@ export default function TermsPage() {
   return (
     <div style={S.page}>
       <div style={S.wrap}>
-        <Link href="/" style={S.back}>&larr; Back to CrewBoard</Link>
+        <Link href="/" style={S.back}>&larr; Back to CrewNotice</Link>
 
         <h1 style={S.h1}>Terms of Service</h1>
         <p style={S.updated}>Last updated: 12 April 2026</p>
@@ -32,7 +32,7 @@ export default function TermsPage() {
         {/* ── 1 ──────────────────────────────────────────────────────── */}
         <h2 style={S.h2}>1. Service description</h2>
         <p style={S.p}>
-          CrewBoard is a web-based operational compliance platform designed for superyacht
+          CrewNotice is a web-based operational compliance platform designed for superyacht
           crew. It provides notice boards, document management, training modules with
           quizzes, event coordination, and compliance reporting. The service is delivered
           as a Progressive Web App (PWA) accessible via modern web browsers.
@@ -41,15 +41,15 @@ export default function TermsPage() {
         {/* ── 2 ──────────────────────────────────────────────────────── */}
         <h2 style={S.h2}>2. Acceptance of terms</h2>
         <p style={S.p}>
-          By creating an account or accessing CrewBoard through a vessel invitation, you
+          By creating an account or accessing CrewNotice through a vessel invitation, you
           agree to be bound by these Terms of Service. If you do not agree, do not use the
           service. Your vessel operator may have additional policies that apply to your
-          use of CrewBoard.
+          use of CrewNotice.
         </p>
 
         {/* ── 3 ──────────────────────────────────────────────────────── */}
         <h2 style={S.h2}>3. User accounts and responsibilities</h2>
-        <p style={S.p}>As a crew member using CrewBoard, you agree to:</p>
+        <p style={S.p}>As a crew member using CrewNotice, you agree to:</p>
         <ul style={S.ul}>
           <li style={S.li}>Provide accurate personal information during registration</li>
           <li style={S.li}>Keep your login credentials secure and not share them with others</li>
@@ -63,12 +63,12 @@ export default function TermsPage() {
         <h2 style={S.h2}>4. Acceptable use</h2>
         <p style={S.p}>You must not:</p>
         <ul style={S.ul}>
-          <li style={S.li}>Use CrewBoard for any purpose unrelated to vessel operations</li>
+          <li style={S.li}>Use CrewNotice for any purpose unrelated to vessel operations</li>
           <li style={S.li}>Attempt to access data belonging to other vessels or crew members outside your assignment</li>
           <li style={S.li}>Upload malicious files, offensive content, or content that violates any law</li>
           <li style={S.li}>Attempt to circumvent security controls, row-level policies, or access restrictions</li>
           <li style={S.li}>Use automated tools to scrape or extract data from the platform</li>
-          <li style={S.li}>Share confidential vessel operational information outside CrewBoard</li>
+          <li style={S.li}>Share confidential vessel operational information outside CrewNotice</li>
         </ul>
 
         {/* ── 5 ──────────────────────────────────────────────────────── */}
@@ -81,15 +81,15 @@ export default function TermsPage() {
           <li style={S.li}>Ensuring the accuracy and timeliness of safety notices and operational documents</li>
           <li style={S.li}>Maintaining compliance with applicable maritime regulations (ISM Code, MLC 2006, flag state requirements)</li>
           <li style={S.li}>Deactivating accounts for crew members who leave the vessel</li>
-          <li style={S.li}>Acting as the data controller for personal data processed through CrewBoard</li>
+          <li style={S.li}>Acting as the data controller for personal data processed through CrewNotice</li>
         </ul>
 
         {/* ── 6 ──────────────────────────────────────────────────────── */}
         <h2 style={S.h2}>6. Content and data accuracy</h2>
         <p style={S.p}>
-          CrewBoard is a tool that facilitates the distribution of operational information.
+          CrewNotice is a tool that facilitates the distribution of operational information.
           The accuracy of notices, documents, training materials, and event details is the
-          sole responsibility of the vessel operator and content authors. CrewBoard does not
+          sole responsibility of the vessel operator and content authors. CrewNotice does not
           independently verify the correctness, completeness, or regulatory compliance of
           any content uploaded to the platform.
         </p>
@@ -107,17 +107,17 @@ export default function TermsPage() {
         {/* ── 8 ──────────────────────────────────────────────────────── */}
         <h2 style={S.h2}>8. Intellectual property</h2>
         <p style={S.p}>
-          The CrewBoard platform, including its design, code, and branding, is the
-          intellectual property of CrewBoard Ltd. Content uploaded by vessel operators
+          The CrewNotice platform, including its design, code, and branding, is the
+          intellectual property of Sharp Digital Solutions Ltd. Content uploaded by vessel operators
           and crew members remains the property of the respective owners. By uploading
-          content, you grant CrewBoard a limited licence to store and display it within
+          content, you grant CrewNotice a limited licence to store and display it within
           the platform for its intended purpose.
         </p>
 
         {/* ── 9 ──────────────────────────────────────────────────────── */}
         <h2 style={S.h2}>9. Limitation of liability</h2>
         <p style={S.p}>
-          To the fullest extent permitted by law, CrewBoard Ltd shall not be liable for
+          To the fullest extent permitted by law, Sharp Digital Solutions Ltd shall not be liable for
           any indirect, incidental, consequential, or punitive damages arising from your
           use of the service. This includes, but is not limited to, loss of data,
           regulatory penalties, or operational disruptions. Our total liability shall not
@@ -125,7 +125,7 @@ export default function TermsPage() {
           claim.
         </p>
         <p style={S.p}>
-          CrewBoard is <strong style={S.strong}>not a substitute</strong> for proper maritime
+          CrewNotice is <strong style={S.strong}>not a substitute</strong> for proper maritime
           safety management systems, qualified personnel, or professional legal and
           regulatory advice.
         </p>
@@ -133,7 +133,7 @@ export default function TermsPage() {
         {/* ── 10 ─────────────────────────────────────────────────────── */}
         <h2 style={S.h2}>10. Termination</h2>
         <p style={S.p}>
-          Your access to CrewBoard may be terminated by your vessel operator at any time
+          Your access to CrewNotice may be terminated by your vessel operator at any time
           (e.g. when you leave the vessel). We may also suspend or terminate accounts that
           violate these terms. Upon termination, your personal data will be handled in
           accordance with our Privacy Policy and applicable data retention requirements.

@@ -1,4 +1,4 @@
--- CrewBoard initial schema
+-- CrewNotice initial schema
 -- Creates all core tables, enums, indexes, and Row Level Security policies.
 
 -- ---------------------------------------------------------------------------

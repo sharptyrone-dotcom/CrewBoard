@@ -1,6 +1,6 @@
 {
-  "name": "CrewBoard",
-  "short_name": "CrewBoard",
+  "name": "CrewNotice",
+  "short_name": "CrewNotice",
   "description": "Yacht Crew Operational Platform — Digital notice board, document library, and compliance tracking.",
   "start_url": "/",
   "display": "standalone",

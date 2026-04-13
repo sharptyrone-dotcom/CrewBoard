@@ -4,13 +4,13 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import CookieConsent from '@/components/CookieConsent';
 
 export const metadata = {
-  title: 'CrewBoard — Yacht Crew Operational Platform',
+  title: 'CrewNotice — Yacht Crew Operational Platform',
   description: 'Digital notice board, document library, and compliance tracking for superyacht crew.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'CrewBoard',
+    title: 'CrewNotice',
   },
 };
 

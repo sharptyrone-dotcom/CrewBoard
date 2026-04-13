@@ -15,7 +15,7 @@ import { useCallback, useEffect, useState } from 'react';
  *           cachedIds, cacheSize } = useOfflineDocuments(userId);
  */
 
-const CACHE_NAME = 'crewboard-offline-docs';
+const CACHE_NAME = 'crewnotice-offline-docs';
 
 // Stable key for a document — uses the doc id so it survives signed-URL
 // rotation. The actual blob is fetched from the signed URL at cache time.

@@ -1,6 +1,6 @@
 -- Seed documents + document_acknowledgements
 --
--- Matches INITIAL_DOCS from components/CrewBoard.js so the visual state
+-- Matches INITIAL_DOCS from components/CrewNotice.js so the visual state
 -- before/after the refactor looks the same. Document IDs use the
 -- 40000000-xxxx... prefix for discoverability.
 --

@@ -1,8 +1,8 @@
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Privacy Policy — CrewBoard',
-  description: 'How CrewBoard collects, uses, and protects your personal data.',
+  title: 'Privacy Policy — CrewNotice',
+  description: 'How CrewNotice collects, uses, and protects your personal data.',
 };
 
 const S = {
@@ -28,7 +28,7 @@ export default function PrivacyPolicyPage() {
   return (
     <div style={S.page}>
       <div style={S.wrap}>
-        <Link href="/" style={S.back}>&larr; Back to CrewBoard</Link>
+        <Link href="/" style={S.back}>&larr; Back to CrewNotice</Link>
 
         <h1 style={S.h1}>Privacy Policy</h1>
         <p style={S.updated}>Last updated: 12 April 2026</p>
@@ -36,10 +36,10 @@ export default function PrivacyPolicyPage() {
         {/* ── 1 ──────────────────────────────────────────────────────── */}
         <h2 style={S.h2}>1. Who we are</h2>
         <p style={S.p}>
-          CrewBoard is an operational compliance platform for superyacht crew.
+          CrewNotice is an operational compliance platform for superyacht crew.
           The <strong style={S.strong}>data controller</strong> for your personal data is
-          the vessel operator (your employer) who administers your vessel&rsquo;s CrewBoard
-          workspace. CrewBoard Ltd acts as a <strong style={S.strong}>data processor</strong> on
+          the vessel operator (your employer) who administers your vessel&rsquo;s CrewNotice
+          workspace. Sharp Digital Solutions Ltd acts as a <strong style={S.strong}>data processor</strong> on
           their behalf.
         </p>
 
@@ -64,7 +64,7 @@ export default function PrivacyPolicyPage() {
         {/* ── 3 ──────────────────────────────────────────────────────── */}
         <h2 style={S.h2}>3. How we use your data</h2>
         <ul style={S.ul}>
-          <li style={S.li}>Providing the CrewBoard service to your vessel</li>
+          <li style={S.li}>Providing the CrewNotice service to your vessel</li>
           <li style={S.li}>Tracking operational compliance (notice reads, document acknowledgements, training completion)</li>
           <li style={S.li}>Generating compliance reports for vessel management</li>
           <li style={S.li}>Sending notifications (in-app, email, and push) about operational matters</li>
@@ -137,8 +137,8 @@ export default function PrivacyPolicyPage() {
         <h2 style={S.h2}>9. Contact</h2>
         <p style={S.p}>
           For privacy enquiries, contact your vessel operator in the first instance.
-          For questions about CrewBoard&rsquo;s data processing practices, email{' '}
-          <strong style={S.strong}>privacy@crewboard.app</strong>.
+          For questions about CrewNotice&rsquo;s data processing practices, email{' '}
+          <strong style={S.strong}>privacy@crewnotice.app</strong>.
         </p>
 
         {/* Footer nav */}

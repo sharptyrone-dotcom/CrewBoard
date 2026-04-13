@@ -24,7 +24,7 @@ import { NextResponse } from 'next/server';
 
 // ── Email via Resend ─────────────────────────────────────────────────
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
-const RESEND_FROM = process.env.RESEND_FROM || 'CrewBoard <onboarding@resend.dev>';
+const RESEND_FROM = process.env.RESEND_FROM || 'CrewNotice <onboarding@resend.dev>';
 
 async function sendEmail({ to, subject, html }) {
   if (!RESEND_API_KEY) return { success: false, error: 'RESEND_API_KEY not configured' };
@@ -48,7 +48,7 @@ async function sendEmail({ to, subject, html }) {
 }
 
 function buildEmailHtml({ title, body, refType, refId }) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://crewboard.app';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://crewnotice.app';
   const deepLink = refType && refId
     ? `${appUrl}/app#${refType}/${refId}`
     : `${appUrl}/app`;
@@ -62,19 +62,19 @@ function buildEmailHtml({ title, body, refType, refId }) {
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08)">
         <tr>
           <td style="background:#1e3a5f;padding:24px 32px">
-            <span style="color:#ffffff;font-size:20px;font-weight:800;letter-spacing:-0.5px">&#9875; CrewBoard</span>
+            <span style="color:#ffffff;font-size:20px;font-weight:800;letter-spacing:-0.5px">&#9875; CrewNotice</span>
           </td>
         </tr>
         <tr>
           <td style="padding:32px">
             <h1 style="margin:0 0 12px;font-size:20px;font-weight:700;color:#1e293b">${escapeHtml(title)}</h1>
             <p style="margin:0 0 24px;font-size:15px;color:#475569;line-height:1.6">${escapeHtml(body)}</p>
-            <a href="${deepLink}" style="display:inline-block;background:#3b82f6;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:10px;font-size:14px;font-weight:700">Open in CrewBoard</a>
+            <a href="${deepLink}" style="display:inline-block;background:#3b82f6;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:10px;font-size:14px;font-weight:700">Open in CrewNotice</a>
           </td>
         </tr>
         <tr>
           <td style="padding:16px 32px;border-top:1px solid #e2e8f0">
-            <p style="margin:0;font-size:12px;color:#94a3b8">This is an automated reminder from CrewBoard. If you believe you received this in error, please contact your vessel administrator.</p>
+            <p style="margin:0;font-size:12px;color:#94a3b8">This is an automated reminder from CrewNotice. If you believe you received this in error, please contact your vessel administrator.</p>
           </td>
         </tr>
       </table>
@@ -95,7 +95,7 @@ function escapeHtml(str) {
 // ── Push via Web Push ────────────────────────────────────────────────
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@crewboard.app';
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@crewnotice.app';
 
 let webpush = null;
 async function getWebPush() {
@@ -169,7 +169,7 @@ export async function POST(request) {
         .map(async (crew) => {
           const result = await sendEmail({
             to: crew.email,
-            subject: `[CrewBoard] ${title}`,
+            subject: `[CrewNotice] ${title}`,
             html,
           });
           if (result.success) emailResults.sent++;

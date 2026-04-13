@@ -1,6 +1,6 @@
 -- Seed notifications
 --
--- Matches INITIAL_NOTIFICATIONS from components/CrewBoard.js so the bell
+-- Matches INITIAL_NOTIFICATIONS from components/CrewNotice.js so the bell
 -- badge and notifications panel look identical before/after the refactor.
 -- Notification IDs use the 50000000-xxxx... prefix for discoverability.
 --

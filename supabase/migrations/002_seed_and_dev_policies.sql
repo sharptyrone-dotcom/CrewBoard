@@ -41,7 +41,7 @@ values
 on conflict (id) do nothing;
 
 -- ---------------------------------------------------------------------------
--- Notices (matches INITIAL_NOTICES in components/CrewBoard.js)
+-- Notices (matches INITIAL_NOTICES in components/CrewNotice.js)
 -- ---------------------------------------------------------------------------
 insert into notices (
   id, vessel_id, created_by, title, body, category, priority,

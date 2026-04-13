@@ -2,7 +2,7 @@ import Link from 'next/link';
 import './landing.css';
 
 export const metadata = {
-  title: "CrewBoard — The operational platform superyachts actually need",
+  title: "CrewNotice — The operational platform superyachts actually need",
   description: "Digital notices, document management, and compliance tracking — purpose-built for superyacht crew. Every read tracked. Every audit ready.",
 };
 
@@ -26,7 +26,7 @@ export default function LandingPage() {
         <div className="wrap nav-inner">
           <Link href="/" className="logo">
             <span className="logo-mark"><AnchorIcon /></span>
-            CrewBoard
+            CrewNotice
           </Link>
           <div className="nav-links">
             <a href="#features">Product</a>
@@ -69,7 +69,7 @@ export default function LandingPage() {
             <div className="phone">
               <div className="screen">
                 <div className="screen-head">
-                  <div className="screen-logo"><span className="dot">⚓</span> CrewBoard</div>
+                  <div className="screen-logo"><span className="dot">⚓</span> CrewNotice</div>
                   <div className="screen-pill">CREW</div>
                 </div>
                 <h2>Welcome, Tom</h2>
@@ -246,7 +246,7 @@ export default function LandingPage() {
             <div className="compliance-content">
               <div className="section-eyebrow">Compliance</div>
               <h2>Auditable proof, every time.</h2>
-              <p>CrewBoard turns daily communications into a defensible compliance record. When flag state, class, or the MCA come aboard, you&apos;re ready in seconds — not weeks.</p>
+              <p>CrewNotice turns daily communications into a defensible compliance record. When flag state, class, or the MCA come aboard, you&apos;re ready in seconds — not weeks.</p>
               <ul className="check-list">
                 <li>
                   <div className="check-ic"><Check size={14} /></div>
@@ -286,7 +286,7 @@ export default function LandingPage() {
         <div className="wrap">
           <div className="testimonial-card">
             <div className="quote-mark">&ldquo;</div>
-            <q>For the first time in fifteen years at sea, I can honestly tell an auditor that every member of my crew has read every notice — and I can prove it in thirty seconds. CrewBoard has completely changed how we run the vessel.</q>
+            <q>For the first time in fifteen years at sea, I can honestly tell an auditor that every member of my crew has read every notice — and I can prove it in thirty seconds. CrewNotice has completely changed how we run the vessel.</q>
             <div className="author">
               <div className="avatar">JR</div>
               <div className="author-info">
@@ -357,7 +357,7 @@ export default function LandingPage() {
         <div className="wrap">
           <div className="final-cta-inner">
             <h2>Ready to go?</h2>
-            <p>Join the vessels already using CrewBoard to prove compliance, protect crew, and sleep better at anchor.</p>
+            <p>Join the vessels already using CrewNotice to prove compliance, protect crew, and sleep better at anchor.</p>
             <div className="hero-cta">
               <Link href="/app" className="btn btn-primary btn-lg">
                 Book a demo <Arrow />
@@ -375,7 +375,7 @@ export default function LandingPage() {
             <div className="footer-brand">
               <Link href="/" className="logo">
                 <span className="logo-mark"><AnchorIcon /></span>
-                CrewBoard
+                CrewNotice
               </Link>
               <p>The operational platform superyachts actually need. Built by crew, for crew.</p>
             </div>
@@ -420,7 +420,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="footer-bottom">
-            <div>© 2026 CrewBoard Ltd. Made for the crew who keep vessels running.</div>
+            <div>© 2026 Sharp Digital Solutions Ltd. Made for the crew who keep vessels running.</div>
             <div className="socials">
               <a href="#" aria-label="LinkedIn"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.063 2.063 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452z" /></svg></a>
               <a href="#" aria-label="Instagram"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5" /><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" /><line x1="17.5" y1="6.5" x2="17.51" y2="6.5" /></svg></a>

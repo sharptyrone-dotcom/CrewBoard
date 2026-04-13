@@ -56,7 +56,7 @@ export function useRealtime({
     // Single channel per vessel keeps the websocket connection count low and
     // makes teardown a one-liner. Channel names must be unique per tab.
     const channel = supabase
-      .channel(`crewboard:vessel:${vesselId}`)
+      .channel(`crewnotice:vessel:${vesselId}`)
       .on(
         'postgres_changes',
         {

@@ -1,6 +1,6 @@
 'use client';
 
-import CrewBoard from '@/components/CrewBoard';
+import CrewNotice from '@/components/CrewNotice';
 import LoginScreen from '@/components/LoginScreen';
 import { AuthProvider, useAuth } from '@/components/AuthProvider';
 
@@ -8,7 +8,7 @@ import { AuthProvider, useAuth } from '@/components/AuthProvider';
 // anon state; this file just picks the right tree based on the current
 // status.
 //
-// Realtime subscriptions (useRealtime, usePresence) live inside CrewBoard
+// Realtime subscriptions (useRealtime, usePresence) live inside CrewNotice
 // and therefore only mount once `status === 'authed'`, guaranteeing they
 // start post-auth and tear down automatically on sign-out.
 function AppPageInner() {
@@ -17,7 +17,7 @@ function AppPageInner() {
   if (status === 'loading') {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', color: '#64748b', fontSize: 13 }}>
-        Loading CrewBoard…
+        Loading CrewNotice…
       </div>
     );
   }
@@ -35,7 +35,7 @@ function AppPageInner() {
     );
   }
 
-  return <CrewBoard user={user} />;
+  return <CrewNotice user={user} />;
 }
 
 export default function AppPage() {

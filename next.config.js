@@ -16,7 +16,7 @@ const withPWA = require('next-pwa')({
       urlPattern: /^https?:\/\/.*\/api\/.*/i,
       handler: 'NetworkFirst',
       options: {
-        cacheName: 'crewboard-api',
+        cacheName: 'crewnotice-api',
         networkTimeoutSeconds: 5,
         expiration: {
           maxEntries: 200,
@@ -32,7 +32,7 @@ const withPWA = require('next-pwa')({
       urlPattern: /^https?:\/\/.*\.supabase\.co\/storage\/v1\/object\/.*/i,
       handler: 'CacheFirst',
       options: {
-        cacheName: 'crewboard-documents',
+        cacheName: 'crewnotice-documents',
         expiration: {
           maxEntries: 100,
           maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
@@ -47,7 +47,7 @@ const withPWA = require('next-pwa')({
       urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i,
       handler: 'CacheFirst',
       options: {
-        cacheName: 'crewboard-images',
+        cacheName: 'crewnotice-images',
         expiration: {
           maxEntries: 100,
           maxAgeSeconds: 60 * 60 * 24 * 60, // 60 days
@@ -62,7 +62,7 @@ const withPWA = require('next-pwa')({
       urlPattern: /\.(?:woff|woff2|ttf|otf|eot)$/i,
       handler: 'CacheFirst',
       options: {
-        cacheName: 'crewboard-fonts',
+        cacheName: 'crewnotice-fonts',
         expiration: {
           maxEntries: 30,
           maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
@@ -77,7 +77,7 @@ const withPWA = require('next-pwa')({
       urlPattern: /^https?:\/\/.*\/_next\/.*/i,
       handler: 'StaleWhileRevalidate',
       options: {
-        cacheName: 'crewboard-static',
+        cacheName: 'crewnotice-static',
         expiration: {
           maxEntries: 200,
           maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
@@ -92,7 +92,7 @@ const withPWA = require('next-pwa')({
       urlPattern: /^https?:\/\/.*\/(?:app|join|admin)?.*/i,
       handler: 'StaleWhileRevalidate',
       options: {
-        cacheName: 'crewboard-pages',
+        cacheName: 'crewnotice-pages',
         expiration: {
           maxEntries: 50,
           maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days

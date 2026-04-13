@@ -1,17 +1,17 @@
-# CrewBoard — Yacht Crew Operational Platform
+# CrewNotice — Yacht Crew Operational Platform
 
 Digital notice board, document library, and compliance tracking for superyacht crew.
 
 ## Project Structure
 
 ```
-crewboard/
+crewnotice/
 ├── app/
 │   ├── globals.css        # Global styles, fonts, resets
 │   ├── layout.js          # Root layout with metadata & PWA config
-│   └── page.js            # Main page (imports CrewBoard component)
+│   └── page.js            # Main page (imports CrewNotice component)
 ├── components/
-│   └── CrewBoard.js       # Full app component (all screens, state, UI)
+│   └── CrewNotice.js       # Full app component (all screens, state, UI)
 ├── public/
 │   └── manifest.json      # PWA manifest for installable app
 ├── .gitignore
