@@ -36,6 +36,7 @@ export function useRealtime({
   onNotificationInsert,
   onNoticeReadChange,
   onPollVoteChange,
+  onEventUpdateInsert,
 } = {}) {
   // Latest-ref pattern: refresh on every render so the channel callbacks
   // always dereference the newest handler (and therefore the newest closure
@@ -48,6 +49,7 @@ export function useRealtime({
     onNotificationInsert,
     onNoticeReadChange,
     onPollVoteChange,
+    onEventUpdateInsert,
   };
 
   useEffect(() => {
@@ -140,6 +142,17 @@ export function useRealtime({
         },
         (payload) => {
           handlersRef.current.onPollVoteChange?.(payload);
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'event_updates',
+        },
+        (payload) => {
+          handlersRef.current.onEventUpdateInsert?.(payload.new);
         },
       );
 

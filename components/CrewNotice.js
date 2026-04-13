@@ -379,6 +379,28 @@ export default function CrewNotice({ user }) {
         return { ...n, pollVotes: [...existing, { crewMemberId: row.crew_member_id, optionId: row.option_id }] };
       }));
     },
+    onEventUpdateInsert: (row) => {
+      if (!row || !row.event_id) return;
+      // Append the update to the currently-open event detail (if viewing it).
+      const mapped = {
+        id: row.id,
+        eventId: row.event_id,
+        content: row.content,
+        createdAt: row.created_at,
+        createdBy: '',
+        createdByRole: '',
+      };
+      setAdminEventDetail(prev => {
+        if (!prev || prev.id !== row.event_id) return prev;
+        const exists = (prev.updates || []).some(u => u.id === row.id);
+        return exists ? prev : { ...prev, updates: [mapped, ...(prev.updates || [])] };
+      });
+      setEventDetail(prev => {
+        if (!prev || prev.id !== row.event_id) return prev;
+        const exists = (prev.updates || []).some(u => u.id === row.id);
+        return exists ? prev : { ...prev, updates: [mapped, ...(prev.updates || [])] };
+      });
+    },
   });
 
   const unreadNotifs = notifications.filter(n => !n.read).length;
@@ -522,7 +544,8 @@ export default function CrewNotice({ user }) {
 
     const routesToNotice = notification.type === 'notice' || notification.type === 'reminder';
     const routesToDocument = notification.type === 'document';
-    if (!routesToNotice && !routesToDocument) return;
+    const routesToEvent = notification.refType === 'event';
+    if (!routesToNotice && !routesToDocument && !routesToEvent) return;
 
     const findItem = (items) => {
       if (!Array.isArray(items) || items.length === 0) return null;
@@ -541,6 +564,21 @@ export default function CrewNotice({ user }) {
         : null;
       return byTitle || null;
     };
+
+    if (routesToEvent) {
+      setSelectedNotice(null);
+      setSelectedDoc(null);
+      setAdminNoticeView(null);
+      setTab('events');
+      // Open the event detail. handleLoadEventDetail expects { id }.
+      if (notification.ref) {
+        const isAdmin = role === 'admin';
+        if (isAdmin) { setAdminEventView('detail'); }
+        else { setSelectedEvent(notification.ref); }
+        handleLoadEventDetail({ id: notification.ref }, isAdmin);
+      }
+      return;
+    }
 
     if (routesToNotice) {
       const notice = findItem(notices);

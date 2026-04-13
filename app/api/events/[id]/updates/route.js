@@ -76,6 +76,32 @@ export async function POST(request, { params }) {
 
     if (error) throw error;
 
+    // Notify all OTHER crew members on this vessel about the live update.
+    try {
+      const { data: crewRows } = await supabase
+        .from('crew_members')
+        .select('id')
+        .eq('vessel_id', event.vessel_id)
+        .eq('is_active', true)
+        .neq('id', crew_member_id);
+
+      if (crewRows && crewRows.length > 0) {
+        const notifRows = crewRows.map((c) => ({
+          vessel_id: event.vessel_id,
+          target_crew_id: c.id,
+          type: 'system',
+          title: 'Event Update',
+          body: `${event.title}: ${content.trim()}`,
+          reference_type: 'event',
+          reference_id: eventId,
+        }));
+        await supabase.from('notifications').insert(notifRows);
+      }
+    } catch (notifErr) {
+      // Non-fatal — the update was already posted successfully.
+      console.error('[events/updates] notification insert failed (non-fatal)', notifErr);
+    }
+
     return NextResponse.json(
       {
         update: {
