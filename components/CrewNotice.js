@@ -1578,7 +1578,7 @@ export default function CrewNotice({ user }) {
       {showReplaceDoc && <ReplaceDocumentModal selectedDoc={selectedDoc} replaceDocState={replaceDocState} setReplaceDocState={setReplaceDocState} setShowReplaceDoc={setShowReplaceDoc} handleReplaceDoc={handleReplaceDoc} replacingDoc={replacingDoc} />}
       {showExportReport && <ExportReportModal exportType={exportType} setExportType={setExportType} exportDateFrom={exportDateFrom} setExportDateFrom={setExportDateFrom} exportDateTo={exportDateTo} setExportDateTo={setExportDateTo} exporting={exporting} handleExport={handleExport} setShowExportReport={setShowExportReport} isDesktop={isDesktop} />}
       {showModuleBuilder && <ModuleBuilderModal moduleBuilderData={moduleBuilderData} setModuleBuilderData={setModuleBuilderData} moduleBuilderSaving={moduleBuilderSaving} editingModuleId={editingModuleId} handleSaveModule={handleSaveModule} resetModuleBuilder={resetModuleBuilder} compressImage={compressImage} isDesktop={isDesktop} crew={crew} currentUser={currentUser} />}
-      {showNewEvent && <NewEventModal newEventData={newEventData} setNewEventData={setNewEventData} eventSaving={eventSaving} handleCreateEvent={handleCreateEvent} setShowNewEvent={setShowNewEvent} isDesktop={isDesktop} EVENT_TYPE_LABELS={EVENT_TYPE_LABELS} />}
+      {showNewEvent && <NewEventModal newEventData={newEventData} setNewEventData={setNewEventData} eventSaving={eventSaving} handleCreateEvent={handleCreateEvent} setShowNewEvent={setShowNewEvent} isDesktop={isDesktop} EVENT_TYPE_ICONS={EVENT_TYPE_ICONS} EVENT_TYPE_COLORS={EVENT_TYPE_COLORS} EVENT_TYPE_LABELS={EVENT_TYPE_LABELS} />}
     </div>
   );
 }
