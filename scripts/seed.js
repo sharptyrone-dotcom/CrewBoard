@@ -226,11 +226,11 @@ async function seedTrainingModules() {
       created_by: SOPHIE_ID,
       title: 'Guest Service Excellence',
       description: 'Standards and procedures for delivering 5-star guest service on board.',
-      content: JSON.stringify([
+      content: [
         { type: 'text', value: 'Guest service on a superyacht is about anticipation, discretion, and attention to detail. Every interaction should feel effortless and personalised.' },
         { type: 'text', value: 'Key principles:\n\n1. Anticipate needs before they are expressed\n2. Remember guest preferences and apply them consistently\n3. Maintain professional distance while being warm and approachable\n4. Never say "no" — offer alternatives\n5. Communicate guest requests to the relevant department immediately' },
         { type: 'text', value: 'Service timing standards:\n- Morning coffee/tea within 5 minutes of guest rising\n- Drinks at anchor/beach club within 3 minutes of order\n- Meal service at captain\'s table within 10 minutes of being seated\n- Cabin turndown completed within 15 minutes' },
-      ]),
+      ],
       pass_mark: 80,
       time_limit_minutes: null,
       randomise_questions: false,
@@ -242,11 +242,11 @@ async function seedTrainingModules() {
       created_by: JAMES_ID,
       title: 'STCW Fire Safety Refresher',
       description: 'Refresher on fire prevention, detection, and response procedures per STCW requirements.',
-      content: JSON.stringify([
+      content: [
         { type: 'text', value: 'Fire is the greatest threat at sea. This refresher covers the fire triangle, classes of fire, and your vessel-specific fire plan.' },
         { type: 'text', value: 'Fire classes:\n- Class A: Ordinary combustibles (wood, paper, fabric)\n- Class B: Flammable liquids (fuel, oil, paint)\n- Class C: Flammable gases (LPG, acetylene)\n- Class D: Metal fires (rarely applicable on yachts)\n- Class F: Cooking oils and fats' },
         { type: 'text', value: 'Response procedure:\n1. Raise the alarm (fire panel / VHF)\n2. Attempt to contain if safe (close doors/vents)\n3. Muster at assigned station\n4. SCBA team deploys to scene\n5. Bridge initiates emergency checklist' },
-      ]),
+      ],
       pass_mark: 70,
       time_limit_minutes: 10,
       randomise_questions: true,
