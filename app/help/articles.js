@@ -354,6 +354,501 @@ export const ARTICLES = {
     ],
   },
 
+  'posting-notices': {
+    slug: 'posting-notices',
+    title: 'Posting Notices and Setting Priorities',
+    category: 'For Captains & Admins',
+    description:
+      'Create routine, important, and critical notices with targeting, acknowledgement tracking, and reminders.',
+    body: [
+      {
+        type: 'p',
+        text:
+          'Notices are the fastest way to get information in front of your crew. This guide covers posting a notice, picking the right priority, targeting the right people, and following up afterwards.',
+      },
+      { type: 'h2', text: 'How to post a notice' },
+      {
+        type: 'p',
+        text:
+          'Go to the Notices tab and tap the **+** button in the bottom-right corner. You can also tap **New Notice** from Quick Actions on the Home screen.',
+      },
+      { type: 'h2', text: 'Notice fields' },
+      {
+        type: 'list',
+        items: [
+          '**Title** — short and specific, this is what crew see in the list',
+          '**Body** — rich text with bold, bullet points, and inline links',
+          '**Category** — Safety, Operations, Guest Info, HR/Admin, Social, or Departmental',
+          '**Priority** — Critical, Important, or Routine',
+        ],
+      },
+      { type: 'h2', text: 'Priority levels' },
+      {
+        type: 'list',
+        items: [
+          '**Critical** — requires acknowledgement, crew cannot dismiss it, and it is shown with a red bar. Use for safety alerts, emergency procedures, and anything that could get someone hurt.',
+          '**Important** — highlighted in amber and shown prominently in the list. Use for operational changes, guest briefings, and anything the crew need to know promptly.',
+          '**Routine** — standard grey styling with normal visibility. Use for day-to-day updates, social announcements, and low-urgency information.',
+        ],
+      },
+      { type: 'h2', text: 'Targeting the right crew' },
+      {
+        type: 'p',
+        text:
+          'Choose **All Crew** to post to everyone on the vessel, or pick a specific department to limit the audience. Department-targeted notices only appear for crew in that department — everyone else does not see them at all.',
+      },
+      { type: 'h2', text: 'Pinning and expiry' },
+      {
+        type: 'list',
+        items: [
+          '**Pin notice** — keeps the notice at the top of the list regardless of date, ideal for standing orders and the current charter brief',
+          '**Require acknowledgement** — crew must explicitly confirm they have read and understood before the notice leaves their action list',
+          '**Expiry date** — set a date after which the notice auto-archives, handy for time-sensitive information like port briefings',
+        ],
+      },
+      {
+        type: 'callout',
+        variant: 'tip',
+        title: 'When to require acknowledgement',
+        text:
+          'Turn acknowledgement on for anything you might need to prove someone saw — safety updates, procedural changes, standing orders. Keep it off for social and informational notices to avoid acknowledgement fatigue.',
+      },
+      { type: 'h2', text: 'After you post' },
+      {
+        type: 'p',
+        text:
+          'All targeted crew receive a push notification immediately. Critical notices also trigger a persistent reminder on their Home screen until they acknowledge.',
+      },
+      { type: 'h2', text: 'Monitoring read and acknowledgement status' },
+      {
+        type: 'p',
+        text:
+          'Tap any notice you have posted to see who has read it, who has acknowledged, and who has not. From the same screen you can send a reminder to non-readers with one tap — they get a fresh push notification pointing straight at the notice.',
+      },
+      { type: 'h2', text: 'Editing and withdrawing' },
+      {
+        type: 'p',
+        text:
+          'You can edit a live notice at any time — crew who have already read it will be notified that it has changed and prompted to read again. To remove a notice entirely, tap **Withdraw** — it disappears from crew lists but is preserved in the audit log.',
+      },
+    ],
+  },
+
+  'uploading-documents': {
+    slug: 'uploading-documents',
+    title: 'Uploading and Managing Documents',
+    category: 'For Captains & Admins',
+    description:
+      'Upload SOPs, risk assessments, and manuals with version control, acknowledgement tracking, and review reminders.',
+    body: [
+      {
+        type: 'p',
+        text:
+          'The Documents library is your vessel\u2019s single source of truth for SOPs, risk assessments, manuals, and checklists. This guide covers uploading, versioning, and tracking who has read what.',
+      },
+      { type: 'h2', text: 'How to upload a document' },
+      {
+        type: 'p',
+        text:
+          'Go to the Documents tab and tap **Upload Document**, or use **Upload Document** from Quick Actions on the Home screen.',
+      },
+      { type: 'h2', text: 'Upload fields' },
+      {
+        type: 'list',
+        items: [
+          '**Title** — clear and searchable, e.g. "Tender Operations SOP" rather than "SOP3"',
+          '**Department** — Bridge, Deck, Engine, Interior, Safety, or General',
+          '**Type** — SOPs, Risk Assessments, Manuals, MSDS/COSHH, Checklists, or Policies',
+          '**PDF file** — upload the file itself from your device or cloud storage',
+        ],
+      },
+      { type: 'h2', text: 'Required vs optional acknowledgement' },
+      {
+        type: 'p',
+        text:
+          'Toggle **Required acknowledgement** when uploading. When enabled, crew must tap **I have read and understood** on the document and their name plus timestamp is logged. Leave it off for reference documents that do not need formal sign-off.',
+      },
+      { type: 'h2', text: 'Review dates' },
+      {
+        type: 'p',
+        text:
+          'Set a review date to remind yourself to revisit the document and keep it current. On the review date, you get a notification prompting you to update or confirm the document is still valid — a simple way to stay on top of document control.',
+      },
+      { type: 'h2', text: 'Version control' },
+      {
+        type: 'p',
+        text:
+          'When you upload a new version of an existing document:',
+      },
+      {
+        type: 'list',
+        items: [
+          'The old version is archived automatically and remains accessible in the audit log',
+          'All previous acknowledgements are cleared so the new version starts from zero',
+          'Crew are notified immediately and prompted to review and re-acknowledge',
+          'The compliance dashboard shows anyone still outstanding against the new version',
+        ],
+      },
+      { type: 'h2', text: 'Version notes' },
+      {
+        type: 'p',
+        text:
+          'Add a short description of what changed — for example, "Updated Section 3.2 — new tender boarding procedure". Crew see these notes when they open the new version so they know where to focus, and auditors see a clean change history.',
+      },
+      {
+        type: 'callout',
+        variant: 'note',
+        title: 'Keep version notes specific',
+        text:
+          'A vague note like "Updated document" is not useful at audit time. Name the section or procedure that changed so the reason for re-acknowledgement is obvious.',
+      },
+      { type: 'h2', text: 'Monitoring acknowledgements' },
+      {
+        type: 'p',
+        text:
+          'Tap any document to see which crew have acknowledged the current version and who is still outstanding. Send reminders from the same screen — crew get a push notification pointing to the document.',
+      },
+      { type: 'h2', text: 'Storage limits' },
+      {
+        type: 'p',
+        text:
+          'Starter plan includes **5 GB** of document storage. Professional plan includes **100 GB**. For vessels with extensive technical libraries, contact us about Enterprise limits.',
+      },
+    ],
+  },
+
+  'creating-training': {
+    slug: 'creating-training',
+    title: 'Creating Training Modules and Quizzes',
+    category: 'For Captains & Admins',
+    description:
+      'Build interactive training with text, images, video, and multiple-choice quizzes — and track completion across the crew.',
+    body: [
+      {
+        type: 'p',
+        text:
+          'Training modules let you deliver structured learning to your crew — induction training, refresher courses, role-specific SOPs — with a quiz at the end to confirm understanding.',
+      },
+      { type: 'h2', text: 'How to create a module' },
+      {
+        type: 'p',
+        text:
+          'Go to the Training tab from the admin side and tap the **+** button to open the Module Builder.',
+      },
+      { type: 'h2', text: 'Adding content blocks' },
+      {
+        type: 'p',
+        text:
+          'Build the module by adding content blocks in any order. Crew work through these in sequence before reaching the quiz.',
+      },
+      {
+        type: 'list',
+        items: [
+          '**Text paragraphs** — formatted with bold, bullets, and inline links',
+          '**Images** — photos or diagrams uploaded from your device',
+          '**Video links** — embed training videos from YouTube, Vimeo, or a direct URL',
+        ],
+      },
+      { type: 'h2', text: 'Building the quiz' },
+      {
+        type: 'p',
+        text:
+          'Add quiz questions below the content blocks. Three question types are supported:',
+      },
+      {
+        type: 'list',
+        items: [
+          '**Multiple choice** — 2 to 4 options, mark the correct one',
+          '**True/false** — binary questions for quick knowledge checks',
+          '**Scenario-based** — a longer question with context, followed by multiple-choice answers',
+        ],
+      },
+      { type: 'h2', text: 'Quiz settings' },
+      {
+        type: 'list',
+        items: [
+          '**Pass mark** — the percentage required to pass, typically 80%',
+          '**Time limit** — optional, sets a countdown timer on the quiz',
+          '**Randomise question order** — shuffles questions per attempt to discourage memorisation',
+        ],
+      },
+      { type: 'h2', text: 'Assigning the module' },
+      {
+        type: 'p',
+        text:
+          'Assign the module to all crew, a specific department, or individual crew members. Set an optional deadline — crew get reminders at 7 days, 3 days, and 1 day before the deadline, and overdue modules are flagged on the compliance dashboard.',
+      },
+      { type: 'h2', text: 'Publishing' },
+      {
+        type: 'p',
+        text:
+          'The module is only visible to crew after you publish it. While you are building, save it as a **Draft** and come back later — nothing appears on the crew side until you hit Publish.',
+      },
+      {
+        type: 'callout',
+        variant: 'tip',
+        title: 'Preview before publishing',
+        text:
+          'Open the module in preview mode and run through the quiz yourself to check the flow, catch any typos, and confirm the pass mark feels right.',
+      },
+      { type: 'h2', text: 'Monitoring completion' },
+      {
+        type: 'p',
+        text:
+          'From the admin Training tab, open any module to see completion rates, individual scores, pass/fail status, and the number of attempts each crew member has made. Sort by status to find anyone still outstanding.',
+      },
+      { type: 'h2', text: 'Reminders' },
+      {
+        type: 'p',
+        text:
+          'Send reminder notifications to crew who have not started the module or who have not yet passed. One tap triggers a push notification pointing straight to the module.',
+      },
+      { type: 'h2', text: 'Editing a published module' },
+      {
+        type: 'p',
+        text:
+          'You can update content blocks and quiz questions after publishing. If the module has already been completed by some crew, their existing results are preserved — they are not automatically reset. If a change is significant enough to warrant re-testing, publish it as a new module instead.',
+      },
+    ],
+  },
+
+  'setting-up-events': {
+    slug: 'setting-up-events',
+    title: 'Setting Up Events and Guest Briefings',
+    category: 'For Captains & Admins',
+    description:
+      'Schedule charters, drills, and passages with per-department briefings, restricted fields, and live updates.',
+    body: [
+      {
+        type: 'p',
+        text:
+          'Events coordinate everything that needs the crew on the same page — charters, passages, drills, maintenance, and social events. This guide covers creating an event, writing department briefings, and managing it through to completion.',
+      },
+      { type: 'h2', text: 'Event types' },
+      {
+        type: 'list',
+        items: [
+          '**Passage** — long trips with watch schedules and weather notes',
+          '**Guest Visit** — owner or charter visits with arrival details and preferences',
+          '**Maintenance** — planned yard periods, service calls, and work scopes',
+          '**Social** — crew nights out, birthdays, and team events',
+          '**Custom** — anything that does not fit the above',
+        ],
+      },
+      { type: 'h2', text: 'Creating an event' },
+      {
+        type: 'p',
+        text:
+          'Go to the Events tab on the admin side and tap **+**. Enter the title, pick a type, set the start and end dates, and write a general description that applies to everyone on the vessel.',
+      },
+      { type: 'h2', text: 'Department briefings' },
+      {
+        type: 'p',
+        text:
+          'Under the general description, add specific briefings for each department. For a guest visit, that might mean:',
+      },
+      {
+        type: 'list',
+        items: [
+          '**Deck** — tender schedules, water toys, and beach setup',
+          '**Interior** — cabin assignments, service timings, and preferences',
+          '**Galley** — dietary requirements, allergies, and menu preferences',
+          '**Engineering** — generator and water-maker load planning',
+        ],
+      },
+      {
+        type: 'p',
+        text:
+          'Each department only sees their own briefing plus the general description — no cross-department noise.',
+      },
+      { type: 'h2', text: 'Restricted fields' },
+      {
+        type: 'p',
+        text:
+          'Mark sensitive information as restricted to specific roles. For example, guest names and personal details might be visible only to the Captain, Chief Stew, and Chef. Crew who do not have access see a placeholder — they know the restricted field exists but not what it contains.',
+      },
+      {
+        type: 'callout',
+        variant: 'note',
+        title: 'Guest privacy',
+        text:
+          'Restricted fields are how you satisfy guest privacy requirements without sacrificing operational awareness. If you are unsure who should see a field, default to fewer roles — you can expand access later.',
+      },
+      { type: 'h2', text: 'Notification schedule' },
+      {
+        type: 'p',
+        text:
+          'Set automatic reminders to fire before the event starts — for example, 7 days, 3 days, and 1 day before. Crew receive push notifications at each interval pointing straight to the briefing, so nothing is left until the last minute.',
+      },
+      { type: 'h2', text: 'Live updates' },
+      {
+        type: 'p',
+        text:
+          'During a running event, post real-time updates — "ETA changed to 1400", "2 additional guests confirmed", "tender departure delayed 30 minutes". Every crew member targeted by the event is notified immediately and the update is appended to the event timeline.',
+      },
+      { type: 'h2', text: 'Monitoring' },
+      {
+        type: 'p',
+        text:
+          'Open any event to see which crew have read the briefing and which have not. Send reminders to outstanding crew with one tap — especially useful in the final hours before a guest arrival or drill.',
+      },
+      { type: 'h2', text: 'Archiving' },
+      {
+        type: 'p',
+        text:
+          'Completed events are archived automatically with all data preserved — briefings, read receipts, live updates, and attached documents. Archived events stay searchable and are included in compliance reports for audit purposes.',
+      },
+    ],
+  },
+
+  'reading-compliance-reports': {
+    slug: 'reading-compliance-reports',
+    title: 'Reading Compliance Reports',
+    category: 'For Captains & Admins',
+    description:
+      'Understand the compliance dashboard and export audit-ready reports for ISM, flag state, and internal reviews.',
+    body: [
+      {
+        type: 'p',
+        text:
+          'CrewNotice keeps a continuous compliance record for your vessel — every notice read, document acknowledged, and training module completed is timestamped and tied to a crew member. Reports turn that record into something you can hand to an auditor.',
+      },
+      { type: 'h2', text: 'Accessing reports' },
+      {
+        type: 'p',
+        text:
+          'Go to **Admin Dashboard > Export Report**, or tap **Export Report** from Quick Actions on the Home screen.',
+      },
+      { type: 'h2', text: 'Report types' },
+      {
+        type: 'list',
+        items: [
+          '**Full Compliance Report (PDF)** — the headline document, suitable for handing directly to auditors',
+          '**Notice Read Receipts (CSV)** — per-notice read and acknowledgement data for every crew member',
+          '**Document Acknowledgements (CSV)** — per-document acknowledgement status across the crew',
+          '**Training Records (CSV)** — completion rates, scores, and attempt counts per module',
+          '**Activity Log (CSV)** — raw timeline of every action taken in the app during the period',
+        ],
+      },
+      { type: 'h2', text: 'Date range' },
+      {
+        type: 'p',
+        text:
+          'Select the period the report should cover — a single day, a rotation, a charter, a quarter, or a full year. The report is scoped to activity inside that window.',
+      },
+      { type: 'h2', text: 'What the Full Compliance Report includes' },
+      {
+        type: 'list',
+        items: [
+          'Vessel summary — name, flag, gross tonnage, and reporting period',
+          'Crew roster with roles, departments, and join dates',
+          'Per-notice read and acknowledgement status for every notice in the period',
+          'Per-document acknowledgement status for every active document',
+          'Training completion rates and scores per crew member',
+          'Overall compliance percentages for the vessel and each department',
+        ],
+      },
+      { type: 'h2', text: 'Using reports for audits' },
+      {
+        type: 'p',
+        text:
+          'Export the report for the audit period, then print it or have it available digitally on a tablet. The PDF includes timestamped evidence of every crew interaction — exactly what ISM auditors and flag state inspectors look for when verifying familiarisation, safety briefings, and training completion.',
+      },
+      {
+        type: 'callout',
+        variant: 'tip',
+        title: 'Audit-ready in under a minute',
+        text:
+          'When an auditor asks to see evidence of a specific notice or training module, export a targeted CSV right there on the spot. It turns a stressful request into a 60-second answer.',
+      },
+      { type: 'h2', text: 'Compliance scores explained' },
+      {
+        type: 'p',
+        text:
+          "Each crew member's compliance score is calculated from the notices they've read, the documents they've acknowledged, and the training they've completed, divided by the total required items assigned to them. 100% means fully compliant — nothing outstanding.",
+      },
+      { type: 'h2', text: 'Tips for staying ahead' },
+      {
+        type: 'list',
+        items: [
+          'Run a compliance report weekly to spot gaps early, not the night before an audit',
+          'Address low individual scores before they become a vessel-wide pattern',
+          'Use CSV exports in a spreadsheet to spot trends across rotations',
+          'Keep a saved PDF of each quarter\u2019s report in your offline records',
+        ],
+      },
+    ],
+  },
+
+  'managing-crew': {
+    slug: 'managing-crew',
+    title: 'Managing Crew and Invite Codes',
+    category: 'For Captains & Admins',
+    description:
+      'Add, manage, and deactivate crew members, and generate invite codes with role and department presets.',
+    body: [
+      {
+        type: 'p',
+        text:
+          'Crew management covers everything from onboarding a new deckhand to deactivating an account at the end of a rotation. This guide walks through the tools you use most.',
+      },
+      { type: 'h2', text: 'The crew roster' },
+      {
+        type: 'p',
+        text:
+          'Go to **Admin > Crew** to see every crew member on your vessel. Each row shows their name, role, department, online status, and current compliance score — a quick way to spot anyone falling behind.',
+      },
+      { type: 'h2', text: 'Individual crew profiles' },
+      {
+        type: 'p',
+        text:
+          "Tap any crew member to open their profile. You see their full compliance breakdown — which notices they've read, which documents they've acknowledged, and which training modules they've completed — plus their history of reads, acknowledgements, and quiz attempts.",
+      },
+      { type: 'h2', text: 'Generating invite codes' },
+      {
+        type: 'p',
+        text:
+          'Go to **Admin > Invite Crew** to create a new code. Share it with new crew by any channel you prefer — text, WhatsApp, email, or on the whiteboard.',
+      },
+      { type: 'h2', text: 'Invite code settings' },
+      {
+        type: 'list',
+        items: [
+          '**Role preset** — pre-fill the role on the join form, e.g. "Deckhand"',
+          '**Department preset** — pre-fill the department, e.g. "Deck"',
+          '**Number of uses** — 1 for a specific person, 5 for a department intake, or unlimited',
+          '**Expiry date** — the code stops working after this date, even if uses remain',
+        ],
+      },
+      {
+        type: 'callout',
+        variant: 'tip',
+        title: 'One-shot invite codes',
+        text:
+          'For new hires, set the uses to 1 and the expiry to 7 days. Once they join, the code is spent — nobody else can use it by accident or intent.',
+      },
+      { type: 'h2', text: 'When crew leave' },
+      {
+        type: 'p',
+        text:
+          'Deactivate a crew member from their profile when they sign off. Their historical data — reads, acknowledgements, training records — is preserved for audit purposes, but they can no longer access the vessel workspace. Deactivation is reversible if they return on a future rotation.',
+      },
+      { type: 'h2', text: 'Crew rotating between vessels' },
+      {
+        type: 'p',
+        text:
+          "Each vessel on CrewNotice is a separate workspace. Crew joining a new vessel need a fresh invite code from that vessel's admin — there is no cross-vessel sharing. Their personal account (name, email, password) carries over, so they don't create a new account each time, but vessel data stays scoped to each vessel for privacy and security.",
+      },
+      {
+        type: 'callout',
+        variant: 'note',
+        title: 'Privacy between vessels',
+        text:
+          'When a crew member leaves your vessel and joins another, your vessel data — notices, documents, training results — is not visible to the new vessel. Only their personal account details carry over.',
+      },
+    ],
+  },
+
   'reading-notices': {
     slug: 'reading-notices',
     title: 'Reading and Acknowledging Notices',

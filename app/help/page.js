@@ -24,12 +24,12 @@ const HELP_CATEGORIES = [
     eyebrow: 'Admin Guide',
     title: 'For Captains & Admins',
     articles: [
-      { title: 'Posting notices and setting priorities', desc: 'Create routine, important, and critical notices with acknowledgement tracking.' },
-      { title: 'Uploading and managing documents', desc: 'Upload SOPs, risk assessments, and manuals with version control.' },
-      { title: 'Creating training modules and quizzes', desc: 'Build interactive training with multiple-choice quizzes and pass marks.' },
-      { title: 'Setting up events and guest briefings', desc: 'Schedule charters, drills, and events with read receipts per crew member.' },
-      { title: 'Reading compliance reports', desc: 'Understand the compliance dashboard and export audit-ready reports.' },
-      { title: 'Managing crew and invite codes', desc: 'Add, remove, and manage crew members and revoke invite codes.' },
+      { slug: 'posting-notices', title: 'Posting notices and setting priorities', desc: 'Create routine, important, and critical notices with acknowledgement tracking.' },
+      { slug: 'uploading-documents', title: 'Uploading and managing documents', desc: 'Upload SOPs, risk assessments, and manuals with version control.' },
+      { slug: 'creating-training', title: 'Creating training modules and quizzes', desc: 'Build interactive training with multiple-choice quizzes and pass marks.' },
+      { slug: 'setting-up-events', title: 'Setting up events and guest briefings', desc: 'Schedule charters, drills, and events with read receipts per crew member.' },
+      { slug: 'reading-compliance-reports', title: 'Reading compliance reports', desc: 'Understand the compliance dashboard and export audit-ready reports.' },
+      { slug: 'managing-crew', title: 'Managing crew and invite codes', desc: 'Add, remove, and manage crew members and revoke invite codes.' },
     ],
   },
   {
