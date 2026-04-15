@@ -3,8 +3,9 @@ import Icons from '../shared/Icons';
 import StatCard from '../shared/StatCard';
 import ComplianceBar from '../shared/ComplianceBar';
 import Avatar from '../shared/Avatar';
+import NeedsAttention from './NeedsAttention';
 
-const AdminDashboard = ({ notices, docs, liveCrew, isDesktop, setSelectedCrewMember, setShowNewNotice, setShowNewDoc, setShowExportReport, dashReminderState, setDashReminderState, dashReminderSentCount, setDashReminderSentCount, handleSendDashboardReminder }) => {
+const AdminDashboard = ({ notices, docs, liveCrew, isDesktop, setSelectedCrewMember, setShowNewNotice, setShowNewDoc, setShowExportReport, dashReminderState, setDashReminderState, dashReminderSentCount, setDashReminderSentCount, handleSendDashboardReminder, trainingModules = [], events = [], setTab, setAdminNoticeView, setSelectedDoc, setTrainingView, setSelectedModule, setAdminEventView, handleLoadEventDetail }) => {
   const criticalUnacked = notices.filter(n => n.priority === 'critical').reduce((sum, n) => sum + (liveCrew.length - n.acknowledgedBy.length), 0);
   const docsUnacked = docs.filter(d => d.required).reduce((sum, d) => sum + (liveCrew.length - d.acknowledgedBy.length), 0);
   const overallCompliance = Math.round(
@@ -34,6 +35,20 @@ const AdminDashboard = ({ notices, docs, liveCrew, isDesktop, setSelectedCrewMem
         <h1 style={{ fontSize: isDesktop ? 26 : 22, fontWeight: 800, color: T.text, margin: 0 }}>Dashboard</h1>
         <p style={{ fontSize: 13, color: T.textMuted, margin: '4px 0 0' }}>M/Y Serenity — {liveCrew.length} crew on board</p>
       </div>
+      <NeedsAttention
+        notices={notices}
+        docs={docs}
+        trainingModules={trainingModules}
+        events={events}
+        liveCrew={liveCrew}
+        setTab={setTab}
+        setAdminNoticeView={setAdminNoticeView}
+        setSelectedDoc={setSelectedDoc}
+        setTrainingView={setTrainingView}
+        setSelectedModule={setSelectedModule}
+        setAdminEventView={setAdminEventView}
+        handleLoadEventDetail={handleLoadEventDetail}
+      />
       {/* Stat cards: 2x2 mobile, 4-column desktop */}
       <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(4, 1fr)' : '1fr 1fr', gap: isDesktop ? 16 : 10, marginBottom: isDesktop ? 24 : 20 }}>
         <StatCard label="Active Notices" value={notices.length} icon={Icons.notices} />

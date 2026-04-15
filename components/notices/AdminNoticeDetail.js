@@ -7,8 +7,36 @@ import StatCard from '../shared/StatCard';
 import BackButton from '../shared/BackButton';
 import { ValidityPill } from '../shared/utils';
 
-export default function AdminNoticeDetail({ notice, onBack, crew, onDelete, onSendReminder, isDesktop }) {
+export default function AdminNoticeDetail({ notice, onBack, crew, onDelete, onSendReminder, activity = [], isDesktop }) {
   const [reminderState, setReminderState] = useState('idle');
+  const [autoRemind, setAutoRemind] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try { return JSON.parse(localStorage.getItem(`auto-remind-${notice.id}`) || 'false'); } catch { return false; }
+  });
+
+  // Pull reminder history entries from the activity log for this notice.
+  const reminderHistory = (activity || [])
+    .filter(a => (a.action === 'reminder_sent' || a.action_type === 'reminder_sent') && (a.targetId === notice.id || a.target_id === notice.id))
+    .slice(0, 10);
+
+  const toggleAutoRemind = (checked) => {
+    setAutoRemind(checked);
+    try { localStorage.setItem(`auto-remind-${notice.id}`, JSON.stringify(checked)); } catch {}
+  };
+
+  const formatTime = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const now = new Date();
+    const delta = now - d;
+    const m = Math.floor(delta / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return d.toLocaleDateString();
+  };
+
   const totalCrew = crew.length;
   const nonReaderCount = crew.filter(cm => !notice.readBy.includes(cm.id)).length;
   const hasPoll = notice.pollOptions && notice.pollOptions.length >= 2;
@@ -116,6 +144,44 @@ export default function AdminNoticeDetail({ notice, onBack, crew, onDelete, onSe
           );
         })}
       </div>
+      {/* Smart Reminders panel */}
+      <div style={{ marginTop: 24, padding: 16, background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 14, boxShadow: T.shadow }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
+          <h3 style={{ fontSize: 13, fontWeight: 700, color: T.text, margin: 0 }}>Smart Reminders</h3>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 12, color: T.textMuted, fontWeight: 600 }}>
+            <input
+              type="checkbox"
+              checked={autoRemind}
+              onChange={(e) => toggleAutoRemind(e.target.checked)}
+              style={{ width: 16, height: 16, accentColor: T.accent, cursor: 'pointer' }}
+            />
+            Auto-remind non-readers after 24h
+          </label>
+        </div>
+        {autoRemind && (
+          <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 10, padding: '8px 12px', background: T.accentTint, borderRadius: 8 }}>
+            Escalation schedule: 24h → 48h → 72h. After 72h, this notice will appear in &quot;Needs Attention&quot;.
+          </div>
+        )}
+        {reminderHistory.length > 0 ? (
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 }}>Reminder History</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {reminderHistory.map((a, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, padding: '6px 10px', background: T.bg, borderRadius: 6 }}>
+                  <span style={{ color: T.text }}>
+                    Reminder sent{a.metadata?.recipientCount ? ` to ${a.metadata.recipientCount} crew` : ''}
+                  </span>
+                  <span style={{ color: T.textMuted, fontSize: 11 }}>{formatTime(a.createdAt || a.created_at)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div style={{ fontSize: 12, color: T.textMuted }}>No reminders sent yet.</div>
+        )}
+      </div>
+
       <div style={{ display: 'flex', gap: 10, marginTop: 16, maxWidth: isDesktop ? 500 : undefined }}>
         {nonReaderCount > 0 && (
           <button

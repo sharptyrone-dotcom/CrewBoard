@@ -1,14 +1,24 @@
 import T, { PRIORITIES } from '../shared/theme';
 import Icons, { Icon } from '../shared/Icons';
 import StatCard from '../shared/StatCard';
+import OnboardingChecklist from './OnboardingChecklist';
 
-export default function CrewHome({ currentUser, unreadNotices, pendingAcks, pendingDocAcks, notices, docs, quickAccessIds, setSelectedNotice, setSelectedDoc, setTab }) {
+export default function CrewHome({ currentUser, unreadNotices, pendingAcks, pendingDocAcks, notices, docs, trainingModules = [], quickAccessIds, setSelectedNotice, setSelectedDoc, setTab }) {
   return (
     <div style={{ padding: 20 }}>
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text, margin: 0 }}>Welcome, {currentUser.name.split(' ')[0]}</h1>
         <p style={{ fontSize: 13, color: T.textMuted, margin: '4px 0 0' }}>M/Y Serenity — {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
       </div>
+      <OnboardingChecklist
+        currentUser={currentUser}
+        notices={notices}
+        docs={docs}
+        trainingModules={trainingModules}
+        setTab={setTab}
+        setSelectedNotice={setSelectedNotice}
+        setSelectedDoc={setSelectedDoc}
+      />
       <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
         <StatCard label="Unread Notices" value={unreadNotices} icon={Icons.notices} />
         <StatCard label="Pending Ack." value={pendingAcks + pendingDocAcks} color={T.critical} icon={Icons.alert} />

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { signOut } from '@/lib/auth';
 import { fetchCrew } from '@/lib/crew';
 import { acknowledgeDocument, deleteDocument, fetchDocuments, getDocumentSignedUrl, replaceDocument, uploadDocument } from '@/lib/documents';
-import { acknowledgeNotice, castPollVote, createNotice, deleteNotice, fetchNotices, markNoticeRead, rowToNotice } from '@/lib/notices';
+import { acknowledgeNotice, archiveNotices, castPollVote, createNotice, deleteNotice, fetchNotices, markNoticeRead, rowToNotice, updateNoticesPinned } from '@/lib/notices';
 import { createBroadcastNotification, createTargetedNotification, fetchNotifications, markNotificationRead, rowToNotification } from '@/lib/notifications';
 import { ACTIVITY_ACTIONS, fetchActivity, logActivity } from '@/lib/activity';
 import useRealtime from '@/hooks/useRealtime';
@@ -34,6 +34,9 @@ import CrewManagement from './admin/CrewManagement';
 import AdminActivityLog from './admin/AdminActivityLog';
 import AdminTrainingScreen from './admin/AdminTrainingScreen';
 import AdminEventsScreen from './admin/AdminEventsScreen';
+
+// Keyboard shortcuts
+import { useKeyboardShortcuts, ShortcutsOverlay } from './shared/KeyboardShortcuts';
 
 // Standalone detail components
 import AdminNoticeDetail from './notices/AdminNoticeDetail';
@@ -172,6 +175,7 @@ export default function CrewNotice({ user }) {
   } = useOfflineDocuments(currentUser.id);
 
   const [cachingDocId, setCachingDocId] = useState(null);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
   const liveCrew = useMemo(
     () => crew.map(c => ({ ...c, online: onlineCrewIds.has(c.id) || c.online })),
@@ -736,6 +740,90 @@ export default function CrewNotice({ user }) {
       targetId: notice.id,
       metadata: { title: notice.title, recipientCount: sent },
     });
+  };
+
+  const handleBulkCrewAction = async (action, crewIds) => {
+    const targets = liveCrew.filter(c => crewIds.includes(c.id));
+    if (targets.length === 0) return;
+    try {
+      if (action === 'remind') {
+        // Per-crew reminder rollup: find each target's outstanding items and
+        // send a single notification with the summary.
+        const results = await Promise.allSettled(targets.map(async (cm) => {
+          const unreadCritical = notices.filter(n => n.priority === 'critical' && !n.readBy.includes(cm.id));
+          const unackedDocs = docs.filter(d => d.required && !d.acknowledgedBy.includes(cm.id));
+          if (unreadCritical.length === 0 && unackedDocs.length === 0) return;
+          const parts = [];
+          if (unreadCritical.length > 0) parts.push(`${unreadCritical.length} unread critical notice${unreadCritical.length > 1 ? 's' : ''}`);
+          if (unackedDocs.length > 0) parts.push(`${unackedDocs.length} document${unackedDocs.length > 1 ? 's' : ''} pending ack`);
+          return createTargetedNotification({
+            targetCrewId: cm.id,
+            type: 'reminder',
+            title: 'Outstanding compliance items',
+            body: `You have ${parts.join(' and ')}.`,
+            referenceType: 'bulk_reminder',
+            referenceId: null,
+          });
+        }));
+        const sent = results.filter(r => r.status === 'fulfilled' && r.value).length;
+        setNoticeToast({ id: targets[0].id, title: `Reminder sent to ${sent} crew`, priority: 'routine' });
+        setTimeout(() => setNoticeToast(null), 2500);
+      } else if (action === 'export') {
+        // Simple CSV export — captures current compliance snapshot.
+        const rows = [['Name', 'Role', 'Department', 'Notices Read', 'Docs Acked', 'Compliance %']];
+        const requiredDocs = docs.filter(d => d.required);
+        targets.forEach(cm => {
+          const read = notices.filter(n => n.readBy.includes(cm.id)).length;
+          const acked = requiredDocs.filter(d => d.acknowledgedBy.includes(cm.id)).length;
+          const total = notices.length + requiredDocs.length;
+          const score = total > 0 ? Math.round(((read + acked) / total) * 100) : 0;
+          rows.push([cm.name, cm.role, cm.dept, `${read}/${notices.length}`, `${acked}/${requiredDocs.length}`, `${score}%`]);
+        });
+        const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `crew-compliance-${new Date().toISOString().slice(0, 10)}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.error('[bulk crew action] failed', err);
+      alert(`Bulk action failed: ${err?.message || err}`);
+    }
+  };
+
+  const handleBulkNoticeAction = async (action, noticeIds) => {
+    const targets = notices.filter(n => noticeIds.includes(n.id));
+    if (targets.length === 0) return;
+    try {
+      if (action === 'delete') {
+        await Promise.all(targets.map(n => deleteNotice({ noticeId: n.id })));
+        setNotices(prev => prev.filter(n => !noticeIds.includes(n.id)));
+        targets.forEach(n => recordActivity({
+          action: ACTIVITY_ACTIONS.NOTICE_DELETED,
+          targetType: 'notice',
+          targetId: n.id,
+          metadata: { title: n.title, bulk: true },
+        }));
+      } else if (action === 'remind') {
+        const results = await Promise.allSettled(targets.map(n => handleSendNoticeReminder(n)));
+        const sent = results.filter(r => r.status === 'fulfilled').length;
+        setNoticeToast({ id: targets[0].id, title: `Reminder sent for ${sent} notice${sent > 1 ? 's' : ''}`, priority: 'routine' });
+        setTimeout(() => setNoticeToast(null), 2500);
+      } else if (action === 'pin' || action === 'unpin') {
+        const isPin = action === 'pin';
+        await updateNoticesPinned({ noticeIds, pinned: isPin });
+        setNotices(prev => prev.map(n => noticeIds.includes(n.id) ? { ...n, pinned: isPin } : n));
+      } else if (action === 'archive') {
+        const now = await archiveNotices({ noticeIds });
+        setNotices(prev => prev.map(n => noticeIds.includes(n.id) ? { ...n, validUntil: now } : n));
+      }
+    } catch (err) {
+      console.error('[bulk notice action] failed', err);
+      alert(`Bulk action failed: ${err?.message || err}`);
+    }
   };
 
   const handleSendDashboardReminder = async () => {
@@ -1431,29 +1519,71 @@ export default function CrewNotice({ user }) {
     }
   };
 
+  // ─── Keyboard shortcuts (admin only) ─────────────────────────────
+  const isAdminRole = role === 'admin';
+  useKeyboardShortcuts({
+    '?': () => setShortcutsOpen(true),
+    'Escape': () => {
+      if (shortcutsOpen) setShortcutsOpen(false);
+      else if (adminNoticeView) setAdminNoticeView(null);
+      else if (selectedNotice) setSelectedNotice(null);
+      else if (selectedDoc) setSelectedDoc(null);
+      else if (showNewNotice) setShowNewNotice(false);
+      else if (showNewDoc) setShowNewDoc(false);
+      else if (showExportReport) setShowExportReport(false);
+    },
+    'n': () => { if (isAdminRole) setShowNewNotice(true); },
+    'd': () => { if (isAdminRole) setShowNewDoc(true); },
+    'r': () => {
+      if (isAdminRole && adminNoticeView) {
+        handleSendNoticeReminder(adminNoticeView).catch(err => console.error(err));
+      }
+    },
+    '/': (e) => {
+      const search = document.querySelector('input[placeholder^="Search"]');
+      if (search) { e.preventDefault(); search.focus(); }
+    },
+    'g': () => { if (isAdminRole) setTab('home'); else setTab('home'); },
+  });
+
+  const shortcutDefs = isAdminRole ? [
+    { key: '?', description: 'Show this help' },
+    { key: 'N', description: 'New notice' },
+    { key: 'D', description: 'Upload document' },
+    { key: 'R', description: 'Send reminder (on notice detail)' },
+    { key: '/', description: 'Focus search' },
+    { key: 'G', description: 'Go to dashboard' },
+    { key: 'Esc', description: 'Close modal / go back' },
+  ] : [
+    { key: '?', description: 'Show this help' },
+    { key: '/', description: 'Focus search' },
+    { key: 'G', description: 'Go home' },
+    { key: 'Esc', description: 'Close modal / go back' },
+  ];
+
   // ─── Render screen ────────────────────────────────────────────────
   const renderScreen = () => {
-    if (role === 'admin' && adminNoticeView) return <AdminNoticeDetail notice={adminNoticeView} onBack={() => setAdminNoticeView(null)} crew={liveCrew} onDelete={() => handleDeleteNotice(adminNoticeView.id)} onSendReminder={handleSendNoticeReminder} isDesktop={isDesktop} />;
+    if (role === 'admin' && adminNoticeView) return <AdminNoticeDetail notice={adminNoticeView} onBack={() => setAdminNoticeView(null)} crew={liveCrew} onDelete={() => handleDeleteNotice(adminNoticeView.id)} onSendReminder={handleSendNoticeReminder} activity={activity} isDesktop={isDesktop} />;
     if (role === 'admin') {
       switch (tab) {
-        case 'home': return <AdminDashboard notices={notices} docs={docs} liveCrew={liveCrew} isDesktop={isDesktop} setSelectedCrewMember={setSelectedCrewMember} setShowNewNotice={setShowNewNotice} setShowNewDoc={setShowNewDoc} setShowExportReport={setShowExportReport} dashReminderState={dashReminderState} setDashReminderState={setDashReminderState} dashReminderSentCount={dashReminderSentCount} setDashReminderSentCount={setDashReminderSentCount} handleSendDashboardReminder={handleSendDashboardReminder} />;
-        case 'notices': return <NoticesScreen selectedNotice={selectedNotice} currentUser={currentUser} notices={notices} noticeFilter={noticeFilter} searchQuery={searchQuery} setSearchQuery={setSearchQuery} setNoticeFilter={setNoticeFilter} setSelectedNotice={setSelectedNotice} setAdminNoticeView={setAdminNoticeView} handleAcknowledge={handleAcknowledge} handleMarkRead={handleMarkRead} handlePollVote={handlePollVote} role={role} crew={crew} isDesktop={isDesktop} noticesLoading={noticesLoading} noticesError={noticesError} />;
+        case 'home': return <AdminDashboard notices={notices} docs={docs} liveCrew={liveCrew} isDesktop={isDesktop} setSelectedCrewMember={setSelectedCrewMember} setShowNewNotice={setShowNewNotice} setShowNewDoc={setShowNewDoc} setShowExportReport={setShowExportReport} dashReminderState={dashReminderState} setDashReminderState={setDashReminderState} dashReminderSentCount={dashReminderSentCount} setDashReminderSentCount={setDashReminderSentCount} handleSendDashboardReminder={handleSendDashboardReminder} trainingModules={trainingModules} events={events} setTab={setTab} setAdminNoticeView={setAdminNoticeView} setSelectedDoc={setSelectedDoc} setTrainingView={setTrainingView} setSelectedModule={setSelectedModule} setAdminEventView={setAdminEventView} handleLoadEventDetail={handleLoadEventDetail} />;
+        case 'notices': return <NoticesScreen selectedNotice={selectedNotice} currentUser={currentUser} notices={notices} noticeFilter={noticeFilter} searchQuery={searchQuery} setSearchQuery={setSearchQuery} setNoticeFilter={setNoticeFilter} setSelectedNotice={setSelectedNotice} setAdminNoticeView={setAdminNoticeView} handleAcknowledge={handleAcknowledge} handleMarkRead={handleMarkRead} handlePollVote={handlePollVote} handleBulkNoticeAction={handleBulkNoticeAction} role={role} crew={crew} isDesktop={isDesktop} noticesLoading={noticesLoading} noticesError={noticesError} />;
         case 'docs': return <DocsScreen selectedDoc={selectedDoc} setSelectedDoc={setSelectedDoc} currentUser={currentUser} docs={docs} docDeptFilter={docDeptFilter} docTypeFilter={docTypeFilter} setDocDeptFilter={setDocDeptFilter} setDocTypeFilter={setDocTypeFilter} quickAccessIds={quickAccessIds} toggleQuickAccess={toggleQuickAccess} handleAckDoc={handleAckDoc} handleDeleteDoc={handleDeleteDoc} handleReplaceDoc={handleReplaceDoc} role={role} isDesktop={isDesktop} crew={crew} setReplaceDocState={setReplaceDocState} setShowReplaceDoc={setShowReplaceDoc} isDocCached={isDocCached} cachingDocId={cachingDocId} setCachingDocId={setCachingDocId} cacheDocument={cacheDocument} getDocumentSignedUrl={getDocumentSignedUrl} />;
         case 'training': return <AdminTrainingScreen trainingView={trainingView} setTrainingView={setTrainingView} selectedModule={selectedModule} setSelectedModule={setSelectedModule} adminTrainingResults={adminTrainingResults} setAdminTrainingResults={setAdminTrainingResults} trainingModules={trainingModules} trainingLoading={trainingLoading} adminTrainDeptFilter={adminTrainDeptFilter} setAdminTrainDeptFilter={setAdminTrainDeptFilter} trainingReminderState={trainingReminderState} setTrainingReminderState={setTrainingReminderState} handleLoadAdminModuleResults={handleLoadAdminModuleResults} handleEditModule={handleEditModule} handleSendTrainingReminder={handleSendTrainingReminder} isDesktop={isDesktop} currentUser={currentUser} />;
         case 'events': return <AdminEventsScreen adminEventView={adminEventView} setAdminEventView={setAdminEventView} adminEventDetail={adminEventDetail} setAdminEventDetail={setAdminEventDetail} adminEventDetailLoading={adminEventDetailLoading} events={events} eventsLoading={eventsLoading} eventFilter={eventFilter} setEventFilter={setEventFilter} isDesktop={isDesktop} handleLoadEventDetail={handleLoadEventDetail} handleArchiveEvent={handleArchiveEvent} handleDeleteEvent={handleDeleteEvent} handlePostEventUpdate={handlePostEventUpdate} newUpdateText={newUpdateText} setNewUpdateText={setNewUpdateText} postingUpdate={postingUpdate} setShowNewEvent={setShowNewEvent} getCountdown={getCountdown} EVENT_TYPE_ICONS={EVENT_TYPE_ICONS} EVENT_TYPE_COLORS={EVENT_TYPE_COLORS} EVENT_TYPE_LABELS={EVENT_TYPE_LABELS} />;
-        case 'crew': return <CrewManagement liveCrew={liveCrew} selectedCrewMember={selectedCrewMember} setSelectedCrewMember={setSelectedCrewMember} notices={notices} docs={docs} isDesktop={isDesktop} />;
+        case 'crew': return <CrewManagement liveCrew={liveCrew} selectedCrewMember={selectedCrewMember} setSelectedCrewMember={setSelectedCrewMember} notices={notices} docs={docs} trainingModules={trainingModules} isDesktop={isDesktop} handleBulkCrewAction={handleBulkCrewAction} />;
         case 'activity': return <AdminActivityLog activity={activity} activityLoading={activityLoading} crew={crew} isDesktop={isDesktop} />;
-        default: return <AdminDashboard notices={notices} docs={docs} liveCrew={liveCrew} isDesktop={isDesktop} setSelectedCrewMember={setSelectedCrewMember} setShowNewNotice={setShowNewNotice} setShowNewDoc={setShowNewDoc} setShowExportReport={setShowExportReport} dashReminderState={dashReminderState} setDashReminderState={setDashReminderState} dashReminderSentCount={dashReminderSentCount} setDashReminderSentCount={setDashReminderSentCount} handleSendDashboardReminder={handleSendDashboardReminder} />;
+        default: return <AdminDashboard notices={notices} docs={docs} liveCrew={liveCrew} isDesktop={isDesktop} setSelectedCrewMember={setSelectedCrewMember} setShowNewNotice={setShowNewNotice} setShowNewDoc={setShowNewDoc} setShowExportReport={setShowExportReport} dashReminderState={dashReminderState} setDashReminderState={setDashReminderState} dashReminderSentCount={dashReminderSentCount} setDashReminderSentCount={setDashReminderSentCount} handleSendDashboardReminder={handleSendDashboardReminder} trainingModules={trainingModules} events={events} setTab={setTab} setAdminNoticeView={setAdminNoticeView} setSelectedDoc={setSelectedDoc} setTrainingView={setTrainingView} setSelectedModule={setSelectedModule} setAdminEventView={setAdminEventView} handleLoadEventDetail={handleLoadEventDetail} />;
       }
     }
     switch (tab) {
-      case 'home': return <CrewHome currentUser={currentUser} unreadNotices={unreadNotices} pendingAcks={pendingAcks} pendingDocAcks={pendingDocAcks} notices={notices} docs={docs} quickAccessIds={quickAccessIds} setSelectedNotice={setSelectedNotice} setSelectedDoc={setSelectedDoc} setTab={setTab} />;
-      case 'notices': return <NoticesScreen selectedNotice={selectedNotice} currentUser={currentUser} notices={notices} noticeFilter={noticeFilter} searchQuery={searchQuery} setSearchQuery={setSearchQuery} setNoticeFilter={setNoticeFilter} setSelectedNotice={setSelectedNotice} setAdminNoticeView={setAdminNoticeView} handleAcknowledge={handleAcknowledge} handleMarkRead={handleMarkRead} handlePollVote={handlePollVote} role={role} crew={crew} isDesktop={isDesktop} noticesLoading={noticesLoading} noticesError={noticesError} />;
+      case 'home': return <CrewHome currentUser={currentUser} unreadNotices={unreadNotices} pendingAcks={pendingAcks} pendingDocAcks={pendingDocAcks} notices={notices} docs={docs} trainingModules={trainingModules} quickAccessIds={quickAccessIds} setSelectedNotice={setSelectedNotice} setSelectedDoc={setSelectedDoc} setTab={setTab} />;
+      case 'notices': return <NoticesScreen selectedNotice={selectedNotice} currentUser={currentUser} notices={notices} noticeFilter={noticeFilter} searchQuery={searchQuery} setSearchQuery={setSearchQuery} setNoticeFilter={setNoticeFilter} setSelectedNotice={setSelectedNotice} setAdminNoticeView={setAdminNoticeView} handleAcknowledge={handleAcknowledge} handleMarkRead={handleMarkRead} handlePollVote={handlePollVote} handleBulkNoticeAction={handleBulkNoticeAction} role={role} crew={crew} isDesktop={isDesktop} noticesLoading={noticesLoading} noticesError={noticesError} />;
       case 'docs': return <DocsScreen selectedDoc={selectedDoc} setSelectedDoc={setSelectedDoc} currentUser={currentUser} docs={docs} docDeptFilter={docDeptFilter} docTypeFilter={docTypeFilter} setDocDeptFilter={setDocDeptFilter} setDocTypeFilter={setDocTypeFilter} quickAccessIds={quickAccessIds} toggleQuickAccess={toggleQuickAccess} handleAckDoc={handleAckDoc} handleDeleteDoc={handleDeleteDoc} handleReplaceDoc={handleReplaceDoc} role={role} isDesktop={isDesktop} crew={crew} setReplaceDocState={setReplaceDocState} setShowReplaceDoc={setShowReplaceDoc} isDocCached={isDocCached} cachingDocId={cachingDocId} setCachingDocId={setCachingDocId} cacheDocument={cacheDocument} getDocumentSignedUrl={getDocumentSignedUrl} />;
       case 'training': return <CrewTrainingScreen trainingView={trainingView} selectedModule={selectedModule} setTrainingView={setTrainingView} setSelectedModule={setSelectedModule} quizQuestions={quizQuestions} quizCurrent={quizCurrent} quizAnswers={quizAnswers} setQuizAnswers={setQuizAnswers} setQuizCurrent={setQuizCurrent} quizResults={quizResults} setQuizResults={setQuizResults} quizSubmitting={quizSubmitting} quizTimerLeft={quizTimerLeft} handleStartQuiz={handleStartQuiz} handleSubmitQuiz={handleSubmitQuiz} trainingModules={trainingModules} trainingLoading={trainingLoading} currentUser={currentUser} resolveContentUrls={resolveContentUrls} isDesktop={isDesktop} />;
       case 'events': return <CrewEventsScreen selectedEvent={selectedEvent} setSelectedEvent={setSelectedEvent} eventDetail={eventDetail} setEventDetail={setEventDetail} eventDetailLoading={eventDetailLoading} events={events} eventsLoading={eventsLoading} eventFilter={eventFilter} setEventFilter={setEventFilter} handleLoadEventDetail={handleLoadEventDetail} handleMarkEventRead={handleMarkEventRead} getCountdown={getCountdown} EVENT_TYPE_ICONS={EVENT_TYPE_ICONS} EVENT_TYPE_COLORS={EVENT_TYPE_COLORS} EVENT_TYPE_LABELS={EVENT_TYPE_LABELS} />;
       case 'profile': return <CrewProfile currentUser={currentUser} notices={notices} docs={docs} handleLogout={handleLogout} offlineCachedIds={offlineCachedIds} offlineCacheSize={offlineCacheSize} clearCachedDoc={clearCachedDoc} clearAllCachedDocs={clearAllCachedDocs} />;
-      default: return <CrewHome currentUser={currentUser} unreadNotices={unreadNotices} pendingAcks={pendingAcks} pendingDocAcks={pendingDocAcks} notices={notices} docs={docs} quickAccessIds={quickAccessIds} setSelectedNotice={setSelectedNotice} setSelectedDoc={setSelectedDoc} setTab={setTab} />;
+      default: return <CrewHome currentUser={currentUser} unreadNotices={unreadNotices} pendingAcks={pendingAcks} pendingDocAcks={pendingDocAcks} notices={notices} docs={docs} trainingModules={trainingModules} quickAccessIds={quickAccessIds} setSelectedNotice={setSelectedNotice} setSelectedDoc={setSelectedDoc} setTab={setTab} />;
     }
   };
 
@@ -1617,6 +1747,7 @@ export default function CrewNotice({ user }) {
       {showExportReport && <ExportReportModal exportType={exportType} setExportType={setExportType} exportDateFrom={exportDateFrom} setExportDateFrom={setExportDateFrom} exportDateTo={exportDateTo} setExportDateTo={setExportDateTo} exporting={exporting} handleExport={handleExport} setShowExportReport={setShowExportReport} isDesktop={isDesktop} />}
       {showModuleBuilder && <ModuleBuilderModal moduleBuilderData={moduleBuilderData} setModuleBuilderData={setModuleBuilderData} moduleBuilderSaving={moduleBuilderSaving} editingModuleId={editingModuleId} handleSaveModule={handleSaveModule} resetModuleBuilder={resetModuleBuilder} compressImage={compressImage} isDesktop={isDesktop} crew={crew} currentUser={currentUser} />}
       {showNewEvent && <NewEventModal newEventData={newEventData} setNewEventData={setNewEventData} eventSaving={eventSaving} handleCreateEvent={handleCreateEvent} setShowNewEvent={setShowNewEvent} isDesktop={isDesktop} EVENT_TYPE_ICONS={EVENT_TYPE_ICONS} EVENT_TYPE_COLORS={EVENT_TYPE_COLORS} EVENT_TYPE_LABELS={EVENT_TYPE_LABELS} />}
+      <ShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} shortcuts={shortcutDefs} />
     </div>
   );
 }
