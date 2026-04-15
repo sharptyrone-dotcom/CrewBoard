@@ -50,6 +50,7 @@ const ARTICLES = [
     excerpt: "Why the industry's most-used communication tool is also its biggest compliance risk.",
   },
   {
+    slug: 'training-delivery-on-board',
     title: 'Training Delivery On Board: Without Disrupting Operations',
     category: 'Training',
     tagClass: 'training',
@@ -57,6 +58,7 @@ const ARTICLES = [
     excerpt: 'How to deliver effective crew training between watches, charters, and passages.',
   },
   {
+    slug: 'guest-briefings-that-work',
     title: 'Guest Briefings That Actually Work',
     category: 'Events',
     tagClass: 'events',

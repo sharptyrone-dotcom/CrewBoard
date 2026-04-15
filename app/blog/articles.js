@@ -589,6 +589,321 @@ export const BLOG_ARTICLES = {
       },
     ],
   },
+
+  'training-delivery-on-board': {
+    slug: 'training-delivery-on-board',
+    title: 'Training Delivery On Board: Without Disrupting Operations',
+    category: 'Training',
+    tagClass: 'training',
+    author: 'CrewNotice Team',
+    date: 'April 2026',
+    dateISO: '2026-04-29',
+    readTime: '5 min read',
+    description:
+      'How to deliver effective crew training between watches, charters, and passages — without disrupting operations.',
+    body: [
+      {
+        type: 'p',
+        text:
+          'Training on a superyacht is a constant tension between "we need to do this" and "we do not have time." Between watches, charters, passages, and guest programmes, finding time for structured crew training feels impossible — especially in a season when the boat barely stops.',
+      },
+      {
+        type: 'p',
+        text:
+          'But it does not have to be. The vessels with the best training records are not the ones with the most time. They are the ones that have stopped trying to run training the way it used to be run, and started delivering it in a way that actually fits the operating rhythm of a working yacht.',
+      },
+
+      { type: 'h2', text: 'Why traditional training does not work at sea' },
+      {
+        type: 'p',
+        text:
+          'Classroom-style sessions require everyone in the same room at the same time. On a vessel running watches, that never happens — someone is always on duty, on rest, or ashore. Even when the captain blocks out an hour for a crew session, half the attendees are thinking about the thing they should be doing instead.',
+      },
+      {
+        type: 'p',
+        text:
+          'Printed training materials add to the paper pile, get left in one cabin, and are rarely referenced again. External training courses are valuable but require crew to be ashore — and ashore time is precious. The result is predictable: training gets deferred indefinitely, records are incomplete, and when an auditor asks for evidence of ongoing training, there is not much to show beyond certificates from the last rotation ashore.',
+      },
+
+      { type: 'h2', text: 'Micro-learning: short modules, big impact' },
+      {
+        type: 'p',
+        text:
+          'The most effective training at sea comes in short, focused modules that crew can complete between tasks. A 10-minute module on fire extinguisher types with a 5-question quiz is more valuable than a 2-hour classroom session that half the crew missed — because it actually gets done, by everyone, with a record of who passed.',
+      },
+      {
+        type: 'p',
+        text:
+          'The principles are simple:',
+      },
+      {
+        type: 'list',
+        items: [
+          'Design modules of **10 to 20 minutes maximum** — long enough to be meaningful, short enough to fit between tasks',
+          'Cover **one topic per module** — fire extinguishers, not "general safety"',
+          'Include a **quiz** at the end to verify understanding, not just attention',
+          'Make it **accessible on a phone** so crew can complete it in a bunk, on a break, or waiting for the guest tender',
+        ],
+      },
+      {
+        type: 'callout',
+        variant: 'tip',
+        title: 'Small chunks beat big blocks',
+        text:
+          'Ten 15-minute modules spread across a rotation are far more effective than one 2.5-hour session at the start of the season. Crew retain more, everyone actually completes them, and you have ten discrete compliance records instead of one patchy attendance sheet.',
+      },
+
+      { type: 'h2', text: 'Building effective quizzes' },
+      {
+        type: 'p',
+        text:
+          'A good quiz is the difference between training crew remember and training they sleep through. A few practical guidelines when writing questions:',
+      },
+      {
+        type: 'list',
+        items: [
+          '**Use scenario-based questions** that reflect real situations on board — "A fire starts in the galley deep fat fryer. Which extinguisher do you use?" rather than abstract theory',
+          '**Include image-based questions** where it helps — identify this safety sign, spot what is wrong in this photo of a stowed life raft',
+          '**Set a reasonable pass mark** — 80% is a sensible default that rewards understanding without punishing a single slip',
+          '**Allow retakes** so crew can learn from their mistakes rather than game the score',
+          '**Include explanations** for the correct answers so the quiz itself is educational, not just a gate',
+        ],
+      },
+      {
+        type: 'p',
+        text:
+          'Quizzes that teach are rare. Quizzes that just test are everywhere. Aim for the first.',
+      },
+
+      { type: 'h2', text: 'Assigning and tracking' },
+      {
+        type: 'p',
+        text:
+          'Once the modules exist, the mechanics of delivery matter almost as much as the content:',
+      },
+      {
+        type: 'list',
+        items: [
+          '**Assign by department** so crew only get modules relevant to their role — no deck training for the interior team',
+          '**Set realistic deadlines** — 7 to 14 days to complete, not 24 hours. Crew need to find a window, not be ambushed',
+          '**Use automated reminders** rather than chasing crew individually — the system can nag so you do not have to',
+          '**Monitor completion rates** on the admin dashboard and address non-completion early, not the week before the audit',
+        ],
+      },
+
+      { type: 'h2', text: 'Topics every yacht should cover' },
+      {
+        type: 'p',
+        text:
+          "If you are starting a training library from scratch, here is a practical set of topics that apply to almost every yacht and cover the biggest compliance and operational risks:",
+      },
+      {
+        type: 'list',
+        items: [
+          'Fire safety and extinguisher types',
+          'Man overboard procedures',
+          'Tender operations safety',
+          'COSHH awareness for cleaning chemicals',
+          'Guest service standards',
+          'Food hygiene (galley crew)',
+          'VHF radio procedures',
+          'Security awareness',
+          'Environmental compliance — MARPOL basics',
+          'Mental health awareness',
+        ],
+      },
+      {
+        type: 'p',
+        text:
+          'These are not niche or aspirational. They are the topics that show up repeatedly in incidents, audits, and insurance claims — which is why they are worth formalising into short modules rather than relying on word of mouth.',
+      },
+
+      { type: 'h2', text: 'Using training records for compliance' },
+      {
+        type: 'p',
+        text:
+          'Digital training records are not just about crew learning. They are the evidence that the learning happened, with dates, scores, and attempts attached to individual crew members.',
+      },
+      {
+        type: 'list',
+        items: [
+          '**STCW 2025 amendments** require fatigue management training for all seafarers certified after January 2026',
+          '**MLC** requires evidence of crew familiarisation on joining the vessel',
+          '**ISM Element 6** requires personnel training and evidence that it is ongoing',
+        ],
+      },
+      {
+        type: 'p',
+        text:
+          'Digital training records with completion dates, scores, and attempt history provide exactly the evidence these regulations demand — automatically, as a byproduct of running the modules rather than as a paperwork exercise bolted on the end.',
+      },
+
+      { type: 'h2', text: 'Training that fits around operations' },
+      {
+        type: 'p',
+        text:
+          'The vessels with the best training records are not the ones with the most time. They are the ones with the right tools: short digital modules, delivered to crew phones, completed between tasks, with automatic tracking and reporting.',
+      },
+      {
+        type: 'p',
+        text:
+          "That is training that fits around operations — not the other way around. And once the system is in place, it keeps working quietly while the boat gets on with its season.",
+      },
+    ],
+  },
+
+  'guest-briefings-that-work': {
+    slug: 'guest-briefings-that-work',
+    title: 'Guest Briefings That Actually Work',
+    category: 'Events',
+    tagClass: 'events',
+    author: 'CrewNotice Team',
+    date: 'April 2026',
+    dateISO: '2026-04-29',
+    readTime: '4 min read',
+    description:
+      'Department-specific briefings, restricted information, and real-time updates for seamless guest visits.',
+    body: [
+      {
+        type: 'p',
+        text:
+          'A guest visit briefing is only as good as its distribution. The best briefing document in the world is useless if the chef does not know about the nut allergy, the bosun does not know about the tender schedule, or the stewardess does not know about the late arrival.',
+      },
+      {
+        type: 'p',
+        text:
+          "This is the quietest problem on a superyacht. Nothing goes obviously wrong — the boat still runs, the guests still embark, the service still happens. But the small misses add up: a preference missed here, a schedule confused there, a repeat request the crew should already know the answer to. Over a season it is the difference between a smooth charter and a stressed one.",
+      },
+
+      { type: 'h2', text: 'The problem with current briefing methods' },
+      {
+        type: 'p',
+        text:
+          'Most yachts distribute guest briefings through a mix of printed sheets, emails, and verbal briefings at morning meetings. Each channel has the same underlying problem: it does not reliably reach every crew member who needs the information.',
+      },
+      {
+        type: 'list',
+        items: [
+          'Not everyone is at the morning meeting — someone is always on watch, on rest, or prepping the tender',
+          'Printed sheets get lost, stuck to fridges, or left in one crew mess while the rest of the team is elsewhere',
+          'Emails get buried inside inboxes nobody checks while they are actively setting up for guests',
+          'Verbal briefings are forgotten within hours and cannot be referenced later',
+          'Crew joining mid-charter miss the original briefing entirely and have to piece it together from colleagues',
+        ],
+      },
+      {
+        type: 'p',
+        text:
+          'Any single one of these is survivable. All of them running at once is why preferences get missed.',
+      },
+
+      { type: 'h2', text: 'Department-specific briefings' },
+      {
+        type: 'p',
+        text:
+          'Not every crew member needs every piece of information. In fact, drowning crew in information that does not apply to them is how the important details get missed. A good briefing system delivers the right information to the right department, and nothing else.',
+      },
+      {
+        type: 'list',
+        items: [
+          '**Deck** — tender schedules, water toy requirements, and excursion plans',
+          '**Interior** — cabin assignments, turn-down preferences, and flower preferences',
+          '**Galley** — dietary requirements, meal schedules, and wine preferences',
+          '**Engineering** — power requirements for events and tender fuelling schedules',
+        ],
+      },
+      {
+        type: 'p',
+        text:
+          'Everyone sees the general schedule. Each department sees the specifics that affect their job. The result is less noise, fewer missed details, and crew who actually read their briefing because it is entirely relevant to them.',
+      },
+
+      { type: 'h2', text: 'Handling sensitive information' },
+      {
+        type: 'p',
+        text:
+          'Guest names, personal details, and preferences are confidential. Not every crew member needs to know who the guests are — just what service they require. This is not paranoia; it is respect for guest privacy and a requirement on most high-profile charters.',
+      },
+      {
+        type: 'p',
+        text:
+          'A briefing system should allow admins to restrict sensitive fields by role:',
+      },
+      {
+        type: 'list',
+        items: [
+          '**Guest names and personal details** — visible to Captain, Chief Stew, and Chef only',
+          '**Dietary and service requirements** — visible to relevant departments',
+          '**General schedule** — visible to all crew',
+        ],
+      },
+      {
+        type: 'callout',
+        variant: 'note',
+        title: 'Need-to-know by design',
+        text:
+          "Role-based restriction is not about keeping crew in the dark. It is about making sure the people who need sensitive information have it and the people who do not, do not — the same principle any well-run guest-facing operation follows on land.",
+      },
+
+      { type: 'h2', text: 'Live updates during the visit' },
+      {
+        type: 'p',
+        text:
+          "Plans change. ETAs shift. Additional guests are confirmed. Activities get cancelled due to weather. A static briefing document written the day before simply cannot keep up.",
+      },
+      {
+        type: 'p',
+        text:
+          'Live updates pushed to crew phones keep everyone aligned in real time — "ETA changed to 1400", "2 additional guests for dinner", "water toys cancelled due to sea state". Every crew member sees the update the moment it is posted, appended to the briefing timeline so nobody has to hunt for it.',
+      },
+
+      { type: 'h2', text: 'Building a briefing template' },
+      {
+        type: 'p',
+        text:
+          'Consistency matters. A good briefing template covers the same ground every time so crew know where to find what they need. Include:',
+      },
+      {
+        type: 'list',
+        items: [
+          'Arrival and departure dates and times',
+          'Guest count and names (restricted)',
+          'Cabin assignments',
+          '**Dietary requirements and allergies — highlight these prominently**',
+          'Meal preferences and schedule',
+          'Activity plans and excursions',
+          'Tender schedule',
+          'Special occasions during the visit (birthdays, anniversaries)',
+          'Preferred communication style (formal or casual)',
+          'Any security considerations',
+        ],
+      },
+      {
+        type: 'p',
+        text:
+          'Allergies and dietary requirements deserve extra visual weight. Mistakes here are the ones with consequences, and they are also the ones most easily prevented with a clear template.',
+      },
+
+      { type: 'h2', text: 'After the visit' },
+      {
+        type: 'p',
+        text:
+          'Archive the briefing with any notes from the visit — what went well, what guests reacted to, any preferences that came up in conversation but were not in the original brief. If the same guests return, you have their preference history ready.',
+      },
+      {
+        type: 'p',
+        text:
+          'Over time this builds a guest preference database that makes repeat visits smoother and more personalised. Guests notice when their favourite wine is already chilled before they ask — and those small details are what turn a charter from good to exceptional.',
+      },
+
+      { type: 'h2', text: 'The minimum standard' },
+      {
+        type: 'p',
+        text:
+          "A guest briefing that reaches every crew member, delivers department-specific information, handles sensitive data appropriately, and supports real-time updates is not a luxury. It is the minimum standard for professional yacht operations — and the vessels that get it right are the ones guests quietly come back to, season after season.",
+      },
+    ],
+  },
 };
 
 export function getBlogArticle(slug) {
