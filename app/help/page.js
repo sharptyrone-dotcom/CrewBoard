@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import '../landing.css';
 import MarketingNav from '@/components/marketing/MarketingNav';
 import MarketingFooter from '@/components/marketing/MarketingFooter';
@@ -19,11 +20,11 @@ const HELP_CATEGORIES = [
     eyebrow: 'Getting Started',
     title: 'Getting Started',
     articles: [
-      { title: 'Creating your vessel and inviting crew', desc: 'Set up your CrewNotice vessel and get your crew on board in minutes.' },
-      { title: 'Joining a vessel with an invite code', desc: 'How crew members accept an invite and join their vessel.' },
-      { title: 'Navigating the crew dashboard', desc: 'A tour of the notices, documents, training, and events tabs.' },
-      { title: 'Setting up notifications', desc: 'Enable push, email, and browser alerts so you never miss an update.' },
-      { title: 'Installing CrewNotice on your phone', desc: 'Add CrewNotice to your home screen on iOS and Android as a PWA.' },
+      { slug: 'creating-your-vessel', title: 'Creating your vessel and inviting crew', desc: 'Set up your CrewNotice vessel and get your crew on board in minutes.' },
+      { slug: 'joining-a-vessel', title: 'Joining a vessel with an invite code', desc: 'How crew members accept an invite and join their vessel.' },
+      { slug: 'navigating-the-dashboard', title: 'Navigating the crew dashboard', desc: 'A tour of the notices, documents, training, and events tabs.' },
+      { slug: 'setting-up-notifications', title: 'Setting up notifications', desc: 'Enable push, email, and browser alerts so you never miss an update.' },
+      { slug: 'installing-on-your-phone', title: 'Installing CrewNotice on your phone', desc: 'Add CrewNotice to your home screen on iOS and Android as a PWA.' },
     ],
   },
   {
@@ -50,6 +51,33 @@ const HELP_CATEGORIES = [
     ],
   },
 ];
+
+function ArticleCard({ article }) {
+  const body = (
+    <>
+      <div className="help-article-body">
+        <h3 className="help-article-title">{article.title}</h3>
+        <p className="help-article-desc">{article.desc}</p>
+      </div>
+      <div className="help-article-arrow"><ArrowIcon /></div>
+    </>
+  );
+
+  if (article.slug) {
+    return (
+      <Link href={`/help/${article.slug}`} className="help-article help-article-link">
+        {body}
+      </Link>
+    );
+  }
+
+  return (
+    <div className="help-article" title="Coming soon" aria-disabled="true">
+      <span className="help-article-badge">Coming soon</span>
+      {body}
+    </div>
+  );
+}
 
 export default function HelpPage() {
   return (
@@ -80,19 +108,7 @@ export default function HelpPage() {
               </div>
               <div className="help-grid">
                 {cat.articles.map(article => (
-                  <div
-                    key={article.title}
-                    className="help-article"
-                    title="Coming soon"
-                    aria-disabled="true"
-                  >
-                    <span className="help-article-badge">Coming soon</span>
-                    <div className="help-article-body">
-                      <h3 className="help-article-title">{article.title}</h3>
-                      <p className="help-article-desc">{article.desc}</p>
-                    </div>
-                    <div className="help-article-arrow"><ArrowIcon /></div>
-                  </div>
+                  <ArticleCard key={article.title} article={article} />
                 ))}
               </div>
             </div>
