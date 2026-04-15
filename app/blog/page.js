@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import '../landing.css';
 import MarketingNav from '@/components/marketing/MarketingNav';
 import MarketingFooter from '@/components/marketing/MarketingFooter';
@@ -17,6 +18,7 @@ const ArrowIcon = () => (
 
 const ARTICLES = [
   {
+    slug: 'why-physical-notice-boards-dont-work',
     title: "Why Physical Notice Boards Don't Work on Superyachts",
     category: 'Operations',
     tagClass: 'ops',
@@ -24,6 +26,7 @@ const ARTICLES = [
     excerpt: "Crew miss critical updates, there's no audit trail, and information gets buried. Here's why digital is the only way forward.",
   },
   {
+    slug: 'ism-audit-preparation-checklist',
     title: "ISM Audit Preparation: A Captain's Digital Checklist",
     category: 'Compliance',
     tagClass: 'compliance',
@@ -60,6 +63,37 @@ const ARTICLES = [
   },
 ];
 
+function BlogCard({ article }) {
+  const inner = (
+    <>
+      <div className="blog-card-head">
+        <span className={`blog-tag ${article.tagClass}`}>{article.category}</span>
+        <span className="blog-read-time">{article.readTime}</span>
+      </div>
+      <h2 className="blog-card-title">{article.title}</h2>
+      <p className="blog-card-excerpt">{article.excerpt}</p>
+      <div className="blog-card-foot">
+        Read article <ArrowIcon />
+      </div>
+    </>
+  );
+
+  if (article.slug) {
+    return (
+      <Link href={`/blog/${article.slug}`} className="blog-card blog-card-link">
+        {inner}
+      </Link>
+    );
+  }
+
+  return (
+    <article className="blog-card" title="Coming soon" aria-disabled="true">
+      <span className="blog-card-badge">Coming soon</span>
+      {inner}
+    </article>
+  );
+}
+
 export default function BlogPage() {
   return (
     <div className="lp-root">
@@ -81,23 +115,7 @@ export default function BlogPage() {
         <div className="wrap">
           <div className="blog-grid">
             {ARTICLES.map(article => (
-              <article
-                key={article.title}
-                className="blog-card"
-                title="Coming soon"
-                aria-disabled="true"
-              >
-                <span className="blog-card-badge">Coming soon</span>
-                <div className="blog-card-head">
-                  <span className={`blog-tag ${article.tagClass}`}>{article.category}</span>
-                  <span className="blog-read-time">{article.readTime}</span>
-                </div>
-                <h2 className="blog-card-title">{article.title}</h2>
-                <p className="blog-card-excerpt">{article.excerpt}</p>
-                <div className="blog-card-foot">
-                  Read article <ArrowIcon />
-                </div>
-              </article>
+              <BlogCard key={article.title} article={article} />
             ))}
           </div>
 
