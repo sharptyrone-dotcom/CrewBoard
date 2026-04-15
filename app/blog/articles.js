@@ -287,6 +287,308 @@ export const BLOG_ARTICLES = {
       },
     ],
   },
+
+  'how-to-manage-sops-on-superyachts': {
+    slug: 'how-to-manage-sops-on-superyachts',
+    title: 'How to Manage SOPs on a Superyacht in 2026',
+    category: 'Documents',
+    tagClass: 'documents',
+    author: 'CrewNotice Team',
+    date: 'April 2026',
+    dateISO: '2026-04-15',
+    readTime: '6 min read',
+    description:
+      'Version control, crew acknowledgements, and offline access — modern SOP management for working vessels.',
+    body: [
+      {
+        type: 'p',
+        text:
+          'Standard Operating Procedures are the backbone of safe vessel operations. They are what turn individual competence into consistent, repeatable performance across a rotating crew. But on most superyachts, SOPs live in ring binders on the bridge or in the crew mess — and the gap between having SOPs and crew actually knowing them is enormous.',
+      },
+      {
+        type: 'p',
+        text:
+          'Closing that gap is not about writing better procedures. It is about making sure the right procedure is in the right hands at the right time, and having the proof to show for it. That is the job digital SOP management is built to do.',
+      },
+
+      { type: 'h2', text: 'The binder problem' },
+      {
+        type: 'p',
+        text:
+          'Ring binders are where SOPs go to die. They are heavy, they take up space, they only exist in one location, and nobody voluntarily reads them. They also quietly fall out of date between audits — the last update was six months ago, the current version was written by a captain who has since rotated off, and nobody is sure whether the tender SOP in the binder is actually the latest one.',
+      },
+      {
+        type: 'p',
+        text:
+          'When an SOP is updated, someone has to physically print the new version, find the binder, remove the old pages, insert the new ones, and somehow communicate the changes to fifteen crew members across three watch rotations. In practice, this rarely happens properly. The new version gets printed and never makes it to the binder. Or it makes it to the binder but crew are never told. Or crew are told in a group chat at 2 am and miss it.',
+      },
+      {
+        type: 'p',
+        text:
+          'The result is a document library that looks compliant on the shelf but is not actually doing its job on the water.',
+      },
+
+      { type: 'h2', text: 'What good SOP management looks like' },
+      {
+        type: 'p',
+        text:
+          'Whatever tool you use, good SOP management rests on five principles:',
+      },
+      {
+        type: 'list',
+        items: [
+          '**Single source of truth.** There is one current version of every SOP and it is unambiguous which one it is.',
+          '**Accessibility.** Every relevant crew member can access the SOP from their phone, on watch or off, on board or ashore.',
+          '**Version control.** A full history of changes with dates, author, and a note on what changed — not just a replacement of the old file.',
+          '**Acknowledgement tracking.** Proof that individual crew members have read and understood the current version, not the one it replaced.',
+          '**Review scheduling.** Automated reminders when SOPs are due for review, so nothing drifts silently out of date.',
+        ],
+      },
+      {
+        type: 'p',
+        text:
+          'A binder handles the first principle at best. A good digital platform handles all five.',
+      },
+
+      { type: 'h2', text: 'Organising your document library' },
+      {
+        type: 'p',
+        text:
+          'Before uploading anything, decide on a structure and stick to it. A clean library saves more time over a season than any productivity tool.',
+      },
+      {
+        type: 'p',
+        text:
+          'Organise by **department** first — Bridge, Deck, Engine, Interior, Safety — so crew only see what is relevant to them. Then organise by **type** within each department: SOPs, Risk Assessments, Manuals, MSDS/COSHH, Checklists, Policies.',
+      },
+      {
+        type: 'p',
+        text:
+          'Adopt a naming convention so titles sort alphabetically into something useful — for example, "Deck — SOP — Tender Operations" or "Safety — Risk Assessment — Helicopter Operations". Future you will thank present you every time you search.',
+      },
+      {
+        type: 'callout',
+        variant: 'tip',
+        title: 'Start with what matters most',
+        text:
+          'Do not try to digitise every document in one weekend. Start with the most critical: emergency procedures, high-risk activity SOPs (tender operations, helicopter operations, water toys), and COSHH assessments. Work outwards from there.',
+      },
+
+      { type: 'h2', text: 'The version control workflow' },
+      {
+        type: 'p',
+        text:
+          'A well-designed version control workflow takes the human memory out of the loop. Here is what happens when an SOP needs updating on a digital platform:',
+      },
+      {
+        type: 'steps',
+        items: [
+          {
+            title: 'Admin uploads the new version',
+            body:
+              'The admin adds version notes describing exactly what changed — for example, "Updated Section 3.2 — new tender boarding procedure after incident review".',
+          },
+          {
+            title: 'Old version is archived automatically',
+            body:
+              'The previous version is preserved in the audit log for future reference, but it is no longer the active version. There is no ambiguity about which is current.',
+          },
+          {
+            title: 'Previous acknowledgements are cleared',
+            body:
+              "Crew acknowledgements apply to a specific version. When the version changes, the slate is wiped — reading the old SOP does not count for the new one.",
+          },
+          {
+            title: 'Crew are notified',
+            body:
+              'Every crew member the SOP applies to gets a push notification pointing them straight to the new version.',
+          },
+          {
+            title: 'Crew read and acknowledge',
+            body:
+              'Crew open the document, read it, and tap to confirm they have read and understood. Their acknowledgement is logged with a timestamp.',
+          },
+          {
+            title: 'Admin monitors progress',
+            body:
+              'The admin sees exactly who has acknowledged and who is outstanding, and can send reminders to individuals with one tap.',
+          },
+        ],
+      },
+
+      { type: 'h2', text: 'Offline access matters' },
+      {
+        type: 'p',
+        text:
+          'During passages, crew may need to reference SOPs in areas with poor WiFi or no signal at all. The bridge might have connectivity but the engine room rarely does. A tender halfway to the beach definitely does not.',
+      },
+      {
+        type: 'p',
+        text:
+          'The ability to cache critical documents for offline access is not a nice-to-have — it is essential for safety. Crew should be encouraged to cache all SOPs relevant to their department before any passage. It takes thirty seconds and it means the procedure is there when it is needed, whether the satellite link is up or not.',
+      },
+
+      { type: 'h2', text: 'Making SOPs part of daily operations' },
+      {
+        type: 'p',
+        text:
+          'SOPs should not only be referenced during audits. The whole point of a digital library is that the procedures are one tap away all the time — so tie them to operational routines:',
+      },
+      {
+        type: 'list',
+        items: [
+          'Before any high-risk activity, the relevant risk assessment should be reviewed on-device by the crew involved',
+          'New crew acknowledge all department SOPs during their onboarding period, before they start independent duties',
+          'When incidents or near-misses occur, reference the relevant SOP in the debrief — either to confirm it was followed or to flag a gap',
+          'Pre-passage briefings should link directly to passage-plan and weather SOPs, not rely on memory',
+        ],
+      },
+      {
+        type: 'p',
+        text:
+          "None of this is new as a concept — most captains already want it to work this way. What digital tools change is the friction. When an SOP is one tap away instead of a trip to the binder, crew actually read it.",
+      },
+
+      { type: 'h2', text: 'The right procedure in the right hands' },
+      {
+        type: 'p',
+        text:
+          'Digital SOP management is not about replacing binders with screens. It is about making sure the right procedure is in the right hands at the right time — and having the proof to show for it.',
+      },
+      {
+        type: 'p',
+        text:
+          'Once the library is organised, version-controlled, and cached offline, the SOPs stop being shelf-ornaments and start doing the job they were written for. That is the outcome to aim for.',
+      },
+    ],
+  },
+
+  'whatsapp-vs-crew-communication-system': {
+    slug: 'whatsapp-vs-crew-communication-system',
+    title: 'WhatsApp vs a Proper Crew Communication System',
+    category: 'Operations',
+    tagClass: 'ops',
+    author: 'CrewNotice Team',
+    date: 'April 2026',
+    dateISO: '2026-04-22',
+    readTime: '4 min read',
+    description:
+      "Why the industry's most-used communication tool is also its biggest compliance risk.",
+    body: [
+      {
+        type: 'p',
+        text:
+          "Let's be honest: WhatsApp runs most superyachts. It is fast, everyone has it, and it works offline-ish. Captains use it to brief the crew. HODs use it to coordinate departments. Deckhands use it to swap watches. It is the default.",
+      },
+      {
+        type: 'p',
+        text:
+          "But using WhatsApp for operational crew communications is like using a hammer to tighten a screw — it sort of works, but it is the wrong tool. This article is not an argument for getting rid of WhatsApp. It is an argument for knowing where it stops working and having a proper tool ready for everything else.",
+      },
+
+      { type: 'h2', text: 'What WhatsApp gets right' },
+      {
+        type: 'p',
+        text:
+          'Give credit where it is due. WhatsApp has real advantages and pretending otherwise does not help anyone.',
+      },
+      {
+        type: 'list',
+        items: [
+          'It is instant — messages arrive immediately with a push notification',
+          'It is on everyone\u2019s phone already, with no install or account setup',
+          'It supports images, voice notes, and documents out of the box',
+          'It works on vessel WiFi and flaky cellular equally well',
+          'It is free and has no per-user licence cost',
+        ],
+      },
+      {
+        type: 'p',
+        text:
+          'For casual crew chat and social coordination, it is perfectly fine. The problems start when it becomes the primary channel for operational information.',
+      },
+
+      { type: 'h2', text: 'Where it falls apart' },
+      {
+        type: 'p',
+        text:
+          "WhatsApp was never designed for professional operational communications. Six specific problems show up once you lean on it for that purpose:",
+      },
+      {
+        type: 'list',
+        items: [
+          "**No priority system.** A critical safety notice about a restricted area sits in the same stream as someone asking what's for dinner. There is no visual hierarchy — everything looks equal.",
+          '**No individual read tracking.** You can see blue ticks but you cannot generate a report showing exactly who read the safety notice and when. For compliance, that is useless.',
+          "**No acknowledgement.** There is no way to require crew to explicitly confirm they have read and understood a critical update. A thumbs-up emoji is not a signed acknowledgement.",
+          '**Messages get buried.** In an active group with fifteen crew, important messages scroll off screen within hours. Anyone joining mid-conversation misses context entirely.',
+          '**No categorisation or search.** Finding that guest dietary requirement from last week means scrolling through hundreds of messages — or giving up and asking again.',
+          '**No audit trail.** WhatsApp data belongs to individual phones, not the vessel. When crew leave, their message history goes with them. Try presenting WhatsApp screenshots to an ISM auditor.',
+        ],
+      },
+
+      { type: 'h2', text: 'The privacy problem' },
+      {
+        type: 'p',
+        text:
+          'There is one more issue that rarely gets discussed: WhatsApp requires personal phone numbers. Crew sharing personal numbers with the entire vessel creates uncomfortable situations, especially for junior crew — and especially for female crew members who may not want their personal number in a group with fifteen others.',
+      },
+      {
+        type: 'p',
+        text:
+          'A professional communication system uses work accounts, not personal contacts. Crew sign in with an email or username, not a phone number. When they rotate off the vessel, their access ends cleanly — no awkward requests to remove someone from a group chat, no lingering data on personal devices.',
+      },
+      {
+        type: 'callout',
+        variant: 'note',
+        title: 'A governance issue, not just etiquette',
+        text:
+          'Guest information, owner details, and vessel SOPs living in personal WhatsApp groups is a governance problem for the vessel, not just a personal preference. It is worth treating it as such.',
+      },
+
+      { type: 'h2', text: 'When to use what' },
+      {
+        type: 'p',
+        text:
+          'The answer is not dogma, it is a clear split. Keep WhatsApp for the things it is good at, and use a professional tool for the things it is not.',
+      },
+      {
+        type: 'list',
+        items: [
+          '**WhatsApp is fine for** — social plans, casual crew chat, quick personal messages between crew members, shore-leave coordination.',
+          '**A professional crew communication system should be used for** — safety notices, operational updates, guest information, SOP distribution, training, event briefings, and anything that needs a compliance record.',
+        ],
+      },
+      {
+        type: 'p',
+        text:
+          'The dividing line is simple: if you might one day need to prove the conversation happened, it does not belong in WhatsApp.',
+      },
+
+      { type: 'h2', text: 'Making the switch' },
+      {
+        type: 'p',
+        text:
+          'The transition does not have to be abrupt. Trying to ban WhatsApp overnight just makes crew resentful and creates a shadow channel you cannot see.',
+      },
+      {
+        type: 'p',
+        text:
+          'Start by moving safety and operational notices to the digital platform. Keep WhatsApp for social use. Crew will naturally adopt the professional tool for professional communications once they see it is faster and more reliable than scrolling through group chats — especially when the critical messages actually stand out instead of disappearing into the noise.',
+      },
+
+      { type: 'h2', text: 'The right tool for the job' },
+      {
+        type: 'p',
+        text:
+          "WhatsApp is not going away on superyachts, and it does not need to. It is great at what it was built for. But operational communications deserve a professional tool — one that tracks reads, requires acknowledgements, categorises by priority, and generates the compliance records your vessel needs.",
+      },
+      {
+        type: 'p',
+        text:
+          'Leave the hammer for hammering. Use the right tool for the screws.',
+      },
+    ],
+  },
 };
 
 export function getBlogArticle(slug) {

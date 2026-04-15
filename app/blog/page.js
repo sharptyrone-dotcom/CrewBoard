@@ -34,6 +34,7 @@ const ARTICLES = [
     excerpt: 'A step-by-step guide to preparing for your next ISM audit using digital compliance records.',
   },
   {
+    slug: 'how-to-manage-sops-on-superyachts',
     title: 'How to Manage SOPs on a Superyacht in 2026',
     category: 'Documents',
     tagClass: 'documents',
@@ -41,6 +42,7 @@ const ARTICLES = [
     excerpt: 'Version control, crew acknowledgements, and offline access — modern SOP management for working vessels.',
   },
   {
+    slug: 'whatsapp-vs-crew-communication-system',
     title: 'WhatsApp vs a Proper Crew Communication System',
     category: 'Operations',
     tagClass: 'ops',
