@@ -515,6 +515,11 @@
 .lp-root .tier-price { font-size: 44px; font-weight: 700; letter-spacing: -.02em; line-height: 1; margin-bottom: 6px; }
 .lp-root .tier-price span { font-size: 16px; font-weight: 500; color: var(--mute); }
 .lp-root .price-card.featured .tier-price span { color: #94a3b8; }
+.lp-root .tier-price-sub {
+  font-size: 13px; font-weight: 500; color: var(--mute);
+  margin-bottom: 18px; min-height: 18px;
+}
+.lp-root .price-card.featured .tier-price-sub { color: #94a3b8; }
 .lp-root .tier-desc { font-size: 14px; color: var(--slate); margin-bottom: 28px; min-height: 42px; }
 .lp-root .price-card.featured .tier-desc { color: #94a3b8; }
 .lp-root .tier-list { list-style: none; margin-bottom: 32px; flex: 1; }
@@ -1400,3 +1405,62 @@
   font-size: 14px; color: #047857; font-weight: 500;
   text-align: center;
 }
+
+/* ───── Billing toggle ───── */
+.lp-root .billing-toggle-wrap {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 12px; margin: 0 auto 48px;
+}
+.lp-root .billing-toggle {
+  display: inline-flex; padding: 4px;
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  box-shadow: var(--shadow-sm);
+}
+.lp-root .billing-toggle-btn {
+  padding: 10px 26px;
+  font-size: 14px; font-weight: 600;
+  color: var(--slate);
+  background: transparent;
+  border-radius: 999px;
+  transition: background .2s, color .2s, box-shadow .2s;
+}
+.lp-root .billing-toggle-btn:hover { color: var(--ink); }
+.lp-root .billing-toggle-btn.active {
+  background: #fff; color: var(--ink);
+  box-shadow: 0 1px 3px rgba(15,23,42,.1), 0 1px 2px rgba(15,23,42,.06);
+}
+.lp-root .billing-save-note {
+  font-size: 13px; font-weight: 600;
+  color: #047857;
+  padding: 4px 12px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 999px;
+}
+
+/* ───── FAQ ───── */
+.lp-root .faq-wrap {
+  max-width: 760px; margin: 0 auto;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.lp-root .faq-item {
+  padding: 24px 28px;
+  background: #fff; border: 1px solid var(--line);
+  border-radius: 14px; box-shadow: var(--shadow-sm);
+  transition: box-shadow .2s, border-color .2s;
+}
+.lp-root .faq-item:hover {
+  box-shadow: var(--shadow-md);
+  border-color: rgba(59,130,246,.2);
+}
+.lp-root .faq-item h3 {
+  font-size: 16px; font-weight: 600; color: var(--ink);
+  margin: 0 0 8px; letter-spacing: -0.005em;
+}
+.lp-root .faq-item p {
+  font-size: 14px; color: var(--slate); line-height: 1.7; margin: 0;
+}
+.lp-root .faq-item p a { color: var(--blue); font-weight: 600; }
+.lp-root .faq-item p a:hover { text-decoration: underline; }

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import '../landing.css';
 import MarketingNav from '@/components/marketing/MarketingNav';
 import MarketingFooter from '@/components/marketing/MarketingFooter';
+import PricingTable from '@/components/marketing/PricingTable';
 
 export const metadata = {
   title: "CrewNotice — The operational platform superyachts actually need",
@@ -284,51 +285,206 @@ export default function LandingPage() {
             <h2>Simple pricing. One vessel, one price.</h2>
             <p className="section-sub">No per-seat fees. No hidden costs. Every tier includes unlimited crew.</p>
           </div>
-          <div className="pricing-grid">
-            <div className="price-card">
-              <div className="tier-name">Starter</div>
-              <div className="tier-price">€149<span> / month</span></div>
-              <div className="tier-desc">For smaller vessels getting started with digital crew operations.</div>
-              <ul className="tier-list">
-                <li><Check /> Notice Board &amp; acknowledgements</li>
-                <li><Check /> Document Library (5GB)</li>
-                <li><Check /> Unlimited crew members</li>
-                <li><Check /> Offline PWA</li>
-                <li><Check /> Email support</li>
-              </ul>
-              <Link href="/app" className="tier-btn">Start free trial</Link>
+          <PricingTable />
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section id="faq">
+        <div className="wrap">
+          <div className="section-head">
+            <div className="section-eyebrow">FAQ</div>
+            <h2>Frequently asked questions</h2>
+            <p className="section-sub">Everything you need to know about CrewNotice pricing and plans.</p>
+          </div>
+          <div className="faq-wrap">
+            <div className="faq-item">
+              <h3>How much does CrewNotice cost?</h3>
+              <p>
+                CrewNotice starts at £1,200/year (or £120/month) for the Starter plan. Professional
+                is £2,400/year (or £249/month). Enterprise pricing is custom. All plans include a
+                14-day free trial.
+              </p>
             </div>
-            <div className="price-card featured">
-              <div className="tier-name">Professional</div>
-              <div className="tier-price">€349<span> / month</span></div>
-              <div className="tier-desc">For working superyachts needing full compliance and training tools.</div>
-              <ul className="tier-list">
-                <li><Check /> Everything in Starter</li>
-                <li><Check /> Training &amp; Quizzes module</li>
-                <li><Check /> Events &amp; Briefings</li>
-                <li><Check /> Compliance Dashboard &amp; exports</li>
-                <li><Check /> 100GB document storage</li>
-                <li><Check /> Priority support</li>
-              </ul>
-              <Link href="/app" className="tier-btn">Start free trial</Link>
+            <div className="faq-item">
+              <h3>Is there a free trial?</h3>
+              <p>
+                Yes — every plan includes a 14-day free trial with full access to all features on
+                that tier. No credit card required to start.
+              </p>
             </div>
-            <div className="price-card">
-              <div className="tier-name">Enterprise</div>
-              <div className="tier-price">Custom</div>
-              <div className="tier-desc">For fleet operators and management companies running multiple vessels.</div>
-              <ul className="tier-list">
-                <li><Check /> Everything in Professional</li>
-                <li><Check /> Multi-vessel dashboard</li>
-                <li><Check /> SSO &amp; custom roles</li>
-                <li><Check /> Custom integrations &amp; API</li>
-                <li><Check /> Dedicated account manager</li>
-                <li><Check /> 24/7 support &amp; SLA</li>
-              </ul>
-              <Link href="/app" className="tier-btn">Contact sales</Link>
+            <div className="faq-item">
+              <h3>Do you charge per crew member?</h3>
+              <p>
+                No. Every plan includes unlimited crew members. You pay one price per vessel,
+                regardless of how many people are on board.
+              </p>
+            </div>
+            <div className="faq-item">
+              <h3>Can I switch between monthly and annual billing?</h3>
+              <p>
+                Yes. You can switch your billing period at any time from your account settings.
+                Annual billing saves up to 17% compared to paying monthly.
+              </p>
+            </div>
+            <div className="faq-item">
+              <h3>Can I cancel at any time?</h3>
+              <p>
+                Yes. There are no long-term contracts. Cancel anytime and you&apos;ll keep access
+                until the end of your billing period.
+              </p>
+            </div>
+            <div className="faq-item">
+              <h3>What happens after the free trial?</h3>
+              <p>
+                At the end of your 14-day trial, you can choose a plan and continue using
+                CrewNotice. If you do nothing, your account simply pauses — your data is kept safe
+                for 30 days in case you decide to come back.
+              </p>
             </div>
           </div>
         </div>
       </section>
+
+      {/* Structured data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@graph': [
+              {
+                '@type': 'Product',
+                name: 'CrewNotice',
+                description:
+                  'Digital notices, document management, training, and compliance tracking purpose-built for superyacht crew.',
+                brand: { '@type': 'Brand', name: 'CrewNotice' },
+                offers: [
+                  {
+                    '@type': 'Offer',
+                    name: 'Starter — Annual',
+                    price: '1200',
+                    priceCurrency: 'GBP',
+                    priceSpecification: {
+                      '@type': 'UnitPriceSpecification',
+                      price: '1200',
+                      priceCurrency: 'GBP',
+                      billingIncrement: 1,
+                      unitCode: 'ANN',
+                    },
+                    availability: 'https://schema.org/InStock',
+                    category: 'Starter',
+                  },
+                  {
+                    '@type': 'Offer',
+                    name: 'Starter — Monthly',
+                    price: '120',
+                    priceCurrency: 'GBP',
+                    priceSpecification: {
+                      '@type': 'UnitPriceSpecification',
+                      price: '120',
+                      priceCurrency: 'GBP',
+                      billingIncrement: 1,
+                      unitCode: 'MON',
+                    },
+                    availability: 'https://schema.org/InStock',
+                    category: 'Starter',
+                  },
+                  {
+                    '@type': 'Offer',
+                    name: 'Professional — Annual',
+                    price: '2400',
+                    priceCurrency: 'GBP',
+                    priceSpecification: {
+                      '@type': 'UnitPriceSpecification',
+                      price: '2400',
+                      priceCurrency: 'GBP',
+                      billingIncrement: 1,
+                      unitCode: 'ANN',
+                    },
+                    availability: 'https://schema.org/InStock',
+                    category: 'Professional',
+                  },
+                  {
+                    '@type': 'Offer',
+                    name: 'Professional — Monthly',
+                    price: '249',
+                    priceCurrency: 'GBP',
+                    priceSpecification: {
+                      '@type': 'UnitPriceSpecification',
+                      price: '249',
+                      priceCurrency: 'GBP',
+                      billingIncrement: 1,
+                      unitCode: 'MON',
+                    },
+                    availability: 'https://schema.org/InStock',
+                    category: 'Professional',
+                  },
+                ],
+              },
+              {
+                '@type': 'FAQPage',
+                mainEntity: [
+                  {
+                    '@type': 'Question',
+                    name: 'How much does CrewNotice cost?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text:
+                        'CrewNotice starts at £1,200/year (or £120/month) for the Starter plan. Professional is £2,400/year (or £249/month). Enterprise pricing is custom. All plans include a 14-day free trial.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'Is there a free trial?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text:
+                        'Yes — every plan includes a 14-day free trial with full access to all features on that tier. No credit card required to start.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'Do you charge per crew member?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text:
+                        'No. Every plan includes unlimited crew members. You pay one price per vessel, regardless of how many people are on board.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'Can I switch between monthly and annual billing?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text:
+                        'Yes. You can switch your billing period at any time from your account settings. Annual billing saves up to 17% compared to paying monthly.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'Can I cancel at any time?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text:
+                        "Yes. There are no long-term contracts. Cancel anytime and you'll keep access until the end of your billing period.",
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'What happens after the free trial?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text:
+                        'At the end of your 14-day trial, you can choose a plan and continue using CrewNotice. If you do nothing, your account simply pauses — your data is kept safe for 30 days in case you decide to come back.',
+                    },
+                  },
+                ],
+              },
+            ],
+          }),
+        }}
+      />
 
       {/* Final CTA */}
       <section className="final-cta">
