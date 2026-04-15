@@ -1014,6 +1014,77 @@
 }
 
 /* ───── Help Centre ───── */
+.lp-root .help-search {
+  position: relative;
+  max-width: 560px;
+  margin: 0 auto 48px;
+}
+.lp-root .help-search input {
+  width: 100%;
+  padding: 16px 44px 16px 48px;
+  font-size: 15px;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+  font-family: inherit;
+}
+.lp-root .help-search input::placeholder { color: var(--mute); }
+.lp-root .help-search input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 4px var(--blue-tint);
+}
+.lp-root .help-search-icon {
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--mute);
+  pointer-events: none;
+  display: flex;
+}
+.lp-root .help-search-clear {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-soft);
+  color: var(--slate);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color .2s, color .2s;
+}
+.lp-root .help-search-clear:hover {
+  background: var(--line);
+  color: var(--ink);
+}
+.lp-root .help-no-results {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 48px 32px;
+  text-align: center;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow-sm);
+}
+.lp-root .help-no-results h3 {
+  font-size: 18px; font-weight: 600; color: var(--ink);
+  margin: 0 0 8px; letter-spacing: -0.01em;
+}
+.lp-root .help-no-results p {
+  font-size: 14px; color: var(--slate); margin: 0; line-height: 1.6;
+}
+.lp-root .help-no-results a {
+  color: var(--blue); font-weight: 600; text-decoration: none;
+}
+.lp-root .help-no-results a:hover { text-decoration: underline; }
 .lp-root .help-category { margin-bottom: 64px; }
 .lp-root .help-category:last-child { margin-bottom: 0; }
 .lp-root .help-category-head {
@@ -1043,13 +1114,12 @@
   cursor: not-allowed;
 }
 .lp-root .help-article.help-article-link { cursor: pointer; }
-.lp-root .help-article.help-article-link .help-article-body { padding-right: 0; }
 .lp-root .help-article:hover {
   box-shadow: var(--shadow-md);
   border-color: rgba(59,130,246,.25);
   transform: translateY(-2px);
 }
-.lp-root .help-article-body { flex: 1; min-width: 0; padding-right: 44px; }
+.lp-root .help-article-body { flex: 1; min-width: 0; }
 .lp-root .help-article-title {
   font-size: 15px; font-weight: 600; color: var(--ink);
   margin: 0 0 4px; letter-spacing: -0.005em;

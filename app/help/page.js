@@ -1,19 +1,12 @@
-import Link from 'next/link';
 import '../landing.css';
 import MarketingNav from '@/components/marketing/MarketingNav';
 import MarketingFooter from '@/components/marketing/MarketingFooter';
+import HelpCategories from '@/components/marketing/HelpCategories';
 
 export const metadata = {
   title: 'Help Centre — CrewNotice',
   description: 'Everything you need to get started and get the most out of CrewNotice. Guides for captains, admins, and crew.',
 };
-
-const ArrowIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="5" y1="12" x2="19" y2="12" />
-    <polyline points="12 5 19 12 12 19" />
-  </svg>
-);
 
 const HELP_CATEGORIES = [
   {
@@ -43,41 +36,14 @@ const HELP_CATEGORIES = [
     eyebrow: 'Crew Guide',
     title: 'For Crew',
     articles: [
-      { title: 'Reading and acknowledging notices', desc: 'How to read notices, acknowledge critical items, and vote in polls.' },
-      { title: 'Accessing SOPs and risk assessments', desc: 'Find and read the documents relevant to your role and department.' },
-      { title: 'Completing training and quizzes', desc: 'Work through assigned training modules and complete assessments.' },
-      { title: 'Viewing event briefings', desc: 'See upcoming events, guest arrivals, and drill schedules.' },
-      { title: 'Saving documents for offline access', desc: 'Cache important documents so you can read them at sea without signal.' },
+      { slug: 'reading-notices', title: 'Reading and acknowledging notices', desc: 'How to read notices, acknowledge critical items, and vote in polls.' },
+      { slug: 'accessing-documents', title: 'Accessing SOPs and risk assessments', desc: 'Find and read the documents relevant to your role and department.' },
+      { slug: 'completing-training', title: 'Completing training and quizzes', desc: 'Work through assigned training modules and complete assessments.' },
+      { slug: 'viewing-events', title: 'Viewing event briefings', desc: 'See upcoming events, guest arrivals, and drill schedules.' },
+      { slug: 'offline-access', title: 'Saving documents for offline access', desc: 'Cache important documents so you can read them at sea without signal.' },
     ],
   },
 ];
-
-function ArticleCard({ article }) {
-  const body = (
-    <>
-      <div className="help-article-body">
-        <h3 className="help-article-title">{article.title}</h3>
-        <p className="help-article-desc">{article.desc}</p>
-      </div>
-      <div className="help-article-arrow"><ArrowIcon /></div>
-    </>
-  );
-
-  if (article.slug) {
-    return (
-      <Link href={`/help/${article.slug}`} className="help-article help-article-link">
-        {body}
-      </Link>
-    );
-  }
-
-  return (
-    <div className="help-article" title="Coming soon" aria-disabled="true">
-      <span className="help-article-badge">Coming soon</span>
-      {body}
-    </div>
-  );
-}
 
 export default function HelpPage() {
   return (
@@ -98,21 +64,7 @@ export default function HelpPage() {
       {/* Help categories */}
       <section>
         <div className="wrap">
-          {HELP_CATEGORIES.map(cat => (
-            <div key={cat.title} className="help-category">
-              <div className="help-category-head">
-                <h2>{cat.title}</h2>
-                <span className="help-category-count">
-                  {cat.articles.length} article{cat.articles.length !== 1 ? 's' : ''}
-                </span>
-              </div>
-              <div className="help-grid">
-                {cat.articles.map(article => (
-                  <ArticleCard key={article.title} article={article} />
-                ))}
-              </div>
-            </div>
-          ))}
+          <HelpCategories categories={HELP_CATEGORIES} />
 
           <div className="help-contact">
             <h3>Can&apos;t find what you need?</h3>
