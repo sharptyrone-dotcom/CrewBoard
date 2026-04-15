@@ -18,10 +18,33 @@ export default function MarketingNav() {
         </Link>
 
         <div className="nav-links">
-          <a href="/#features">Product</a>
-          <a href="/#compliance">Compliance</a>
-          <a href="/#pricing">Pricing</a>
-          <a href="#">Resources</a>
+          {/* Product dropdown */}
+          <div className="nav-company-group">
+            <span className="nav-company-trigger">Product</span>
+            <div className="nav-company-menu">
+              <div className="nav-company-menu-inner">
+                <Link href="/product/notice-board">Notice Board</Link>
+                <Link href="/product/document-library">Document Library</Link>
+                <Link href="/product/training">Training</Link>
+                <Link href="/product/compliance">Compliance</Link>
+                <Link href="/pricing">Pricing</Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Resources dropdown */}
+          <div className="nav-company-group">
+            <span className="nav-company-trigger">Resources</span>
+            <div className="nav-company-menu">
+              <div className="nav-company-menu-inner">
+                <Link href="/help">Help Centre</Link>
+                <Link href="/resources/ism-guide">ISM Guide</Link>
+                <Link href="/resources/mlc-checklist">MLC Checklist</Link>
+                <Link href="/blog">Blog</Link>
+                <Link href="/resources/api-docs">API Docs</Link>
+              </div>
+            </div>
+          </div>
 
           {/* Company dropdown */}
           <div className="nav-company-group">

@@ -32,11 +32,11 @@ export default function MarketingFooter() {
           <div className="footer-col">
             <h4>Product</h4>
             <ul>
-              <li><a href="/#features">Notice Board</a></li>
-              <li><a href="/#features">Document Library</a></li>
-              <li><a href="/#features">Training</a></li>
-              <li><a href="/#compliance">Compliance</a></li>
-              <li><a href="/#pricing">Pricing</a></li>
+              <li><Link href="/product/notice-board">Notice Board</Link></li>
+              <li><Link href="/product/document-library">Document Library</Link></li>
+              <li><Link href="/product/training">Training</Link></li>
+              <li><Link href="/product/compliance">Compliance</Link></li>
+              <li><Link href="/pricing">Pricing</Link></li>
             </ul>
           </div>
 
@@ -44,11 +44,11 @@ export default function MarketingFooter() {
           <div className="footer-col">
             <h4>Resources</h4>
             <ul>
-              <li><a href="#">Help Centre</a></li>
-              <li><a href="#">ISM Guide</a></li>
-              <li><a href="#">MLC Checklist</a></li>
-              <li><a href="#">Blog</a></li>
-              <li><a href="#">API Docs</a></li>
+              <li><Link href="/help">Help Centre</Link></li>
+              <li><Link href="/resources/ism-guide">ISM Guide</Link></li>
+              <li><Link href="/resources/mlc-checklist">MLC Checklist</Link></li>
+              <li><Link href="/blog">Blog</Link></li>
+              <li><Link href="/resources/api-docs">API Docs</Link></li>
             </ul>
           </div>
 
