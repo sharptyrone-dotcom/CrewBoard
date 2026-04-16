@@ -984,6 +984,7 @@
   .lp-root .pd-feature-row,
   .lp-root .pd-feature-row-reversed { flex-direction: column; gap: 36px; }
   .lp-root .pd-capabilities-grid { grid-template-columns: 1fr 1fr; }
+  .lp-root .pd-standards-grid { grid-template-columns: 1fr; max-width: 480px; }
   .lp-root .pd-scenario { padding: 36px 32px; }
 }
 @media (max-width: 560px) {
@@ -1799,6 +1800,32 @@
 .lp-root .pd-compliance p {
   font-size: 17px; color: var(--slate); line-height: 1.7;
   margin: 0; max-width: 640px; margin-left: auto; margin-right: auto;
+}
+
+/* Standards three-column block */
+.lp-root .pd-standards-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
+  max-width: 1020px; margin: 0 auto;
+}
+.lp-root .pd-standard-card {
+  padding: 32px 28px;
+  background: #fff; border: 1px solid var(--line);
+  border-radius: 16px; box-shadow: var(--shadow-sm);
+  text-align: center;
+}
+.lp-root .pd-standard-icon {
+  width: 56px; height: 56px; border-radius: 14px;
+  background: var(--blue-tint); color: var(--blue-darker);
+  display: grid; place-items: center;
+  margin: 0 auto 18px;
+}
+.lp-root .pd-standard-card h3 {
+  font-size: 18px; font-weight: 700; color: var(--ink);
+  margin: 0 0 10px; letter-spacing: -0.01em;
+}
+.lp-root .pd-standard-card p {
+  font-size: 14px; color: var(--slate);
+  line-height: 1.6; margin: 0;
 }
 
 /* ───── Help article body ───── */
