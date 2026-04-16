@@ -34,7 +34,7 @@ export default function LandingPage() {
             <p className="hero-sub">Digital notices, document management, and compliance tracking — every read tracked, every acknowledgement timestamped, every audit ready.</p>
             <div className="hero-cta">
               <Link href="/app" className="btn btn-primary btn-lg">
-                Book a demo <Arrow />
+                Start free trial <Arrow />
               </Link>
               <a href="#features" className="btn btn-ghost btn-lg">See how it works</a>
             </div>
@@ -450,9 +450,9 @@ export default function LandingPage() {
             <p>Join the vessels already using CrewNotice to prove compliance, protect crew, and sleep better at anchor.</p>
             <div className="hero-cta">
               <Link href="/app" className="btn btn-primary btn-lg">
-                Book a demo <Arrow />
+                Start free trial <Arrow />
               </Link>
-              <Link href="/app" className="btn btn-ghost btn-lg">Start free trial</Link>
+              <Link href="/pricing" className="btn btn-ghost btn-lg">View pricing</Link>
             </div>
           </div>
         </div>
