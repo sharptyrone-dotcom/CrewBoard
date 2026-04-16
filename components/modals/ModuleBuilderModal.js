@@ -2,7 +2,7 @@ import T, { DEPARTMENTS } from '../shared/theme';
 import Icons from '../shared/Icons';
 import FilterChips from '../shared/FilterChips';
 
-const ModuleBuilderModal = ({ moduleBuilderData, setModuleBuilderData, moduleBuilderSaving, editingModuleId, handleSaveModule, resetModuleBuilder, compressImage, crew, isDesktop }) => {
+const ModuleBuilderModal = ({ moduleBuilderData, setModuleBuilderData, moduleBuilderSaving, editingModuleId, handleSaveModule, resetModuleBuilder, compressImage, crew, isDesktop, taxonomies }) => {
   const b = moduleBuilderData;
   const setB = (key, val) => setModuleBuilderData(prev => ({ ...prev, [key]: val }));
   const addContentBlock = (type) => setB('content', [...b.content, { type, value: '', caption: '' }]);
@@ -207,7 +207,7 @@ const ModuleBuilderModal = ({ moduleBuilderData, setModuleBuilderData, moduleBui
             </div>
             {b.assignTo === 'department' && (
               <div style={{ marginTop: 8 }}>
-                <FilterChips options={DEPARTMENTS.filter(d => d !== 'All')} selected={b.assignDept} onChange={v => setB('assignDept', v)} />
+                <FilterChips options={taxonomies?.departments || DEPARTMENTS.filter(d => d !== 'All')} selected={b.assignDept} onChange={v => setB('assignDept', v)} />
               </div>
             )}
             {b.assignTo !== 'none' && (

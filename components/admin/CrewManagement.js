@@ -8,7 +8,7 @@ import BackButton from '../shared/BackButton';
 import ComplianceHeatmap from './ComplianceHeatmap';
 import BulkActionBar from '../shared/BulkActionBar';
 
-const CrewManagement = ({ liveCrew, selectedCrewMember, setSelectedCrewMember, notices, docs, trainingModules = [], isDesktop, handleBulkCrewAction }) => {
+const CrewManagement = ({ liveCrew, selectedCrewMember, setSelectedCrewMember, notices, docs, trainingModules = [], isDesktop, handleBulkCrewAction, categoryOptions }) => {
   const [view, setView] = useState('roster');
   const [selectedIds, setSelectedIds] = useState(new Set());
   if (selectedCrewMember) {
@@ -135,6 +135,7 @@ const CrewManagement = ({ liveCrew, selectedCrewMember, setSelectedCrewMember, n
           trainingModules={trainingModules}
           setSelectedCrewMember={setSelectedCrewMember}
           isDesktop={isDesktop}
+          categoryOptions={categoryOptions}
         />
       )}
       {view === 'roster' && (

@@ -1,7 +1,10 @@
-import T, { CATEGORIES, PRIORITIES } from '../shared/theme';
+import T, { PRIORITIES } from '../shared/theme';
 import Icons from '../shared/Icons';
+import SelectWithAddNew from '../shared/SelectWithAddNew';
 
-const NewNoticeModal = ({ newNotice, setNewNotice, handlePostNotice, setShowNewNotice, isDesktop }) => (
+const NewNoticeModal = ({ newNotice, setNewNotice, handlePostNotice, setShowNewNotice, isDesktop, taxonomies }) => {
+  const categories = taxonomies?.categories || ['Safety', 'Operations', 'Guest Info', 'HR/Admin', 'Social', 'Departmental'];
+  return (
   <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
     <div style={{ background: T.bgModal, borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 480, maxHeight: '90vh', overflow: 'auto', padding: 28, boxShadow: '0 -20px 40px rgba(15,23,42,0.15)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -20,9 +23,14 @@ const NewNoticeModal = ({ newNotice, setNewNotice, handlePostNotice, setShowNewN
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: T.textMuted, display: 'block', marginBottom: 6 }}>Category</label>
-            <select value={newNotice.category} onChange={e => setNewNotice(p => ({ ...p, category: e.target.value }))} style={{ width: '100%', padding: 12, borderRadius: 10, border: `1px solid ${T.border}`, background: T.bgCard, color: T.text, fontSize: 13, outline: 'none' }}>
-              {CATEGORIES.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
+            <SelectWithAddNew
+              value={newNotice.category}
+              onChange={val => setNewNotice(p => ({ ...p, category: val }))}
+              options={categories}
+              onAddNew={taxonomies?.addCategory}
+              placeholder="New category…"
+              showColorPicker
+            />
           </div>
           <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: T.textMuted, display: 'block', marginBottom: 6 }}>Priority</label>
@@ -106,6 +114,7 @@ const NewNoticeModal = ({ newNotice, setNewNotice, handlePostNotice, setShowNewN
       </div>
     </div>
   </div>
-);
+  );
+};
 
 export default NewNoticeModal;

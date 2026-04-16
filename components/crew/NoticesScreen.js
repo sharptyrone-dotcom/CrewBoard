@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import T, { CATEGORIES } from '../shared/theme';
+import T from '../shared/theme';
 import Icons from '../shared/Icons';
 import FilterChips from '../shared/FilterChips';
 import BulkActionBar from '../shared/BulkActionBar';
 import NoticeDetail from '../notices/NoticeDetail';
 import NoticeCard from '../notices/NoticeCard';
 
-export default function NoticesScreen({ selectedNotice, currentUser, notices, noticeFilter, searchQuery, setSearchQuery, setNoticeFilter, setSelectedNotice, setAdminNoticeView, handleAcknowledge, handleMarkRead, handlePollVote, handleBulkNoticeAction, role, crew, isDesktop, noticesLoading, noticesError }) {
+export default function NoticesScreen({ selectedNotice, currentUser, notices, noticeFilter, searchQuery, setSearchQuery, setNoticeFilter, setSelectedNotice, setAdminNoticeView, handleAcknowledge, handleMarkRead, handlePollVote, handleBulkNoticeAction, role, crew, isDesktop, noticesLoading, noticesError, categoryOptions }) {
   const [selectedIds, setSelectedIds] = useState(new Set());
 
   if (selectedNotice) return <NoticeDetail notice={selectedNotice} currentUser={currentUser} onBack={() => setSelectedNotice(null)} onAcknowledge={handleAcknowledge} onMarkRead={handleMarkRead} onPollVote={handlePollVote} />;
@@ -56,7 +56,7 @@ export default function NoticesScreen({ selectedNotice, currentUser, notices, no
         <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: T.textDim }}>{Icons.search}</div>
         <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search notices..." style={{ width: '100%', padding: '12px 14px 12px 42px', borderRadius: 12, border: `1px solid ${T.border}`, background: T.bgCard, color: T.text, fontSize: 14, outline: 'none', boxSizing: 'border-box', boxShadow: T.shadow }} />
       </div>
-      <FilterChips options={CATEGORIES} selected={noticeFilter} onChange={setNoticeFilter} />
+      <FilterChips options={categoryOptions || ['All', 'Safety', 'Operations', 'Guest Info', 'HR/Admin', 'Social', 'Departmental']} selected={noticeFilter} onChange={setNoticeFilter} />
       <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
         {pinned.map(n => (
           <div key={n.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>

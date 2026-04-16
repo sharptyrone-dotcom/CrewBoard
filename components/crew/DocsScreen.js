@@ -1,10 +1,10 @@
-import T, { DEPARTMENTS, DOC_TYPES } from '../shared/theme';
+import T from '../shared/theme';
 import Icons, { Icon } from '../shared/Icons';
 import FilterChips from '../shared/FilterChips';
 import ComplianceBar from '../shared/ComplianceBar';
 import DocDetail from '../documents/DocDetail';
 
-export default function DocsScreen({ selectedDoc, setSelectedDoc, currentUser, docs, docDeptFilter, docTypeFilter, setDocDeptFilter, setDocTypeFilter, quickAccessIds, toggleQuickAccess, handleAckDoc, handleDeleteDoc, handleReplaceDoc, role, isDesktop, crew, setReplaceDocState, setShowReplaceDoc, isDocCached, cachingDocId, setCachingDocId, cacheDocument, getDocumentSignedUrl }) {
+export default function DocsScreen({ selectedDoc, setSelectedDoc, currentUser, docs, docDeptFilter, docTypeFilter, setDocDeptFilter, setDocTypeFilter, quickAccessIds, toggleQuickAccess, handleAckDoc, handleDeleteDoc, handleReplaceDoc, role, isDesktop, crew, setReplaceDocState, setShowReplaceDoc, isDocCached, cachingDocId, setCachingDocId, cacheDocument, getDocumentSignedUrl, departmentOptions, docTypeOptions }) {
   if (selectedDoc) return (
     <DocDetail
       doc={selectedDoc}
@@ -42,11 +42,11 @@ export default function DocsScreen({ selectedDoc, setSelectedDoc, currentUser, d
       <h2 style={{ fontSize: isDesktop ? 26 : 20, fontWeight: 800, color: T.text, margin: '0 0 16px' }}>{role === 'admin' ? 'Document Management' : 'Document Library'}</h2>
       <div style={{ marginBottom: 8 }}>
         <div style={{ fontSize: 11, fontWeight: 600, color: T.textMuted, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>Department</div>
-        <FilterChips options={DEPARTMENTS} selected={docDeptFilter} onChange={setDocDeptFilter} />
+        <FilterChips options={departmentOptions || ['All', 'Bridge', 'Deck', 'Engine', 'Interior', 'Safety', 'General']} selected={docDeptFilter} onChange={setDocDeptFilter} />
       </div>
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 11, fontWeight: 600, color: T.textMuted, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>Type</div>
-        <FilterChips options={DOC_TYPES} selected={docTypeFilter} onChange={setDocTypeFilter} />
+        <FilterChips options={docTypeOptions || ['All', 'SOPs', 'Risk Assessments', 'Manuals', 'MSDS/COSHH', 'Checklists', 'Policies']} selected={docTypeFilter} onChange={setDocTypeFilter} />
       </div>
       {/* Quick Access section — crew only, shows when they have favourites */}
       {role === 'crew' && quickAccessIds.length > 0 && docDeptFilter === 'All' && docTypeFilter === 'All' && (() => {

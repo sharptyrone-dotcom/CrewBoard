@@ -1,7 +1,10 @@
-import T, { DOC_TYPES, DEPARTMENTS } from '../shared/theme';
+import T from '../shared/theme';
 import Icons from '../shared/Icons';
+import SelectWithAddNew from '../shared/SelectWithAddNew';
 
-const NewDocumentModal = ({ newDoc, setNewDoc, handleUploadDoc, uploadingDoc, setShowNewDoc }) => {
+const NewDocumentModal = ({ newDoc, setNewDoc, handleUploadDoc, uploadingDoc, setShowNewDoc, taxonomies }) => {
+  const docTypes = taxonomies?.docTypes || ['SOPs', 'Risk Assessments', 'Manuals', 'MSDS/COSHH', 'Checklists', 'Policies'];
+  const departments = taxonomies?.departments || ['Bridge', 'Deck', 'Engine', 'Interior', 'Safety', 'General'];
   const canSubmit = !!newDoc.file && newDoc.title.trim() && !uploadingDoc;
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
@@ -41,15 +44,23 @@ const NewDocumentModal = ({ newDoc, setNewDoc, handleUploadDoc, uploadingDoc, se
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: T.textMuted, display: 'block', marginBottom: 6 }}>Type</label>
-              <select value={newDoc.docType} onChange={e => setNewDoc(p => ({ ...p, docType: e.target.value }))} style={{ width: '100%', padding: 12, borderRadius: 10, border: `1px solid ${T.border}`, background: T.bgCard, color: T.text, fontSize: 13, outline: 'none' }}>
-                {DOC_TYPES.filter(t => t !== 'All').map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
+              <SelectWithAddNew
+                value={newDoc.docType}
+                onChange={val => setNewDoc(p => ({ ...p, docType: val }))}
+                options={docTypes}
+                onAddNew={taxonomies?.addDocType}
+                placeholder="New document type…"
+              />
             </div>
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: T.textMuted, display: 'block', marginBottom: 6 }}>Department</label>
-              <select value={newDoc.department} onChange={e => setNewDoc(p => ({ ...p, department: e.target.value }))} style={{ width: '100%', padding: 12, borderRadius: 10, border: `1px solid ${T.border}`, background: T.bgCard, color: T.text, fontSize: 13, outline: 'none' }}>
-                {DEPARTMENTS.filter(d => d !== 'All').concat('General').filter((v, i, a) => a.indexOf(v) === i).map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
+              <SelectWithAddNew
+                value={newDoc.department}
+                onChange={val => setNewDoc(p => ({ ...p, department: val }))}
+                options={departments}
+                onAddNew={taxonomies?.addDepartment}
+                placeholder="New department…"
+              />
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>

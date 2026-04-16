@@ -4,9 +4,11 @@ import Avatar from '../shared/Avatar';
 // Renders a grid: rows = crew, columns = notice categories (+ docs +
 // training). Cells colour-coded by percentage compliance. Clicking a cell
 // opens that crew member's detail view.
-const ComplianceHeatmap = ({ liveCrew = [], notices = [], docs = [], trainingModules = [], setSelectedCrewMember, isDesktop }) => {
-  // Exclude the 'All' meta-category and build columns
-  const noticeCats = CATEGORIES.filter(c => c !== 'All');
+const ComplianceHeatmap = ({ liveCrew = [], notices = [], docs = [], trainingModules = [], setSelectedCrewMember, isDesktop, categoryOptions }) => {
+  // Exclude the 'All' meta-category and build columns — use dynamic categories if provided
+  const noticeCats = categoryOptions
+    ? categoryOptions.filter(c => c !== 'All')
+    : CATEGORIES.filter(c => c !== 'All');
   const columns = [
     ...noticeCats.map(c => ({ key: `notice-${c}`, label: c, type: 'notice', value: c })),
     { key: 'docs', label: 'Docs', type: 'docs' },

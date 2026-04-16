@@ -1,7 +1,8 @@
 import T, { DEPARTMENTS } from '../shared/theme';
 import Icons from '../shared/Icons';
 
-const NewEventModal = ({ newEventData, setNewEventData, handleCreateEvent, eventSaving, setShowNewEvent, isDesktop, EVENT_TYPE_ICONS, EVENT_TYPE_COLORS, EVENT_TYPE_LABELS }) => {
+const NewEventModal = ({ newEventData, setNewEventData, handleCreateEvent, eventSaving, setShowNewEvent, isDesktop, EVENT_TYPE_ICONS, EVENT_TYPE_COLORS, EVENT_TYPE_LABELS, taxonomies }) => {
+  const deptOptions = taxonomies?.departments || DEPARTMENTS.filter(d => d !== 'All');
   const d = newEventData;
   const setD = (key, val) => setNewEventData(prev => ({ ...prev, [key]: val }));
   const inputStyle = { width: '100%', padding: '10px 14px', borderRadius: 10, border: `1px solid ${T.border}`, background: T.bg, color: T.text, fontSize: 13, outline: 'none', boxSizing: 'border-box' };
@@ -85,7 +86,7 @@ const NewEventModal = ({ newEventData, setNewEventData, handleCreateEvent, event
                 <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                   <select value={b.department} onChange={e => updateBriefing(i, 'department', e.target.value)} style={{ ...inputStyle, flex: 1, padding: 8 }}>
                     <option value="">Select department...</option>
-                    {DEPARTMENTS.filter(d => d !== 'All').map(dept => (
+                    {deptOptions.map(dept => (
                       <option key={dept} value={dept}>{dept}</option>
                     ))}
                   </select>
