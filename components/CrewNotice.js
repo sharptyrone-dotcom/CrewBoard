@@ -1679,22 +1679,20 @@ export default function CrewNotice({ user }) {
         </div>
       )}
 
-      {/* Admin FAB — mobile only (notices + training) */}
-      {role === 'admin' && !isDesktop && tab === 'notices' && !adminNoticeView && (
-        <button onClick={() => setShowNewNotice(true)} className="cb-btn-primary" style={{ position: 'fixed', bottom: 100, right: 'calc(50% - 214px)', width: 56, height: 56, borderRadius: '50%', background: T.accent, border: 'none', color: '#fff', cursor: 'pointer', boxShadow: '0 10px 30px rgba(59,130,246,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-          {Icons.plus}
-        </button>
-      )}
-      {role === 'admin' && tab === 'training' && trainingView === 'dashboard' && (
-        <button onClick={() => setShowModuleBuilder(true)} className="cb-btn-primary" style={{ position: 'fixed', bottom: isDesktop ? 32 : 100, right: isDesktop ? 48 : 'calc(50% - 214px)', width: 56, height: 56, borderRadius: '50%', background: T.accent, border: 'none', color: '#fff', cursor: 'pointer', boxShadow: '0 10px 30px rgba(59,130,246,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-          {Icons.plus}
-        </button>
-      )}
-      {role === 'admin' && !isDesktop && tab === 'events' && !adminEventView && (
-        <button onClick={() => setShowNewEvent(true)} className="cb-btn-primary" style={{ position: 'fixed', bottom: 100, right: 'calc(50% - 214px)', width: 56, height: 56, borderRadius: '50%', background: T.accent, border: 'none', color: '#fff', cursor: 'pointer', boxShadow: '0 10px 30px rgba(59,130,246,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-          {Icons.plus}
-        </button>
-      )}
+      {/* Admin FAB — notices, docs, training, events */}
+      {role === 'admin' && (() => {
+        let fabAction = null;
+        if (tab === 'notices' && !adminNoticeView) fabAction = () => setShowNewNotice(true);
+        else if (tab === 'docs' && !selectedDoc) fabAction = () => setShowNewDoc(true);
+        else if (tab === 'training' && trainingView === 'dashboard') fabAction = () => setShowModuleBuilder(true);
+        else if (tab === 'events' && !adminEventView) fabAction = () => setShowNewEvent(true);
+        if (!fabAction) return null;
+        return (
+          <button onClick={fabAction} className="cb-btn-primary" style={{ position: 'fixed', bottom: isDesktop ? 32 : 100, right: isDesktop ? 48 : 'calc(50% - 214px)', width: 56, height: 56, borderRadius: '50%', background: T.accent, border: 'none', color: '#fff', cursor: 'pointer', boxShadow: '0 10px 30px rgba(59,130,246,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
+            {Icons.plus}
+          </button>
+        );
+      })()}
 
       {/* Realtime toast */}
       {noticeToast && (
