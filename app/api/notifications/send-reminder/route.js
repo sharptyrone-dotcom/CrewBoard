@@ -136,27 +136,65 @@ async function sendPushNotification(subscription, payload) {
   }
 }
 
+// ── Preference filtering (server-side) ───────────────────────────────
+// Maps notification metadata to the preference column.  Returns null
+// for types that should always be delivered (e.g. critical notices).
+function getPreferenceColumn({ refType, priority, notificationType }) {
+  if (refType === 'notice') {
+    if (priority === 'critical') return null;
+    if (priority === 'important') return 'important_notices';
+    return 'routine_notices';
+  }
+  if (refType === 'document') return 'document_updates';
+  if (refType === 'training_module') return 'training_assignments';
+  if (notificationType === 'training_reminder') return 'training_reminders';
+  if (refType === 'event') return 'event_briefings';
+  if (notificationType === 'event_update') return 'event_updates';
+  return 'admin_reminders';
+}
+
+async function filterIdsByPreference(crewMemberIds, vesselId, preferenceColumn) {
+  if (!preferenceColumn) return crewMemberIds; // always send
+  try {
+    const { data } = await supabaseServer
+      .from('notification_preferences')
+      .select('crew_member_id, ' + preferenceColumn)
+      .eq('vessel_id', vesselId)
+      .in('crew_member_id', crewMemberIds);
+    if (!data || data.length === 0) return crewMemberIds; // no prefs = all defaults (true)
+    const mutedIds = new Set(data.filter(r => r[preferenceColumn] === false).map(r => r.crew_member_id));
+    return crewMemberIds.filter(id => !mutedIds.has(id));
+  } catch (err) {
+    console.error('[send-reminder] preference check failed (sending to all)', err);
+    return crewMemberIds;
+  }
+}
+
 // ── Main handler ─────────────────────────────────────────────────────
 export async function POST(request) {
   try {
-    const { crewMemberIds, vesselId, title, body, refType, refId, createNotification } = await request.json();
+    const { crewMemberIds, vesselId, title, body, refType, refId, createNotification, priority, notificationType } = await request.json();
 
     if (!crewMemberIds?.length || !vesselId || !title) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // 1. Look up crew emails
+    // 0. Filter by notification preferences
+    const prefCol = getPreferenceColumn({ refType, priority, notificationType });
+    const eligibleIds = await filterIdsByPreference(crewMemberIds, vesselId, prefCol);
+
+    // 1. Look up crew emails (only for eligible recipients)
     const { data: crewRows } = await supabaseServer
       .from('crew_members')
       .select('id, email, full_name')
-      .in('id', crewMemberIds);
+      .in('id', eligibleIds.length > 0 ? eligibleIds : ['00000000-0000-0000-0000-000000000000']);
 
-    // 2. Look up push subscriptions
+    // 2. Look up push subscriptions (only for eligible recipients)
     const { data: pushSubs } = await supabaseServer
       .from('push_subscriptions')
       .select('crew_member_id, endpoint, p256dh, auth')
       .eq('vessel_id', vesselId)
-      .in('crew_member_id', crewMemberIds);
+      .in('crew_member_id', eligibleIds.length > 0 ? eligibleIds : ['00000000-0000-0000-0000-000000000000']);
 
     const emailResults = { sent: 0, failed: 0, skipped: 0 };
     const pushResults = { sent: 0, failed: 0, skipped: 0 };
@@ -203,7 +241,7 @@ export async function POST(request) {
     //    flag to avoid duplicates.
     if (createNotification) {
       try {
-        const notifRows = crewMemberIds.map((cid) => ({
+        const notifRows = eligibleIds.map((cid) => ({
           vessel_id: vesselId,
           target_crew_id: cid,
           type: 'system',

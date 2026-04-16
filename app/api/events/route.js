@@ -199,7 +199,7 @@ export async function POST(request) {
       }
     }
 
-    // 3. Notify all other crew members on this vessel.
+    // 3. Notify all other crew members on this vessel (respecting preferences).
     try {
       const { data: crewRows } = await supabase
         .from('crew_members')
@@ -209,17 +209,35 @@ export async function POST(request) {
         .neq('id', crew_member_id);
 
       if (crewRows && crewRows.length > 0) {
-        const dateFmt = new Date(start_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-        const notifRows = crewRows.map((c) => ({
-          vessel_id,
-          target_crew_id: c.id,
-          type: 'system',
-          title: 'New Event',
-          body: `"${title}" — ${dateFmt}`,
-          reference_type: 'event',
-          reference_id: event.id,
-        }));
-        await supabase.from('notifications').insert(notifRows);
+        // Filter by event_briefings preference
+        let eligibleIds = crewRows.map(c => c.id);
+        try {
+          const { data: prefs } = await supabase
+            .from('notification_preferences')
+            .select('crew_member_id, event_briefings')
+            .eq('vessel_id', vessel_id)
+            .in('crew_member_id', eligibleIds);
+          if (prefs && prefs.length > 0) {
+            const mutedIds = new Set(prefs.filter(p => p.event_briefings === false).map(p => p.crew_member_id));
+            eligibleIds = eligibleIds.filter(id => !mutedIds.has(id));
+          }
+        } catch (prefErr) {
+          console.error('[events] preference check failed (sending to all)', prefErr);
+        }
+
+        if (eligibleIds.length > 0) {
+          const dateFmt = new Date(start_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+          const notifRows = eligibleIds.map((id) => ({
+            vessel_id,
+            target_crew_id: id,
+            type: 'system',
+            title: 'New Event',
+            body: `"${title}" — ${dateFmt}`,
+            reference_type: 'event',
+            reference_id: event.id,
+          }));
+          await supabase.from('notifications').insert(notifRows);
+        }
       }
     } catch (notifErr) {
       // Non-fatal — the event was already created successfully.

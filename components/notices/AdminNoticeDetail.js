@@ -182,7 +182,12 @@ export default function AdminNoticeDetail({ notice, onBack, crew, onDelete, onSe
         )}
       </div>
 
-      <div style={{ display: 'flex', gap: 10, marginTop: 16, maxWidth: isDesktop ? 500 : undefined }}>
+      {nonReaderCount > 0 && notice.priority !== 'critical' && (
+        <div style={{ fontSize: 11, color: T.textDim, marginTop: 16, padding: '8px 12px', background: T.bg, borderRadius: 8, maxWidth: isDesktop ? 500 : undefined }}>
+          Note: crew may have muted non-critical notifications in their preferences.
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 10, marginTop: nonReaderCount > 0 && notice.priority !== 'critical' ? 8 : 16, maxWidth: isDesktop ? 500 : undefined }}>
         {nonReaderCount > 0 && (
           <button
             onClick={handleReminder}

@@ -108,6 +108,11 @@ const NewNoticeModal = ({ newNotice, setNewNotice, handlePostNotice, setShowNewN
           </div>
         )}
 
+        {newNotice.priority !== 'critical' && (
+          <div style={{ fontSize: 11, color: T.textDim, padding: '8px 12px', background: T.bg, borderRadius: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+            {Icons.bell} Note: crew may have muted non-critical notifications in their preferences.
+          </div>
+        )}
         <button onClick={handlePostNotice} disabled={!newNotice.title.trim()} className="cb-btn-primary" style={{ width: '100%', padding: 16, borderRadius: 12, border: 'none', background: newNotice.title.trim() ? T.accent : T.border, color: newNotice.title.trim() ? '#fff' : T.textDim, fontSize: 15, fontWeight: 700, cursor: newNotice.title.trim() ? 'pointer' : 'default', transition: 'background 0.2s' }}>
           Post Notice
         </button>

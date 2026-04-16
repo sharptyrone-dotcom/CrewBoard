@@ -17,7 +17,7 @@ function useDarkMode() {
   return [dark, toggle];
 }
 
-export default function CrewProfile({ currentUser, notices, docs, handleLogout, offlineCachedIds, offlineCacheSize, clearCachedDoc, clearAllCachedDocs }) {
+export default function CrewProfile({ currentUser, notices, docs, handleLogout, offlineCachedIds, offlineCacheSize, clearCachedDoc, clearAllCachedDocs, onOpenNotifPrefs }) {
   const [isDark, toggleDark] = useDarkMode();
   // Compliance score = (notices read + required docs acked) / (total notices
   // + total required docs). Matches the per-crew formula used in
@@ -91,10 +91,16 @@ export default function CrewProfile({ currentUser, notices, docs, handleLogout, 
       </div>
 
       <div style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 16, overflow: 'hidden', boxShadow: T.shadow }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: `1px solid ${T.border}` }}>
-          <span style={{ fontSize: 14, color: T.text }}>Notification Preferences</span>
+        <button
+          onClick={onOpenNotifPrefs}
+          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: `1px solid ${T.border}`, width: '100%', background: 'none', border: 'none', cursor: 'pointer', color: T.text, fontSize: 14 }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {Icons.bell}
+            Notification Preferences
+          </span>
           <span style={{ color: T.textDim, fontSize: 18 }}>&rsaquo;</span>
-        </div>
+        </button>
         <button
           onClick={toggleDark}
           style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: `1px solid ${T.border}`, width: '100%', background: 'none', border: 'none', cursor: 'pointer', color: T.text, fontSize: 14 }}
