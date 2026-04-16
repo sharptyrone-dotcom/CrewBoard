@@ -1,7 +1,7 @@
 import T, { PRIORITIES } from './theme';
 
 export function PriorityBadge({ priority }) {
-  const bg = priority === 'critical' ? T.criticalTint : priority === 'important' ? T.goldTint : '#f1f5f9';
+  const bg = priority === 'critical' ? T.criticalTint : priority === 'important' ? T.goldTint : T.bg;
   return (
     <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1.2, color: PRIORITIES[priority], background: bg, padding: '4px 9px', borderRadius: 6 }}>
       {priority}

@@ -65,7 +65,7 @@ const NewNoticeModal = ({ newNotice, setNewNotice, handlePostNotice, setShowNewN
 
         {/* Poll builder — only shows when category is Social and poll is enabled */}
         {newNotice.category === 'Social' && newNotice.pollEnabled && (
-          <div style={{ padding: 16, background: '#f8f7ff', borderRadius: 12, border: '1px solid #e9e5ff' }}>
+          <div style={{ padding: 16, background: 'var(--poll-bg)', borderRadius: 12, border: '1px solid var(--poll-border)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <label style={{ fontSize: 12, fontWeight: 700, color: '#5b21b6' }}>Poll Options</label>
               {newNotice.pollOptions.length < 6 && (
@@ -89,7 +89,7 @@ const NewNoticeModal = ({ newNotice, setNewNotice, handlePostNotice, setShowNewN
                       setNewNotice(p => ({ ...p, pollOptions: updated }));
                     }}
                     placeholder={`Option ${idx + 1}...`}
-                    style={{ flex: 1, padding: 10, borderRadius: 8, border: `1px solid #e9e5ff`, background: T.bgCard, color: T.text, fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+                    style={{ flex: 1, padding: 10, borderRadius: 8, border: `1px solid var(--poll-border)`, background: T.bgCard, color: T.text, fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
                   />
                   {newNotice.pollOptions.length > 2 && (
                     <button

@@ -194,7 +194,7 @@ const CrewManagement = ({ liveCrew, selectedCrewMember, setSelectedCrewMember, n
                     <td style={{ padding: '14px 16px', color: T.textMuted }}>{cm.role}</td>
                     <td style={{ padding: '14px 16px', color: T.textMuted }}>{cm.dept}</td>
                     <td style={{ padding: '14px 16px' }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: cm.online ? T.success : T.textDim, background: cm.online ? T.successTint : '#f1f5f9', padding: '3px 8px', borderRadius: 6 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: cm.online ? T.success : T.textDim, background: cm.online ? T.successTint : T.bg, padding: '3px 8px', borderRadius: 6 }}>
                         {cm.online ? 'Online' : 'Offline'}
                       </span>
                     </td>

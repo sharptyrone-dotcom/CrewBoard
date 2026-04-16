@@ -108,7 +108,7 @@ const AdminDashboard = ({ notices, docs, liveCrew, isDesktop, setSelectedCrewMem
                 <button key={isReminder ? 'reminder' : label} onClick={fn} className="cb-btn-secondary" style={{
                   flex: '1 1 140px', padding: '14px 10px', borderRadius: 12,
                   border: `1px solid ${reminderError ? T.critical : reminderDone ? T.success : T.border}`,
-                  background: reminderError ? T.criticalTint : reminderDone ? '#f0fdf4' : T.bgCard,
+                  background: reminderError ? T.criticalTint : reminderDone ? T.successTint : T.bgCard,
                   color: reminderError ? T.critical : reminderDone ? T.success : T.accentDark,
                   fontSize: 12, fontWeight: 700,
                   cursor: (isReminder && dashReminderState !== 'idle') ? 'default' : 'pointer',

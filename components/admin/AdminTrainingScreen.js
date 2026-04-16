@@ -75,7 +75,7 @@ const AdminTrainingScreen = ({ trainingView, setTrainingView, selectedModule, se
           <button onClick={sendReminder} disabled={trainingReminderState !== 'idle'} style={{
             width: '100%', padding: 14, borderRadius: 12,
             border: `1px solid ${trainingReminderState === 'sent' ? T.success : T.gold}`,
-            background: trainingReminderState === 'sent' ? '#f0fdf4' : T.goldTint,
+            background: trainingReminderState === 'sent' ? T.successTint : T.goldTint,
             color: trainingReminderState === 'sent' ? T.success : '#b45309',
             fontSize: 14, fontWeight: 700,
             cursor: trainingReminderState === 'idle' ? 'pointer' : 'default',
@@ -107,13 +107,13 @@ const AdminTrainingScreen = ({ trainingView, setTrainingView, selectedModule, se
           const stats = m.stats || {};
           return (
             <button key={m.id} onClick={() => handleLoadAdminModuleResults(m)} className="cb-card" style={{ display: 'flex', gap: isDesktop ? 18 : 14, padding: isDesktop ? '18px 22px' : '18px 20px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: isDesktop ? 14 : 16, cursor: 'pointer', textAlign: 'left', width: '100%', boxShadow: T.shadow, alignItems: isDesktop ? 'center' : 'stretch' }}>
-              <div style={{ width: 44, height: 50, borderRadius: 10, background: m.isPublished ? T.accentTint : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: m.isPublished ? T.accentDark : T.textDim, flexShrink: 0 }}>
+              <div style={{ width: 44, height: 50, borderRadius: 10, background: m.isPublished ? T.accentTint : T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: m.isPublished ? T.accentDark : T.textDim, flexShrink: 0 }}>
                 {Icons.training}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                   <span style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{m.title}</span>
-                  {!m.isPublished && <span style={{ fontSize: 9, fontWeight: 700, color: T.textDim, background: '#f1f5f9', padding: '2px 6px', borderRadius: 4 }}>DRAFT</span>}
+                  {!m.isPublished && <span style={{ fontSize: 9, fontWeight: 700, color: T.textDim, background: T.bg, padding: '2px 6px', borderRadius: 4 }}>DRAFT</span>}
                 </div>
                 <div style={{ display: 'flex', gap: 12, fontSize: 11, color: T.textMuted }}>
                   <span>{m.questionCount || 0} questions</span>

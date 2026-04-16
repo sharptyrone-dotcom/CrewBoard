@@ -29,7 +29,7 @@ export function ValidityPill({ validUntil, size = 'sm' }) {
       textTransform: 'uppercase',
       letterSpacing: 0.8,
       color: expired ? T.critical : T.textMuted,
-      background: expired ? T.criticalTint : '#f1f5f9',
+      background: expired ? T.criticalTint : T.bg,
       padding,
       borderRadius: 6,
       display: 'inline-flex',
@@ -51,7 +51,7 @@ export function PollResultsBar({ option, voteCount, totalVotes, isSelected, perc
     }}>
       <div style={{
         position: 'absolute', left: 0, top: 0, bottom: 0,
-        width: `${percentage}%`, background: isSelected ? T.accentGlow : '#f1f5f9',
+        width: `${percentage}%`, background: isSelected ? T.accentGlow : T.bg,
         transition: 'width 0.4s ease-out', borderRadius: 10,
       }} />
       <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

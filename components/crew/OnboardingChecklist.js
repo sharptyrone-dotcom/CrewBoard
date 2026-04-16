@@ -113,7 +113,7 @@ const OnboardingChecklist = ({ currentUser, notices = [], docs = [], trainingMod
               display: 'flex', alignItems: 'center', gap: 12,
               padding: '10px 12px', borderRadius: 10,
               border: 'none',
-              background: step.done ? '#f0fdf4' : T.bg,
+              background: step.done ? T.successTint : T.bg,
               cursor: step.action && !step.done ? 'pointer' : 'default',
               textAlign: 'left',
               opacity: step.done ? 0.7 : 1,

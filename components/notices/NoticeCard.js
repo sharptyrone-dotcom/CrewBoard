@@ -15,7 +15,7 @@ export default function NoticeCard({ notice, currentUser, role, onClick, isPinne
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, minWidth: 120 }}>
             <PriorityBadge priority={notice.priority} />
             <CategoryBadge category={notice.category} />
-            {hasPoll && <span style={{ fontSize: 9, fontWeight: 700, color: '#7c3aed', background: '#f5f3ff', padding: '2px 6px', borderRadius: 4 }}>{Icons.poll}</span>}
+            {hasPoll && <span style={{ fontSize: 9, fontWeight: 700, color: '#7c3aed', background: 'var(--poll-tint)', padding: '2px 6px', borderRadius: 4 }}>{Icons.poll}</span>}
           </div>
           <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
             {isPinned && <span style={{ color: T.gold, display: 'flex', flexShrink: 0 }}><Icon d={<><line x1="12" y1="17" x2="12" y2="22" /><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1V2H8v4h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24z" /></>} size={14} /></span>}
@@ -35,7 +35,7 @@ export default function NoticeCard({ notice, currentUser, role, onClick, isPinne
               <PriorityBadge priority={notice.priority} />
               <CategoryBadge category={notice.category} />
               <ValidityPill validUntil={notice.validUntil} />
-              {hasPoll && <span style={{ fontSize: 9, fontWeight: 700, color: '#7c3aed', background: '#f5f3ff', padding: '2px 6px', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 3 }}>{Icons.poll} Poll</span>}
+              {hasPoll && <span style={{ fontSize: 9, fontWeight: 700, color: '#7c3aed', background: 'var(--poll-tint)', padding: '2px 6px', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 3 }}>{Icons.poll} Poll</span>}
               {isPinned && <span style={{ color: T.gold, display: 'flex' }}><Icon d={<><line x1="12" y1="17" x2="12" y2="22" /><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1V2H8v4h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24z" /></>} size={14} /></span>}
             </div>
             <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 4, lineHeight: 1.3 }}>{notice.title}</div>

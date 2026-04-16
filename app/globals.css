@@ -1,5 +1,76 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap');
 
+/* ── Theme CSS variables ── */
+:root {
+  --bg: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-hover: #f0f7ff;
+  --bg-modal: #ffffff;
+  --bg-input: #f8fafc;
+  --border: #e2e8f0;
+  --border-light: #cbd5e1;
+  --text: #0f172a;
+  --text-muted: #475569;
+  --text-dim: #94a3b8;
+  --accent: #3b82f6;
+  --accent-dark: #2563eb;
+  --accent-glow: #dbeafe;
+  --accent-tint: #f0f7ff;
+  --gold-tint: #fef3c7;
+  --critical-tint: #fef2f2;
+  --success-tint: #d1fae5;
+  --navy: #1e3a5f;
+  --shadow: 0 1px 3px rgba(15,23,42,0.06), 0 4px 12px rgba(15,23,42,0.04);
+  --shadow-lg: 0 10px 30px rgba(15,23,42,0.08);
+  --modal-backdrop: rgba(15,23,42,0.45);
+  --card-hover-shadow: 0 10px 24px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.04);
+  --card-hover-border: #cbd5e1;
+  --btn-secondary-hover-bg: #f0f7ff;
+  --toast-hover-shadow: 0 14px 32px rgba(15, 23, 42, 0.12);
+  --option-bg: #ffffff;
+  --option-color: #0f172a;
+  --header-bg: rgba(255,255,255,0.85);
+  --tab-bar-bg: rgba(255,255,255,0.92);
+  --poll-tint: #f5f3ff;
+  --poll-border: #e9e5ff;
+  --poll-bg: #f8f7ff;
+}
+
+[data-theme="dark"] {
+  --bg: #0a0f1a;
+  --bg-card: #111827;
+  --bg-hover: #1e293b;
+  --bg-modal: #111827;
+  --bg-input: #1e293b;
+  --border: #1e293b;
+  --border-light: #334155;
+  --text: #e2e8f0;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+  --accent: #3b82f6;
+  --accent-dark: #60a5fa;
+  --accent-glow: #1e3a5f;
+  --accent-tint: #172554;
+  --gold-tint: #422006;
+  --critical-tint: #450a0a;
+  --success-tint: #052e16;
+  --navy: #1e3a5f;
+  --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2);
+  --shadow-lg: 0 10px 30px rgba(0,0,0,0.3);
+  --modal-backdrop: rgba(0,0,0,0.6);
+  --card-hover-shadow: 0 10px 24px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(0, 0, 0, 0.15);
+  --card-hover-border: #334155;
+  --btn-secondary-hover-bg: #1e293b;
+  --toast-hover-shadow: 0 14px 32px rgba(0, 0, 0, 0.35);
+  --option-bg: #1e293b;
+  --option-color: #e2e8f0;
+  --header-bg: rgba(10,15,26,0.88);
+  --tab-bar-bg: rgba(15,23,42,0.92);
+  --poll-tint: #1e1b4b;
+  --poll-border: #312e81;
+  --poll-bg: #1e1b4b;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -9,8 +80,8 @@
 
 html,
 body {
-  background: #f8fafc;
-  color: #0f172a;
+  background: var(--bg);
+  color: var(--text);
   font-family: 'Outfit', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -30,8 +101,8 @@ button {
 }
 
 option {
-  background: #ffffff;
-  color: #0f172a;
+  background: var(--option-bg);
+  color: var(--option-color);
 }
 
 /* App card hover */
@@ -40,8 +111,8 @@ option {
 }
 .cb-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.04);
-  border-color: #cbd5e1 !important;
+  box-shadow: var(--card-hover-shadow);
+  border-color: var(--card-hover-border) !important;
 }
 .cb-btn-primary {
   transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
@@ -55,7 +126,7 @@ option {
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 .cb-btn-secondary:hover {
-  background: #f0f7ff !important;
+  background: var(--btn-secondary-hover-bg) !important;
   border-color: #3b82f6 !important;
 }
 
@@ -75,5 +146,10 @@ option {
   animation: cb-slide-down 220ms ease-out;
 }
 .cb-toast:hover {
-  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12) !important;
+  box-shadow: var(--toast-hover-shadow) !important;
+}
+
+/* Color scheme meta for browser chrome */
+html[data-theme="dark"] {
+  color-scheme: dark;
 }

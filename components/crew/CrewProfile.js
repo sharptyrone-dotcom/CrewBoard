@@ -1,8 +1,24 @@
+import { useState, useEffect } from 'react';
 import T from '../shared/theme';
 import Icons from '../shared/Icons';
 import Avatar from '../shared/Avatar';
 
+function useDarkMode() {
+  const [dark, setDark] = useState(false);
+  useEffect(() => {
+    setDark(document.documentElement.getAttribute('data-theme') === 'dark');
+  }, []);
+  const toggle = () => {
+    const next = !dark;
+    setDark(next);
+    document.documentElement.setAttribute('data-theme', next ? 'dark' : 'light');
+    try { localStorage.setItem('crewnotice-theme', next ? 'dark' : 'light'); } catch (_) {}
+  };
+  return [dark, toggle];
+}
+
 export default function CrewProfile({ currentUser, notices, docs, handleLogout, offlineCachedIds, offlineCacheSize, clearCachedDoc, clearAllCachedDocs }) {
+  const [isDark, toggleDark] = useDarkMode();
   // Compliance score = (notices read + required docs acked) / (total notices
   // + total required docs). Matches the per-crew formula used in
   // AdminDashboard so the numbers line up across screens.
@@ -75,16 +91,36 @@ export default function CrewProfile({ currentUser, notices, docs, handleLogout, 
       </div>
 
       <div style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 16, overflow: 'hidden', boxShadow: T.shadow }}>
-        {['Notification Preferences', 'Dark Mode', 'Log Out'].map((item, i) => (
-          <button
-            key={item}
-            onClick={item === 'Log Out' ? handleLogout : undefined}
-            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: i < 2 ? `1px solid ${T.border}` : 'none', width: '100%', background: 'none', border: 'none', cursor: item === 'Log Out' ? 'pointer' : 'default', color: item === 'Log Out' ? T.critical : T.text, fontSize: 14 }}
-          >
-            {item}
-            {item !== 'Log Out' && <span style={{ color: T.textDim, fontSize: 18 }}>&rsaquo;</span>}
-          </button>
-        ))}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: `1px solid ${T.border}` }}>
+          <span style={{ fontSize: 14, color: T.text }}>Notification Preferences</span>
+          <span style={{ color: T.textDim, fontSize: 18 }}>&rsaquo;</span>
+        </div>
+        <button
+          onClick={toggleDark}
+          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: `1px solid ${T.border}`, width: '100%', background: 'none', border: 'none', cursor: 'pointer', color: T.text, fontSize: 14 }}
+        >
+          <span>Dark Mode</span>
+          <div style={{
+            width: 44, height: 24, borderRadius: 12, padding: 2,
+            background: isDark ? T.accent : T.border,
+            transition: 'background 0.2s',
+            display: 'flex', alignItems: 'center',
+          }}>
+            <div style={{
+              width: 20, height: 20, borderRadius: '50%',
+              background: '#fff',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+              transform: isDark ? 'translateX(20px)' : 'translateX(0)',
+              transition: 'transform 0.2s',
+            }} />
+          </div>
+        </button>
+        <button
+          onClick={handleLogout}
+          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', width: '100%', background: 'none', border: 'none', cursor: 'pointer', color: T.critical, fontSize: 14 }}
+        >
+          Log Out
+        </button>
       </div>
     </div>
   );

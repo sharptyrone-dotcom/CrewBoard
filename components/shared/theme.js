@@ -14,29 +14,31 @@ export const INITIAL_NOTICES = [
 ];
 
 // ─── Theme ───────────────────────────────────────────────────────────
+// Values reference CSS variables defined in globals.css so dark mode
+// works automatically when [data-theme="dark"] is set on <html>.
 const T = {
-  bg: '#f8fafc',
-  bgCard: '#ffffff',
-  bgHover: '#f0f7ff',
-  bgModal: '#ffffff',
-  border: '#e2e8f0',
-  borderLight: '#cbd5e1',
-  text: '#0f172a',
-  textMuted: '#475569',
-  textDim: '#94a3b8',
+  bg: 'var(--bg)',
+  bgCard: 'var(--bg-card)',
+  bgHover: 'var(--bg-hover)',
+  bgModal: 'var(--bg-modal)',
+  border: 'var(--border)',
+  borderLight: 'var(--border-light)',
+  text: 'var(--text)',
+  textMuted: 'var(--text-muted)',
+  textDim: 'var(--text-dim)',
   accent: '#3b82f6',
-  accentDark: '#2563eb',
-  accentGlow: '#dbeafe',
-  accentTint: '#f0f7ff',
+  accentDark: 'var(--accent-dark)',
+  accentGlow: 'var(--accent-glow)',
+  accentTint: 'var(--accent-tint)',
   gold: '#f59e0b',
-  goldTint: '#fef3c7',
+  goldTint: 'var(--gold-tint)',
   critical: '#ef4444',
-  criticalTint: '#fef2f2',
+  criticalTint: 'var(--critical-tint)',
   success: '#10b981',
-  successTint: '#d1fae5',
-  navy: '#1e3a5f',
-  shadow: '0 1px 3px rgba(15,23,42,0.06), 0 4px 12px rgba(15,23,42,0.04)',
-  shadowLg: '0 10px 30px rgba(15,23,42,0.08)',
+  successTint: 'var(--success-tint)',
+  navy: 'var(--navy)',
+  shadow: 'var(--shadow)',
+  shadowLg: 'var(--shadow-lg)',
 };
 
 export default T;

@@ -90,7 +90,7 @@ const NeedsAttention = ({ notices = [], docs = [], trainingModules = [], events 
   if (items.length === 0) {
     return (
       <div style={{
-        background: '#f0fdf4',
+        background: T.successTint,
         border: `1px solid ${T.success}33`,
         borderLeft: `4px solid ${T.success}`,
         borderRadius: 14,

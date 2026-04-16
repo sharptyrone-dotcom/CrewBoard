@@ -62,12 +62,12 @@ export default function AdminNoticeDetail({ notice, onBack, crew, onDelete, onSe
         <PriorityBadge priority={notice.priority} />
         <CategoryBadge category={notice.category} />
         <ValidityPill validUntil={notice.validUntil} />
-        {hasPoll && <span style={{ fontSize: 10, fontWeight: 700, color: '#7c3aed', background: '#f5f3ff', padding: '3px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 4 }}>{Icons.poll} Poll</span>}
+        {hasPoll && <span style={{ fontSize: 10, fontWeight: 700, color: '#7c3aed', background: 'var(--poll-tint)', padding: '3px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 4 }}>{Icons.poll} Poll</span>}
       </div>
       <h2 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: '0 0 20px' }}>{notice.title}</h2>
 
       {hasPoll && (
-        <div style={{ marginBottom: 24, padding: 20, background: '#f8f7ff', borderRadius: 16, border: '1px solid #e9e5ff' }}>
+        <div style={{ marginBottom: 24, padding: 20, background: 'var(--poll-bg)', borderRadius: 16, border: '1px solid var(--poll-border)' }}>
           <h3 style={{ fontSize: 14, fontWeight: 700, color: '#5b21b6', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
             {Icons.poll} Poll Results
             <span style={{ fontSize: 12, fontWeight: 500, color: T.textMuted }}>({totalVotes}/{totalCrew} voted)</span>
@@ -86,7 +86,7 @@ export default function AdminNoticeDetail({ notice, onBack, crew, onDelete, onSe
                   }}>
                     <div style={{
                       position: 'absolute', left: 0, top: 0, bottom: 0,
-                      width: `${pct}%`, background: isWinning ? '#ede9fe' : '#f1f5f9',
+                      width: `${pct}%`, background: isWinning ? 'var(--poll-tint)' : T.bg,
                       transition: 'width 0.4s ease-out', borderRadius: 8,
                     }} />
                     <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -190,7 +190,7 @@ export default function AdminNoticeDetail({ notice, onBack, crew, onDelete, onSe
             style={{
               flex: 1, padding: 14, borderRadius: 12,
               border: `1px solid ${reminderState === 'sent' ? T.success : reminderState === 'error' ? T.critical : T.gold}`,
-              background: reminderState === 'sent' ? '#f0fdf4' : reminderState === 'error' ? T.criticalTint : T.goldTint,
+              background: reminderState === 'sent' ? T.successTint : reminderState === 'error' ? T.criticalTint : T.goldTint,
               color: reminderState === 'sent' ? T.success : reminderState === 'error' ? T.critical : '#b45309',
               fontSize: 14, fontWeight: 700,
               cursor: reminderState === 'idle' ? 'pointer' : 'default',

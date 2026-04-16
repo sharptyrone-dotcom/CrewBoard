@@ -167,7 +167,7 @@ export default function CrewTrainingScreen({ trainingView, selectedModule, setTr
         <h3 style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 12px' }}>Question Breakdown</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
           {(r.answers || []).map((a, i) => (
-            <div key={a.questionId || i} style={{ padding: '14px 16px', borderRadius: 12, border: `1px solid ${a.isCorrect ? T.success : T.critical}30`, background: a.isCorrect ? '#f0fdf4' : '#fef2f2', boxShadow: T.shadow }}>
+            <div key={a.questionId || i} style={{ padding: '14px 16px', borderRadius: 12, border: `1px solid ${a.isCorrect ? T.success : T.critical}30`, background: a.isCorrect ? T.successTint : T.criticalTint, boxShadow: T.shadow }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
                 <span style={{ color: a.isCorrect ? T.success : T.critical, flexShrink: 0, marginTop: 1 }}>
                   {a.isCorrect ? Icons.checkCircle : Icons.x}

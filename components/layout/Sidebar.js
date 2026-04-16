@@ -3,7 +3,7 @@ import Icons, { Icon } from '../shared/Icons';
 import Avatar from '../shared/Avatar';
 
 const Sidebar = ({ tabs, tab, setTab, resetNav, currentUser }) => (
-  <div style={{ position: 'fixed', left: 0, top: 0, bottom: 0, width: 240, background: '#fff', borderRight: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', zIndex: 60 }}>
+  <div style={{ position: 'fixed', left: 0, top: 0, bottom: 0, width: 240, background: T.bgCard, borderRight: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', zIndex: 60 }}>
     {/* Sidebar header / logo */}
     <div style={{ padding: '20px 22px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: `1px solid ${T.border}` }}>
       <div style={{ width: 32, height: 32, borderRadius: 8, background: `linear-gradient(135deg, ${T.accent} 0%, ${T.accentDark} 100%)`, display: 'grid', placeItems: 'center', color: '#fff', boxShadow: '0 4px 10px rgba(59,130,246,0.35)' }}>

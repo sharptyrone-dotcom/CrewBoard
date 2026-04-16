@@ -20,7 +20,7 @@ export default function NoticeDetail({ notice, currentUser, onBack, onAcknowledg
         <CategoryBadge category={notice.category} />
         <ValidityPill validUntil={notice.validUntil} />
         {notice.pinned && <span style={{ fontSize: 10, color: T.gold, display: 'flex', alignItems: 'center', gap: 4 }}>{Icons.pin} Pinned</span>}
-        {hasPoll && <span style={{ fontSize: 10, fontWeight: 700, color: '#7c3aed', background: '#f5f3ff', padding: '3px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 4 }}>{Icons.poll} Poll</span>}
+        {hasPoll && <span style={{ fontSize: 10, fontWeight: 700, color: '#7c3aed', background: 'var(--poll-tint)', padding: '3px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 4 }}>{Icons.poll} Poll</span>}
       </div>
       <h2 style={{ fontSize: 20, fontWeight: 800, color: T.text, margin: '0 0 8px', lineHeight: 1.3 }}>{notice.title}</h2>
       <p style={{ fontSize: 12, color: T.textMuted, margin: '0 0 20px' }}>

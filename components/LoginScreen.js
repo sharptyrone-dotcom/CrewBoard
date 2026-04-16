@@ -10,16 +10,16 @@ import { signInWithPassword } from '@/lib/auth';
 // Styling deliberately mirrors CrewNotice's inline-style approach so we
 // don't need to introduce a shared design system mid-refactor.
 const T = {
-  bg: '#f8fafc',
-  bgCard: '#ffffff',
-  text: '#0f172a',
-  textMuted: '#475569',
-  textDim: '#94a3b8',
-  border: '#e2e8f0',
+  bg: 'var(--bg)',
+  bgCard: 'var(--bg-card)',
+  text: 'var(--text)',
+  textMuted: 'var(--text-muted)',
+  textDim: 'var(--text-dim)',
+  border: 'var(--border)',
   accent: '#0f766e',
   accentHover: '#115e59',
   critical: '#ef4444',
-  shadow: '0 1px 3px rgba(15,23,42,0.05)',
+  shadow: 'var(--shadow)',
 };
 
 const DEV_ACCOUNTS = [
