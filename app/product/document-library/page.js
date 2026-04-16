@@ -68,16 +68,15 @@ const FileIcon = () => (
   </svg>
 );
 
-function ScreenshotPlaceholder({ label, width, height }) {
+function Screenshot({ src, alt, width }) {
   return (
-    <div
-      className="pd-screenshot"
-      style={{ maxWidth: width, aspectRatio: `${width} / ${height}` }}
-      aria-label={label}
-    >
-      <span className="pd-screenshot-label">Screenshot Placeholder</span>
-      <span className="pd-screenshot-desc">{label}</span>
-    </div>
+    <img
+      className="pd-screenshot-img"
+      src={src}
+      alt={alt}
+      style={{ maxWidth: width }}
+      loading="lazy"
+    />
   );
 }
 
@@ -130,10 +129,10 @@ export default function DocumentLibraryPage() {
                 <a href="#scenario" className="btn btn-ghost btn-lg">Learn more</a>
               </div>
             </div>
-            <ScreenshotPlaceholder
-              label="Document library admin view with version history"
+            <Screenshot
+              src="/screenshots/document-library.png"
+              alt="Document library with department and type filters, version numbers, and acknowledgement progress"
               width={800}
-              height={500}
             />
           </div>
         </div>
@@ -180,10 +179,10 @@ export default function DocumentLibraryPage() {
                 <FeatureBullet>Full revision history per document</FeatureBullet>
               </ul>
             </div>
-            <ScreenshotPlaceholder
-              label="Version history and acknowledgement reset"
+            <Screenshot
+              src="/screenshots/document-version-history.png"
+              alt="Document detail showing version number, review date, and replace with new version button"
               width={500}
-              height={350}
             />
           </div>
         </div>
@@ -193,10 +192,10 @@ export default function DocumentLibraryPage() {
       <section className="pd-section">
         <div className="wrap">
           <div className="pd-feature-row pd-feature-row-reversed">
-            <ScreenshotPlaceholder
-              label="Document acknowledgement dashboard"
+            <Screenshot
+              src="/screenshots/document-acknowledgement-dashboard.png"
+              alt="Document acknowledgement dashboard with per-crew status and progress bars"
               width={500}
-              height={350}
             />
             <div className="pd-feature-text">
               <h2>Acknowledgement Tracking by Version</h2>
@@ -237,10 +236,10 @@ export default function DocumentLibraryPage() {
                 <FeatureBullet>Automatic sync when reconnected</FeatureBullet>
               </ul>
             </div>
-            <ScreenshotPlaceholder
-              label="Offline document access on crew phone"
+            <Screenshot
+              src="/screenshots/crew-offline-view.png"
+              alt="Crew document library on mobile showing favourite stars and acknowledgement checkmarks"
               width={500}
-              height={350}
             />
           </div>
         </div>

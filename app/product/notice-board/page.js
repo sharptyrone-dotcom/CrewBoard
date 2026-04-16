@@ -66,16 +66,15 @@ const ClockIcon = () => (
   </svg>
 );
 
-function ScreenshotPlaceholder({ label, width, height }) {
+function Screenshot({ src, alt, width }) {
   return (
-    <div
-      className="pd-screenshot"
-      style={{ maxWidth: width, aspectRatio: `${width} / ${height}` }}
-      aria-label={label}
-    >
-      <span className="pd-screenshot-label">Screenshot Placeholder</span>
-      <span className="pd-screenshot-desc">{label}</span>
-    </div>
+    <img
+      className="pd-screenshot-img"
+      src={src}
+      alt={alt}
+      style={{ maxWidth: width }}
+      loading="lazy"
+    />
   );
 }
 
@@ -129,10 +128,10 @@ export default function NoticeBoardPage() {
                 <a href="#scenario" className="btn btn-ghost btn-lg">See it in action</a>
               </div>
             </div>
-            <ScreenshotPlaceholder
-              label="Notice Board screenshot — admin view showing notice list with read receipts"
+            <Screenshot
+              src="/screenshots/notice-list-read-receipts.png"
+              alt="Admin notice board showing priority-coded notices with read receipt counts"
               width={800}
-              height={500}
             />
           </div>
         </div>
@@ -179,10 +178,10 @@ export default function NoticeBoardPage() {
                 <FeatureBullet>Send reminders to non-readers with one tap</FeatureBullet>
               </ul>
             </div>
-            <ScreenshotPlaceholder
-              label="Notice priority levels in crew view"
+            <Screenshot
+              src="/screenshots/notice-list-read-receipts.png"
+              alt="Notice priority levels showing Critical, Important, and Routine with colour-coded indicators"
               width={500}
-              height={350}
             />
           </div>
         </div>
@@ -192,10 +191,10 @@ export default function NoticeBoardPage() {
       <section className="pd-section">
         <div className="wrap">
           <div className="pd-feature-row pd-feature-row-reversed">
-            <ScreenshotPlaceholder
-              label="Admin read receipt dashboard"
+            <Screenshot
+              src="/screenshots/read-receipt-dashboard.png"
+              alt="Read receipt dashboard showing per-crew read and acknowledgement status"
               width={500}
-              height={350}
             />
             <div className="pd-feature-text">
               <h2>Read Receipts and Acknowledgement Tracking</h2>
@@ -235,10 +234,10 @@ export default function NoticeBoardPage() {
                 <FeatureBullet>Set expiry dates for time-sensitive information</FeatureBullet>
               </ul>
             </div>
-            <ScreenshotPlaceholder
-              label="Category filters and department targeting"
+            <Screenshot
+              src="/screenshots/notice-detail-acknowledge.png"
+              alt="Crew notice detail view with acknowledgement status and category tags"
               width={500}
-              height={350}
             />
           </div>
         </div>

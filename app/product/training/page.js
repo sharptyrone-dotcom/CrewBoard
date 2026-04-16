@@ -69,16 +69,15 @@ const DownloadIcon = () => (
   </svg>
 );
 
-function ScreenshotPlaceholder({ label, width, height }) {
+function Screenshot({ src, alt, width }) {
   return (
-    <div
-      className="pd-screenshot"
-      style={{ maxWidth: width, aspectRatio: `${width} / ${height}` }}
-      aria-label={label}
-    >
-      <span className="pd-screenshot-label">Screenshot Placeholder</span>
-      <span className="pd-screenshot-desc">{label}</span>
-    </div>
+    <img
+      className="pd-screenshot-img"
+      src={src}
+      alt={alt}
+      style={{ maxWidth: width }}
+      loading="lazy"
+    />
   );
 }
 
@@ -131,10 +130,10 @@ export default function TrainingPage() {
                 <a href="#scenario" className="btn btn-ghost btn-lg">Learn more</a>
               </div>
             </div>
-            <ScreenshotPlaceholder
-              label="Training module with quiz interface"
+            <Screenshot
+              src="/screenshots/quiz-in-progress.png"
+              alt="Crew training view showing assigned and completed modules with progress tracking"
               width={800}
-              height={500}
             />
           </div>
         </div>
@@ -181,10 +180,10 @@ export default function TrainingPage() {
                 <FeatureBullet>Update content anytime</FeatureBullet>
               </ul>
             </div>
-            <ScreenshotPlaceholder
-              label="Module builder with content blocks"
+            <Screenshot
+              src="/screenshots/module-builder.png"
+              alt="Training module editor with title, description, and drag-and-drop content blocks"
               width={500}
-              height={350}
             />
           </div>
         </div>
@@ -194,10 +193,10 @@ export default function TrainingPage() {
       <section className="pd-section">
         <div className="wrap">
           <div className="pd-feature-row pd-feature-row-reversed">
-            <ScreenshotPlaceholder
-              label="Quiz builder with multiple question types"
+            <Screenshot
+              src="/screenshots/training-results.png"
+              alt="Training module detail showing completion stats, pass rate, and per-crew results"
               width={500}
-              height={350}
             />
             <div className="pd-feature-text">
               <h2>Built-In Quiz Engine</h2>
@@ -239,10 +238,10 @@ export default function TrainingPage() {
                 <FeatureBullet>Exportable training records with scores</FeatureBullet>
               </ul>
             </div>
-            <ScreenshotPlaceholder
-              label="Training results dashboard for admins"
+            <Screenshot
+              src="/screenshots/training-results.png"
+              alt="Admin training results dashboard showing crew assignment status and completion rates"
               width={500}
-              height={350}
             />
           </div>
         </div>

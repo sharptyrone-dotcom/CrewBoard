@@ -92,16 +92,15 @@ const AwardIcon = () => (
   </svg>
 );
 
-function ScreenshotPlaceholder({ label, width, height }) {
+function Screenshot({ src, alt, width }) {
   return (
-    <div
-      className="pd-screenshot"
-      style={{ maxWidth: width, aspectRatio: `${width} / ${height}` }}
-      aria-label={label}
-    >
-      <span className="pd-screenshot-label">Screenshot Placeholder</span>
-      <span className="pd-screenshot-desc">{label}</span>
-    </div>
+    <img
+      className="pd-screenshot-img"
+      src={src}
+      alt={alt}
+      style={{ maxWidth: width }}
+      loading="lazy"
+    />
   );
 }
 
@@ -172,10 +171,10 @@ export default function CompliancePage() {
                 <a href="#scenario" className="btn btn-ghost btn-lg">Learn more</a>
               </div>
             </div>
-            <ScreenshotPlaceholder
-              label="Compliance dashboard with crew scoring"
+            <Screenshot
+              src="/screenshots/compliance-dashboard.png"
+              alt="Compliance dashboard showing overall compliance score, attention items, and quick actions"
               width={800}
-              height={500}
             />
           </div>
         </div>
@@ -222,10 +221,10 @@ export default function CompliancePage() {
                 <FeatureBullet>One-tap targeted reminders</FeatureBullet>
               </ul>
             </div>
-            <ScreenshotPlaceholder
-              label="Crew compliance scoring with traffic light indicators"
+            <Screenshot
+              src="/screenshots/compliance-dashboard.png"
+              alt="Per-crew compliance scoring with attention items and critical unacknowledged notices"
               width={500}
-              height={350}
             />
           </div>
         </div>
@@ -235,10 +234,10 @@ export default function CompliancePage() {
       <section className="pd-section">
         <div className="wrap">
           <div className="pd-feature-row pd-feature-row-reversed">
-            <ScreenshotPlaceholder
-              label="PDF compliance report export"
+            <Screenshot
+              src="/screenshots/pdf-export.png"
+              alt="Export report dialog with PDF and CSV options for compliance, notices, and training records"
               width={500}
-              height={350}
             />
             <div className="pd-feature-text">
               <h2>Exportable Audit Reports</h2>
@@ -279,10 +278,10 @@ export default function CompliancePage() {
                 <FeatureBullet>Full audit trail for the lifetime of the vessel subscription</FeatureBullet>
               </ul>
             </div>
-            <ScreenshotPlaceholder
-              label="Activity log with timestamped events"
+            <Screenshot
+              src="/screenshots/activity-log.png"
+              alt="Activity log showing timestamped crew actions with filtering and CSV export"
               width={500}
-              height={350}
             />
           </div>
         </div>
