@@ -309,7 +309,7 @@ export default function NoticeBoardPage() {
             <div className="cta-box-inner">
               <h2>Ready to replace your notice board?</h2>
               <p>
-                Start your 14-day free trial. No credit card required. Live on your vessel in under
+                Start your 30-day free trial. No credit card required. Live on your vessel in under
                 10 minutes.
               </p>
               <div className="hero-cta" style={{ justifyContent: 'center' }}>

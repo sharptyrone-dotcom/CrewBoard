@@ -115,7 +115,7 @@ export default function MlcChecklistPage() {
             <div className="cta-box-inner">
               <h2>Start tracking crew compliance today</h2>
               <p>
-                Free 14-day trial, no credit card required. See how much easier MLC-aligned
+                Free 30-day trial, no credit card required. See how much easier MLC-aligned
                 recordkeeping becomes when every notice, acknowledgement, and training event is
                 captured automatically.
               </p>

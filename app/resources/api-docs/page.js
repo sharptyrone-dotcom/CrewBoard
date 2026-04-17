@@ -65,7 +65,7 @@ export default function ApiDocsPage() {
             <div className="api-banner-icon"><CodeIcon /></div>
             <p>
               <strong>The CrewNotice API is currently in development.</strong>{' '}
-              Enterprise plan customers will receive API access when available. Register your
+              Fleet plan customers will receive API access when available. Register your
               interest below.
             </p>
           </div>

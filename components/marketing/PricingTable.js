@@ -1,6 +1,3 @@
-'use client';
-
-import { useState } from 'react';
 import Link from 'next/link';
 
 const Check = ({ size = 16, strokeWidth = 3 }) => (
@@ -9,133 +6,65 @@ const Check = ({ size = 16, strokeWidth = 3 }) => (
   </svg>
 );
 
-const TIERS = [
-  {
-    id: 'starter',
-    name: 'Starter',
-    desc: 'For vessels getting started with digital crew operations.',
-    annual: 1200,
-    monthly: 120,
-    features: [
-      'Notice Board & acknowledgements',
-      'Document Library (5GB)',
-      'Unlimited crew members',
-      'Offline PWA',
-      'Email support',
-    ],
-    cta: { label: 'Start free trial', href: '/app' },
-    featured: false,
-  },
-  {
-    id: 'professional',
-    name: 'Professional',
-    desc: 'For working superyachts needing full compliance and training tools.',
-    annual: 2400,
-    monthly: 249,
-    features: [
-      'Everything in Starter',
-      'Training & Quizzes module',
-      'Events & Briefings',
-      'Compliance Dashboard & exports',
-      '100GB document storage',
-      'Priority support',
-    ],
-    cta: { label: 'Start free trial', href: '/app' },
-    featured: true,
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    desc: 'For fleet operators and management companies running multiple vessels.',
-    custom: true,
-    features: [
-      'Everything in Professional',
-      'Multi-vessel dashboard',
-      'SSO & custom roles',
-      'Custom integrations & API',
-      'Dedicated account manager',
-      '24/7 support & SLA',
-    ],
-    cta: { label: 'Contact sales', href: '/contact' },
-    featured: false,
-  },
+const VESSEL_FEATURES = [
+  'Digital Notice Board with read tracking & acknowledgements',
+  'Document Library with version control (100GB storage)',
+  'Training & Quiz Engine',
+  'Events & Guest Briefings',
+  'Compliance Dashboard & audit exports',
+  'Unlimited crew members',
+  'Offline PWA',
+  'Priority support',
 ];
 
-const formatGBP = (n) => `£${n.toLocaleString('en-GB')}`;
+const FLEET_FEATURES = [
+  'Everything in Vessel across your entire fleet',
+  'Multi-vessel compliance dashboard',
+  'Cross-fleet reporting & analytics',
+  'SSO & custom roles',
+  'API access & integrations',
+  'Dedicated account manager',
+  '24/7 support & SLA',
+  'Unlimited storage',
+];
 
 export default function PricingTable() {
-  const [billing, setBilling] = useState('annual'); // 'annual' | 'monthly'
-
   return (
     <>
-      <div className="billing-toggle-wrap">
-        <div className="billing-toggle" role="tablist" aria-label="Billing period">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={billing === 'annual'}
-            className={`billing-toggle-btn ${billing === 'annual' ? 'active' : ''}`}
-            onClick={() => setBilling('annual')}
-          >
-            Annual
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={billing === 'monthly'}
-            className={`billing-toggle-btn ${billing === 'monthly' ? 'active' : ''}`}
-            onClick={() => setBilling('monthly')}
-          >
-            Monthly
-          </button>
+      <div className="pricing-grid pricing-grid-two">
+        {/* Vessel card */}
+        <div className="price-card featured">
+          <div className="tier-badge">Most Popular</div>
+          <div className="tier-name">Vessel</div>
+          <div className="tier-price">£2,400<span> / year</span></div>
+          <div className="tier-price-sub">or £249/month</div>
+          <div className="tier-desc">Everything you need to run crew operations on a single vessel.</div>
+          <ul className="tier-list">
+            {VESSEL_FEATURES.map((f) => (
+              <li key={f}><Check /> {f}</li>
+            ))}
+          </ul>
+          <Link href="/app" className="tier-btn">Start 30-day free trial</Link>
         </div>
-        {billing === 'annual' && (
-          <div className="billing-save-note">Save up to 17% with annual billing</div>
-        )}
+
+        {/* Fleet card */}
+        <div className="price-card">
+          <div className="tier-name">Fleet</div>
+          <div className="tier-price">Custom</div>
+          <div className="tier-price-sub">Tailored to your fleet</div>
+          <div className="tier-desc">For management companies and fleet operators running multiple vessels.</div>
+          <ul className="tier-list">
+            {FLEET_FEATURES.map((f) => (
+              <li key={f}><Check /> {f}</li>
+            ))}
+          </ul>
+          <Link href="/contact" className="tier-btn tier-btn-outline">Contact sales</Link>
+        </div>
       </div>
 
-      <div className="pricing-grid">
-        {TIERS.map((tier) => {
-          const isCustom = tier.custom;
-          const mainPrice = isCustom
-            ? 'Custom'
-            : billing === 'annual'
-              ? formatGBP(tier.annual)
-              : formatGBP(tier.monthly);
-          const mainSuffix = isCustom ? null : billing === 'annual' ? ' / year' : ' / month';
-          const sub = isCustom
-            ? null
-            : billing === 'annual'
-              ? `or ${formatGBP(tier.monthly)}/month`
-              : `or ${formatGBP(tier.annual)}/year`;
-
-          return (
-            <div key={tier.id} className={`price-card ${tier.featured ? 'featured' : ''}`}>
-              <div className="tier-name">{tier.name}</div>
-              <div className="tier-price">
-                {mainPrice}
-                {mainSuffix && <span>{mainSuffix}</span>}
-              </div>
-              {sub ? (
-                <div className="tier-price-sub">{sub}</div>
-              ) : (
-                <div className="tier-price-sub">&nbsp;</div>
-              )}
-              <div className="tier-desc">{tier.desc}</div>
-              <ul className="tier-list">
-                {tier.features.map((f) => (
-                  <li key={f}>
-                    <Check /> {f}
-                  </li>
-                ))}
-              </ul>
-              <Link href={tier.cta.href} className="tier-btn">
-                {tier.cta.label}
-              </Link>
-            </div>
-          );
-        })}
-      </div>
+      <p className="pricing-trial-note">
+        All plans include a 30-day free trial with full access. No credit card required.
+      </p>
     </>
   );
 }

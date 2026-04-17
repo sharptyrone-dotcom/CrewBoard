@@ -98,7 +98,7 @@ export default function ProductPageLayout({
             <div className="cta-box-inner">
               <h2>Ready to get started?</h2>
               <p>
-                Free 14-day trial, no credit card required. Have the whole vessel live in under
+                Free 30-day trial, no credit card required. Have the whole vessel live in under
                 an hour.
               </p>
               <div className="hero-cta" style={{ justifyContent: 'center' }}>

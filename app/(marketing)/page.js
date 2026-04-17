@@ -7,7 +7,7 @@ import PricingFaq from '@/components/marketing/PricingFaq';
 
 export const metadata = {
   title: "CrewNotice — The operational platform superyachts actually need",
-  description: "Digital notices, document management, and compliance tracking — purpose-built for superyacht crew. Every read tracked. Every audit ready.",
+  description: "Replace your yacht's physical notice board with CrewNotice. Track who reads every notice, manage SOPs with version control, deliver crew training, and generate audit-ready compliance reports. £2,400/year per vessel. 30-day free trial.",
 };
 
 const Check = ({ size = 16, strokeWidth = 3 }) => (
@@ -318,37 +318,7 @@ export default function LandingPage() {
                 offers: [
                   {
                     '@type': 'Offer',
-                    name: 'Starter — Annual',
-                    price: '1200',
-                    priceCurrency: 'GBP',
-                    priceSpecification: {
-                      '@type': 'UnitPriceSpecification',
-                      price: '1200',
-                      priceCurrency: 'GBP',
-                      billingIncrement: 1,
-                      unitCode: 'ANN',
-                    },
-                    availability: 'https://schema.org/InStock',
-                    category: 'Starter',
-                  },
-                  {
-                    '@type': 'Offer',
-                    name: 'Starter — Monthly',
-                    price: '120',
-                    priceCurrency: 'GBP',
-                    priceSpecification: {
-                      '@type': 'UnitPriceSpecification',
-                      price: '120',
-                      priceCurrency: 'GBP',
-                      billingIncrement: 1,
-                      unitCode: 'MON',
-                    },
-                    availability: 'https://schema.org/InStock',
-                    category: 'Starter',
-                  },
-                  {
-                    '@type': 'Offer',
-                    name: 'Professional — Annual',
+                    name: 'Vessel',
                     price: '2400',
                     priceCurrency: 'GBP',
                     priceSpecification: {
@@ -359,11 +329,11 @@ export default function LandingPage() {
                       unitCode: 'ANN',
                     },
                     availability: 'https://schema.org/InStock',
-                    category: 'Professional',
+                    category: 'Vessel',
                   },
                   {
                     '@type': 'Offer',
-                    name: 'Professional — Monthly',
+                    name: 'Vessel Monthly',
                     price: '249',
                     priceCurrency: 'GBP',
                     priceSpecification: {
@@ -374,7 +344,7 @@ export default function LandingPage() {
                       unitCode: 'MON',
                     },
                     availability: 'https://schema.org/InStock',
-                    category: 'Professional',
+                    category: 'Vessel',
                   },
                 ],
               },
@@ -387,52 +357,43 @@ export default function LandingPage() {
                     acceptedAnswer: {
                       '@type': 'Answer',
                       text:
-                        'CrewNotice starts at £1,200/year (or £120/month) for the Starter plan. Professional is £2,400/year (or £249/month). Enterprise pricing is custom. All plans include a 14-day free trial.',
+                        'CrewNotice is £2,400 per year (or £249/month) per vessel. This includes every feature — notice board, document library, training, events, compliance dashboard, and unlimited crew. For fleets of multiple vessels, contact our sales team for custom pricing.',
                     },
                   },
                   {
                     '@type': 'Question',
-                    name: 'Is there a free trial?',
+                    name: "What's included in the free trial?",
                     acceptedAnswer: {
                       '@type': 'Answer',
                       text:
-                        'Yes — every plan includes a 14-day free trial with full access to all features on that tier. No credit card required to start.',
+                        "Everything. You get full access to every feature for 30 days with no credit card required. Upload documents, post notices, create training modules, and see your compliance dashboard populate with real data. If you decide CrewNotice isn't for you, simply stop using it.",
                     },
                   },
                   {
                     '@type': 'Question',
-                    name: 'Do you charge per crew member?',
+                    name: 'Can I switch from monthly to annual billing?',
                     acceptedAnswer: {
                       '@type': 'Answer',
                       text:
-                        'No. Every plan includes unlimited crew members. You pay one price per vessel, regardless of how many people are on board.',
+                        'Yes, you can switch to annual billing at any time from your billing settings. Annual billing saves you approximately 20% compared to monthly.',
                     },
                   },
                   {
                     '@type': 'Question',
-                    name: 'Can I switch between monthly and annual billing?',
+                    name: 'What happens when my trial ends?',
                     acceptedAnswer: {
                       '@type': 'Answer',
                       text:
-                        'Yes. You can switch your billing period at any time from your account settings. Annual billing saves up to 17% compared to paying monthly.',
+                        "We'll email you at day 20 to remind you. If you choose a plan before day 30, everything continues seamlessly. If not, your account is paused but your data is preserved for 30 days in case you decide to subscribe later.",
                     },
                   },
                   {
                     '@type': 'Question',
-                    name: 'Can I cancel at any time?',
+                    name: 'Do you offer discounts for multiple vessels?',
                     acceptedAnswer: {
                       '@type': 'Answer',
                       text:
-                        "Yes. There are no long-term contracts. Cancel anytime and you'll keep access until the end of your billing period.",
-                    },
-                  },
-                  {
-                    '@type': 'Question',
-                    name: 'What happens after the free trial?',
-                    acceptedAnswer: {
-                      '@type': 'Answer',
-                      text:
-                        'At the end of your 14-day trial, you can choose a plan and continue using CrewNotice. If you do nothing, your account simply pauses — your data is kept safe for 30 days in case you decide to come back.',
+                        'Yes. Our Fleet plan includes volume discounts based on the number of vessels. Contact our sales team for a custom quote.',
                     },
                   },
                 ],

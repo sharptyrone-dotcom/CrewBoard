@@ -154,7 +154,7 @@ export default function IsmGuidePage() {
             <div className="cta-box-inner">
               <h2>Ready to make your next audit stress-free?</h2>
               <p>
-                Start your free 14-day trial and see how much time CrewNotice saves you the next time an
+                Start your free 30-day trial and see how much time CrewNotice saves you the next time an
                 auditor steps aboard.
               </p>
               <div className="hero-cta" style={{ justifyContent: 'center' }}>

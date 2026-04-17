@@ -118,7 +118,7 @@ const CAPABILITIES = [
   { icon: <LayersIcon />, title: 'Department-Level Views', desc: 'Compliance broken down by department so HODs can own their team\u2019s readiness.' },
   { icon: <BellIcon />, title: 'Automated Reminders', desc: 'Trigger when compliance drops below thresholds — intervene before gaps become findings.' },
   { icon: <AlertIcon />, title: 'Overdue Tracking', desc: 'Identify outstanding items before they become non-conformities at inspection.' },
-  { icon: <GlobeIcon />, title: 'Fleet-Wide Compliance', desc: 'Cross-vessel reporting for management companies on Enterprise plans.' },
+  { icon: <GlobeIcon />, title: 'Fleet-Wide Compliance', desc: 'Cross-vessel reporting for management companies on Fleet plans.' },
   { icon: <ArchiveIcon />, title: 'Historical Reports', desc: 'Pull compliance data for any past period — last rotation, last quarter, last year.' },
 ];
 
@@ -358,7 +358,7 @@ export default function CompliancePage() {
             <div className="cta-box-inner">
               <h2>Make your next audit stress-free</h2>
               <p>
-                Free 14-day trial. No credit card required. Compliance dashboard live the moment
+                Free 30-day trial. No credit card required. Compliance dashboard live the moment
                 your first crew member logs in.
               </p>
               <div className="hero-cta" style={{ justifyContent: 'center' }}>

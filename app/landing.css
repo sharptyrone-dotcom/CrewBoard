@@ -543,6 +543,66 @@
 }
 .lp-root .price-card.featured .tier-btn:hover { background: var(--blue-dark); border-color: var(--blue-dark); }
 
+/* Two-card pricing grid variant */
+.lp-root .pricing-grid-two {
+  grid-template-columns: repeat(2, 1fr);
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+/* Outline button variant (Fleet card) */
+.lp-root .tier-btn-outline {
+  background: transparent !important;
+  color: var(--ink) !important;
+  border: 2px solid var(--line) !important;
+  box-shadow: none !important;
+}
+.lp-root .tier-btn-outline:hover {
+  border-color: var(--ink) !important;
+  background: var(--bg-soft) !important;
+}
+
+/* Trial note */
+.lp-root .pricing-trial-note {
+  text-align: center;
+  font-size: 15px;
+  color: var(--mute);
+  margin-top: 28px;
+}
+
+/* Feature comparison table */
+.lp-root .pricing-compare {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+.lp-root .pricing-compare th {
+  text-align: left;
+  padding: 12px 16px;
+  font-weight: 600;
+  color: var(--ink);
+  border-bottom: 2px solid var(--line);
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.lp-root .pricing-compare th:not(:first-child) {
+  text-align: center;
+  width: 110px;
+}
+.lp-root .pricing-compare td {
+  padding: 12px 16px;
+  color: var(--slate);
+  border-bottom: 1px solid var(--line-soft);
+}
+.lp-root .pricing-compare-check {
+  text-align: center;
+}
+.lp-root .pricing-compare-dash {
+  color: var(--mute);
+  font-size: 18px;
+}
+
 /* Final CTA */
 .lp-root .final-cta {
   background: linear-gradient(135deg, var(--ink) 0%, #1e293b 100%);
@@ -950,6 +1010,7 @@
   .lp-root .steps::before { display: none; }
   .lp-root .compliance-grid { grid-template-columns: 1fr; gap: 50px; }
   .lp-root .pricing-grid { grid-template-columns: 1fr; max-width: 420px; margin: 0 auto; }
+  .lp-root .pricing-grid-two { grid-template-columns: 1fr; max-width: 480px; }
   .lp-root .price-card.featured { transform: none; }
   .lp-root .price-card.featured:hover { transform: translateY(-4px); }
   .lp-root .footer-grid { grid-template-columns: 1fr 1fr; }
@@ -980,6 +1041,8 @@
 @media (max-width: 560px) {
   .lp-root .problem-grid { grid-template-columns: 1fr; }
   .lp-root .features-grid { grid-template-columns: 1fr; }
+  .lp-root .pricing-compare th, .lp-root .pricing-compare td { padding: 10px 12px; font-size: 13px; }
+  .lp-root .pricing-compare th:not(:first-child) { width: 80px; }
   .lp-root .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
   .lp-root .hero-meta { flex-direction: column; gap: 10px; align-items: center; }
   .lp-root .phone { width: 280px; height: 560px; }
@@ -1528,7 +1591,7 @@
   text-align: center;
 }
 
-/* ───── Billing toggle ───── */
+/* ───── Billing toggle (unused — kept for reference) ───── */
 .lp-root .billing-toggle-wrap {
   display: flex; flex-direction: column; align-items: center;
   gap: 12px; margin: 0 auto 48px;

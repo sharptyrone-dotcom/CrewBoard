@@ -76,7 +76,7 @@ export default function BlogArticlePage({ params }) {
           {/* CTA */}
           <div className="blog-article-cta">
             <h3>Ready to try CrewNotice?</h3>
-            <p>Start your free 14-day trial — no credit card required.</p>
+            <p>Start your free 30-day trial — no credit card required.</p>
             <Link href="/join" className="btn btn-primary">Start free trial</Link>
           </div>
 

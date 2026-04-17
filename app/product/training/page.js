@@ -312,7 +312,7 @@ export default function TrainingPage() {
             <div className="cta-box-inner">
               <h2>Start training your crew the modern way</h2>
               <p>
-                Free 14-day trial. No credit card required. First module live in under 10 minutes.
+                Free 30-day trial. No credit card required. First module live in under 10 minutes.
               </p>
               <div className="hero-cta" style={{ justifyContent: 'center' }}>
                 <Link href="/app" className="btn btn-primary btn-lg">

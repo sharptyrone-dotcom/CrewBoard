@@ -512,7 +512,7 @@ export const ARTICLES = {
       {
         type: 'p',
         text:
-          'Starter plan includes **5 GB** of document storage. Professional plan includes **100 GB**. For vessels with extensive technical libraries, contact us about Enterprise limits.',
+          'The Vessel plan includes **100 GB** of document storage. For fleets needing more, the Fleet plan includes unlimited storage.',
       },
     ],
   },

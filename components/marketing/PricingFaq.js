@@ -4,45 +4,41 @@ export default function PricingFaq() {
       <div className="faq-item">
         <h3>How much does CrewNotice cost?</h3>
         <p>
-          CrewNotice starts at £1,200/year (or £120/month) for the Starter plan. Professional
-          is £2,400/year (or £249/month). Enterprise pricing is custom. All plans include a
-          14-day free trial.
+          CrewNotice is £2,400 per year (or £249/month) per vessel. This includes every
+          feature — notice board, document library, training, events, compliance dashboard,
+          and unlimited crew. For fleets of multiple vessels, contact our sales team for
+          custom pricing.
         </p>
       </div>
       <div className="faq-item">
-        <h3>Is there a free trial?</h3>
+        <h3>What&apos;s included in the free trial?</h3>
         <p>
-          Yes — every plan includes a 14-day free trial with full access to all features on
-          that tier. No credit card required to start.
+          Everything. You get full access to every feature for 30 days with no credit card
+          required. Upload documents, post notices, create training modules, and see your
+          compliance dashboard populate with real data. If you decide CrewNotice isn&apos;t for
+          you, simply stop using it.
         </p>
       </div>
       <div className="faq-item">
-        <h3>Do you charge per crew member?</h3>
+        <h3>Can I switch from monthly to annual billing?</h3>
         <p>
-          No. Every plan includes unlimited crew members. You pay one price per vessel,
-          regardless of how many people are on board.
+          Yes, you can switch to annual billing at any time from your billing settings. Annual
+          billing saves you approximately 20% compared to monthly.
         </p>
       </div>
       <div className="faq-item">
-        <h3>Can I switch between monthly and annual billing?</h3>
+        <h3>What happens when my trial ends?</h3>
         <p>
-          Yes. You can switch your billing period at any time from your account settings.
-          Annual billing saves up to 17% compared to paying monthly.
+          We&apos;ll email you at day 20 to remind you. If you choose a plan before day 30,
+          everything continues seamlessly. If not, your account is paused but your data is
+          preserved for 30 days in case you decide to subscribe later.
         </p>
       </div>
       <div className="faq-item">
-        <h3>Can I cancel at any time?</h3>
+        <h3>Do you offer discounts for multiple vessels?</h3>
         <p>
-          Yes. There are no long-term contracts. Cancel anytime and you&apos;ll keep access
-          until the end of your billing period.
-        </p>
-      </div>
-      <div className="faq-item">
-        <h3>What happens after the free trial?</h3>
-        <p>
-          At the end of your 14-day trial, you can choose a plan and continue using
-          CrewNotice. If you do nothing, your account simply pauses — your data is kept safe
-          for 30 days in case you decide to come back.
+          Yes. Our Fleet plan includes volume discounts based on the number of vessels. Contact
+          our <a href="/contact">sales team</a> for a custom quote.
         </p>
       </div>
     </div>

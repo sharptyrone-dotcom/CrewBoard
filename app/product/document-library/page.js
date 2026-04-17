@@ -310,7 +310,7 @@ export default function DocumentLibraryPage() {
             <div className="cta-box-inner">
               <h2>Start managing documents the modern way</h2>
               <p>
-                Free 14-day trial. No credit card required. Have your document library live in under
+                Free 30-day trial. No credit card required. Have your document library live in under
                 an hour.
               </p>
               <div className="hero-cta" style={{ justifyContent: 'center' }}>

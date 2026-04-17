@@ -18,7 +18,7 @@ export default function ApiInterestForm() {
     return (
       <div className="api-form">
         <div className="api-form-success">
-          Thanks for your interest! We&apos;ll be in touch once API access is ready for Enterprise customers.
+          Thanks for your interest! We&apos;ll be in touch once API access is ready for Fleet customers.
         </div>
       </div>
     );
