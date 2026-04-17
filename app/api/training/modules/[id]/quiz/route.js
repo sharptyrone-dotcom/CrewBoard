@@ -1,5 +1,8 @@
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/authCheck';
+import { apiLimiter, writeLimiter } from '@/lib/rateLimit';
+import { handleApiError } from '@/lib/apiError';
 
 // ---------------------------------------------------------------------------
 // /api/training/modules/[id]/quiz
@@ -11,16 +14,13 @@ import { NextResponse } from 'next/server';
 //        • Also marks the assignment as in_progress on first access.
 //
 // POST — Submit a quiz attempt.
-//        Body: { crew_member_id, answers: [{ question_id, selected_option_id }] }
+//        Body: { answers: [{ question_id, selected_option_id }] }
 //        • Scores every answer server-side against the stored correct options.
 //        • Creates a quiz_attempts record with the score and pass/fail.
 //        • Updates the assignment status to 'completed' if the crew member
 //          passes (score >= module pass_mark).
 //        • Returns results with correct answers and explanations so the crew
 //          member can review.
-//
-// Query params (GET):
-//   crew_member_id — UUID of the crew member taking the quiz
 // ---------------------------------------------------------------------------
 
 // Parses question_text which may be a plain string or a JSON-encoded
@@ -48,16 +48,14 @@ function shuffle(arr) {
 // ── GET ─────────────────────────────────────────────────────────────────────
 export async function GET(request, { params }) {
   try {
-    const moduleId = params.id;
-    const { searchParams } = new URL(request.url);
-    const crewMemberId = searchParams.get('crew_member_id');
+    const limited = apiLimiter(request);
+    if (limited) return limited;
 
-    if (!crewMemberId) {
-      return NextResponse.json(
-        { error: 'Missing required param: crew_member_id' },
-        { status: 400 },
-      );
-    }
+    const auth = await requireAuth();
+    if (auth.response) return auth.response;
+
+    const moduleId = params.id;
+    const crewMemberId = auth.crewMember.id;
 
     // Verify the crew member is assigned to this module.
     const { data: assignment } = await supabase
@@ -134,21 +132,27 @@ export async function GET(request, { params }) {
       },
     });
   } catch (err) {
-    console.error('[training/quiz] GET failed', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return handleApiError(err, 'training/quiz/GET');
   }
 }
 
 // ── POST ────────────────────────────────────────────────────────────────────
 export async function POST(request, { params }) {
   try {
+    const limited = writeLimiter(request);
+    if (limited) return limited;
+
+    const auth = await requireAuth();
+    if (auth.response) return auth.response;
+
     const moduleId = params.id;
     const body = await request.json();
-    const { crew_member_id, answers } = body;
+    const { answers } = body;
+    const crew_member_id = auth.crewMember.id;
 
-    if (!crew_member_id || !Array.isArray(answers)) {
+    if (!Array.isArray(answers)) {
       return NextResponse.json(
-        { error: 'Missing required fields: crew_member_id, answers[]' },
+        { error: 'Missing required field: answers[]' },
         { status: 400 },
       );
     }
@@ -279,7 +283,6 @@ export async function POST(request, { params }) {
       },
     });
   } catch (err) {
-    console.error('[training/quiz] POST failed', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return handleApiError(err, 'training/quiz/POST');
   }
 }

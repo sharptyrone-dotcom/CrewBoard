@@ -1,5 +1,8 @@
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/authCheck';
+import { writeLimiter } from '@/lib/rateLimit';
+import { handleApiError } from '@/lib/apiError';
 
 // ---------------------------------------------------------------------------
 // POST /api/events/[id]/read
@@ -7,22 +10,18 @@ import { NextResponse } from 'next/server';
 // Mark an event as read by the current crew member. Uses upsert to handle
 // duplicate calls gracefully (the unique constraint on event_id + crew_member_id
 // prevents double-inserts).
-//
-// Body: { crew_member_id }
 // ---------------------------------------------------------------------------
 
 export async function POST(request, { params }) {
   try {
-    const eventId = params.id;
-    const body = await request.json();
-    const { crew_member_id } = body;
+    const limited = writeLimiter(request);
+    if (limited) return limited;
 
-    if (!crew_member_id) {
-      return NextResponse.json(
-        { error: 'Missing required field: crew_member_id' },
-        { status: 400 },
-      );
-    }
+    const auth = await requireAuth();
+    if (auth.response) return auth.response;
+
+    const eventId = params.id;
+    const crew_member_id = auth.crewMember.id;
 
     // Verify event exists.
     const { data: event } = await supabase
@@ -56,7 +55,6 @@ export async function POST(request, { params }) {
       readAt: read?.read_at || new Date().toISOString(),
     });
   } catch (err) {
-    console.error('[events/read] POST failed', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return handleApiError(err, 'events/read');
   }
 }

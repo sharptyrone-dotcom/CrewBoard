@@ -1,5 +1,8 @@
 import { supabaseAdmin as supabaseServer } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/authCheck';
+import { writeLimiter } from '@/lib/rateLimit';
+import { handleApiError } from '@/lib/apiError';
 
 // ---------------------------------------------------------------------------
 // POST /api/notifications/send-reminder
@@ -10,7 +13,6 @@ import { NextResponse } from 'next/server';
 //
 // Body: {
 //   crewMemberIds: string[],     — UUIDs of crew to notify
-//   vesselId: string,            — vessel UUID (to look up push subs)
 //   title: string,               — notification title
 //   body: string,                — notification body / detail
 //   refType?: string,            — 'notice' | 'document' (for deep-link)
@@ -18,9 +20,10 @@ import { NextResponse } from 'next/server';
 // }
 //
 // Response: { email: { sent, failed }, push: { sent, failed } }
+//
+// Note: vesselId is derived from the authenticated caller — the caller can
+// only send reminders to crew on their own vessel.
 // ---------------------------------------------------------------------------
-
-// supabaseServer is the service-role admin client imported from lib/supabase.
 
 // ── Email via Resend ─────────────────────────────────────────────────
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
@@ -173,15 +176,38 @@ async function filterIdsByPreference(crewMemberIds, vesselId, preferenceColumn) 
 // ── Main handler ─────────────────────────────────────────────────────
 export async function POST(request) {
   try {
-    const { crewMemberIds, vesselId, title, body, refType, refId, createNotification, priority, notificationType } = await request.json();
+    const limited = writeLimiter(request);
+    if (limited) return limited;
 
-    if (!crewMemberIds?.length || !vesselId || !title) {
+    const auth = await requireAuth();
+    if (auth.response) return auth.response;
+
+    const { crewMemberIds, title, body, refType, refId, createNotification, priority, notificationType } = await request.json();
+
+    // vesselId is always derived from the authenticated caller — prevents
+    // cross-vessel abuse where an attacker passes a different vesselId.
+    const vesselId = auth.crewMember.vessel_id;
+
+    if (!crewMemberIds?.length || !title) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // Verify all target crew members belong to the caller's vessel.
+    const { data: verifiedCrew } = await supabaseServer
+      .from('crew_members')
+      .select('id')
+      .eq('vessel_id', vesselId)
+      .in('id', crewMemberIds);
+
+    const verifiedIds = (verifiedCrew || []).map(c => c.id);
+
+    if (verifiedIds.length === 0) {
+      return NextResponse.json({ error: 'No valid recipients on your vessel' }, { status: 400 });
     }
 
     // 0. Filter by notification preferences
     const prefCol = getPreferenceColumn({ refType, priority, notificationType });
-    const eligibleIds = await filterIdsByPreference(crewMemberIds, vesselId, prefCol);
+    const eligibleIds = await filterIdsByPreference(verifiedIds, vesselId, prefCol);
 
     // 1. Look up crew emails (only for eligible recipients)
     const { data: crewRows } = await supabaseServer
@@ -215,7 +241,7 @@ export async function POST(request) {
         });
       await Promise.allSettled(emailPromises);
     } else {
-      emailResults.skipped = crewMemberIds.length;
+      emailResults.skipped = verifiedIds.length;
     }
 
     // 4. Send push notifications
@@ -233,7 +259,7 @@ export async function POST(request) {
       });
       await Promise.allSettled(pushPromises);
     } else {
-      pushResults.skipped = crewMemberIds.length;
+      pushResults.skipped = verifiedIds.length;
     }
 
     // 5. Optionally create in-app notifications server-side.
@@ -259,10 +285,9 @@ export async function POST(request) {
     return NextResponse.json({
       email: emailResults,
       push: pushResults,
-      total: crewMemberIds.length,
+      total: verifiedIds.length,
     });
   } catch (err) {
-    console.error('[send-reminder] Unhandled error', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return handleApiError(err, 'send-reminder');
   }
 }

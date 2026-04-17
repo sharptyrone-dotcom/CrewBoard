@@ -47,9 +47,13 @@ export default function LoginScreen() {
     }
   };
 
+  const isDev = typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
   const useDevAccount = (devEmail) => {
     setEmail(devEmail);
-    setPassword('CrewNotice2026');
+    // Dev password is only available in local development
+    setPassword(isDev ? 'CrewNotice2026' : '');
     setError(null);
   };
 
@@ -117,21 +121,23 @@ export default function LoginScreen() {
           </Link>
         </div>
 
-        <div style={{ background: T.bgCard, border: `1px dashed ${T.border}`, borderRadius: 14, padding: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Dev accounts</div>
-          <div style={{ fontSize: 11, color: T.textDim, marginBottom: 10 }}>Click to fill. Password for all seeded users: <code style={{ background: T.bg, padding: '1px 6px', borderRadius: 4 }}>CrewNotice2026</code></div>
-          {DEV_ACCOUNTS.map(acc => (
-            <button
-              key={acc.email}
-              type="button"
-              onClick={() => useDevAccount(acc.email)}
-              style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: `1px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', marginBottom: 6, cursor: 'pointer' }}
-            >
-              <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{acc.name}</div>
-              <div style={{ fontSize: 11, color: T.textMuted }}>{acc.role} — {acc.email}</div>
-            </button>
-          ))}
-        </div>
+        {isDev && (
+          <div style={{ background: T.bgCard, border: `1px dashed ${T.border}`, borderRadius: 14, padding: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Dev accounts (local only)</div>
+            <div style={{ fontSize: 11, color: T.textDim, marginBottom: 10 }}>Click to fill credentials.</div>
+            {DEV_ACCOUNTS.map(acc => (
+              <button
+                key={acc.email}
+                type="button"
+                onClick={() => useDevAccount(acc.email)}
+                style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: `1px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', marginBottom: 6, cursor: 'pointer' }}
+              >
+                <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{acc.name}</div>
+                <div style={{ fontSize: 11, color: T.textMuted }}>{acc.role} — {acc.email}</div>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Legal footer links */}
         <div style={{ textAlign: 'center', marginTop: 24, paddingTop: 16, borderTop: `1px solid ${T.border}` }}>

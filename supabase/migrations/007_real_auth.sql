@@ -9,6 +9,14 @@
 -- password is 'CrewNotice2026' for every seeded account — rotate it before
 -- sharing the URL with anyone outside the dev team.
 --
+-- ⚠️  PRE-LAUNCH CHECKLIST:
+--   1. Change or disable ALL seeded account passwords in the Supabase dashboard
+--   2. Delete or deactivate dev accounts (sophie.laurent@serenity.yacht,
+--      tom.hayes@serenity.yacht, etc.) if not needed in production
+--   3. Rotate the SUPABASE_SERVICE_ROLE_KEY in Vercel environment variables
+--   4. This migration should NOT be re-run in production — dev seed data
+--      should never exist in a production database
+--
 -- This migration was applied to the live DB via MCP during development.
 -- It's committed here so fresh clones of the database can reproduce the
 -- cutover deterministically.

@@ -1,43 +1,31 @@
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
+import { requireAuth, requireAdmin } from '@/lib/authCheck';
+import { apiLimiter, writeLimiter } from '@/lib/rateLimit';
+import { handleApiError } from '@/lib/apiError';
 
 // ---------------------------------------------------------------------------
 // /api/training/modules
 //
 // GET  — List training modules.
-//        Admin: all modules for the vessel with assignment stats (total
-//        assigned, completed, average score).
+//        Admin: all modules for the vessel with assignment stats.
 //        Crew:  only modules they are assigned to, with their personal status.
 //
-// POST — Create a new module (admin only). Accepts content blocks and quiz
-//        questions in a single request so the admin doesn't need multiple
-//        round-trips.
-//
-// Query params (GET):
-//   crew_member_id — UUID of the calling user (required)
-//   vessel_id      — UUID of the vessel (required)
-//
-// Body (POST): {
-//   crew_member_id, vessel_id, title, description, content, attachments,
-//   pass_mark, time_limit_minutes, randomise_questions, is_published,
-//   questions: [{ question_text, question_type, options, explanation, sort_order }]
-// }
+// POST — Create a new module (admin only).
 // ---------------------------------------------------------------------------
 
 // ── GET ─────────────────────────────────────────────────────────────────────
 export async function GET(request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const crewMemberId = searchParams.get('crew_member_id');
-    const vesselId = searchParams.get('vessel_id');
-    const isAdmin = searchParams.get('role') === 'admin';
+    const limited = apiLimiter(request);
+    if (limited) return limited;
 
-    if (!crewMemberId || !vesselId) {
-      return NextResponse.json(
-        { error: 'Missing required params: crew_member_id, vessel_id' },
-        { status: 400 },
-      );
-    }
+    const auth = await requireAuth();
+    if (auth.response) return auth.response;
+
+    const crewMemberId = auth.crewMember.id;
+    const vesselId = auth.crewMember.vessel_id;
+    const isAdmin = auth.crewMember.is_admin;
 
     // ── Admin: all modules + aggregate stats ──
     if (isAdmin) {
@@ -110,18 +98,21 @@ export async function GET(request) {
 
     return NextResponse.json({ modules: result });
   } catch (err) {
-    console.error('[training/modules] GET failed', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return handleApiError(err, 'training/modules/GET');
   }
 }
 
 // ── POST ────────────────────────────────────────────────────────────────────
 export async function POST(request) {
   try {
+    const limited = writeLimiter(request);
+    if (limited) return limited;
+
+    const auth = await requireAdmin();
+    if (auth.response) return auth.response;
+
     const body = await request.json();
     const {
-      crew_member_id,
-      vessel_id,
       title,
       description,
       content,
@@ -133,15 +124,15 @@ export async function POST(request) {
       questions,
     } = body;
 
-    if (!crew_member_id || !vessel_id || !title) {
+    const crew_member_id = auth.crewMember.id;
+    const vessel_id = auth.crewMember.vessel_id;
+
+    if (!title) {
       return NextResponse.json(
-        { error: 'Missing required fields: crew_member_id, vessel_id, title' },
+        { error: 'Missing required field: title' },
         { status: 400 },
       );
     }
-
-    // Admin gating is handled client-side — the module builder UI is only
-    // rendered for admin users. The dev anon RLS policies allow all CRUD.
 
     // 1. Insert the module.
     const { data: mod, error: modErr } = await supabase
@@ -203,7 +194,6 @@ export async function POST(request) {
       { status: 201 },
     );
   } catch (err) {
-    console.error('[training/modules] POST failed', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return handleApiError(err, 'training/modules/POST');
   }
 }

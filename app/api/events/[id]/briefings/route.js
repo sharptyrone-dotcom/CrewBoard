@@ -1,17 +1,26 @@
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
+import { requireAuth, requireAdmin } from '@/lib/authCheck';
+import { apiLimiter, writeLimiter } from '@/lib/rateLimit';
+import { handleApiError } from '@/lib/apiError';
 
 // ---------------------------------------------------------------------------
 // /api/events/[id]/briefings
 //
 // GET  — List briefings for an event, ordered by sort_order.
 // POST — Add a department briefing to an event (admin only).
-//        Body: { crew_member_id, department, content, attachments }
+//        Body: { department, content, attachments }
 // ---------------------------------------------------------------------------
 
 // ── GET ─────────────────────────────────────────────────────────────────────
 export async function GET(request, { params }) {
   try {
+    const limited = apiLimiter(request);
+    if (limited) return limited;
+
+    const auth = await requireAuth();
+    if (auth.response) return auth.response;
+
     const eventId = params.id;
 
     const { data: briefings, error } = await supabase
@@ -35,21 +44,26 @@ export async function GET(request, { params }) {
 
     return NextResponse.json({ briefings: result });
   } catch (err) {
-    console.error('[events/briefings] GET failed', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return handleApiError(err, 'events/briefings/GET');
   }
 }
 
 // ── POST ────────────────────────────────────────────────────────────────────
 export async function POST(request, { params }) {
   try {
+    const limited = writeLimiter(request);
+    if (limited) return limited;
+
+    const auth = await requireAdmin();
+    if (auth.response) return auth.response;
+
     const eventId = params.id;
     const body = await request.json();
-    const { crew_member_id, department, content, attachments } = body;
+    const { department, content, attachments } = body;
 
-    if (!crew_member_id || !department || !content?.trim()) {
+    if (!department || !content?.trim()) {
       return NextResponse.json(
-        { error: 'Missing required fields: crew_member_id, department, content' },
+        { error: 'Missing required fields: department, content' },
         { status: 400 },
       );
     }
@@ -104,7 +118,6 @@ export async function POST(request, { params }) {
       { status: 201 },
     );
   } catch (err) {
-    console.error('[events/briefings] POST failed', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return handleApiError(err, 'events/briefings/POST');
   }
 }

@@ -1,8 +1,11 @@
 import { supabaseAdmin as supabaseServer } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/authCheck';
+import { apiLimiter } from '@/lib/rateLimit';
+import { handleApiError } from '@/lib/apiError';
 
 // ---------------------------------------------------------------------------
-// GET /api/admin/reports?type=...&date_from=...&date_to=...&vessel_id=...
+// GET /api/admin/reports?type=...&date_from=...&date_to=...
 //
 // Generates compliance reports (PDF or CSV) from live Supabase data.
 // The heavy lifting is done by lib/reportGenerator.js; this route
@@ -12,7 +15,6 @@ import { NextResponse } from 'next/server';
 //   type       — compliance_pdf | notice_csv | document_csv | training_csv | activity_csv
 //   date_from  — ISO date string (optional, inclusive)
 //   date_to    — ISO date string (optional, inclusive)
-//   vessel_id  — UUID of the vessel to report on
 // ---------------------------------------------------------------------------
 
 // Map DB rows to the UI shapes that reportGenerator expects.
@@ -83,14 +85,20 @@ async function fetchReportData(vesselId) {
 
 export async function GET(request) {
   try {
+    const limited = apiLimiter(request);
+    if (limited) return limited;
+
+    const auth = await requireAdmin();
+    if (auth.response) return auth.response;
+
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type');
     const dateFrom = searchParams.get('date_from') || undefined;
     const dateTo = searchParams.get('date_to') || undefined;
-    const vesselId = searchParams.get('vessel_id');
+    const vesselId = auth.crewMember.vessel_id;
 
-    if (!type || !vesselId) {
-      return NextResponse.json({ error: 'Missing required params: type, vessel_id' }, { status: 400 });
+    if (!type) {
+      return NextResponse.json({ error: 'Missing required param: type' }, { status: 400 });
     }
 
     const data = await fetchReportData(vesselId);
@@ -136,7 +144,6 @@ export async function GET(request) {
 
     return NextResponse.json({ error: `Unknown report type: ${type}` }, { status: 400 });
   } catch (err) {
-    console.error('[reports] generation failed', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return handleApiError(err, 'admin/reports');
   }
 }

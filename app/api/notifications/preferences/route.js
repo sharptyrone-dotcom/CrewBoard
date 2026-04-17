@@ -1,15 +1,16 @@
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/authCheck';
+import { apiLimiter, writeLimiter } from '@/lib/rateLimit';
+import { handleApiError } from '@/lib/apiError';
 
 // ---------------------------------------------------------------------------
 // /api/notifications/preferences
 //
 // GET  — Return the current user's notification preferences.
 //        Creates a default row if none exists yet.
-//        Query params: crew_member_id, vessel_id
-//
 // PUT  — Update notification preferences.
-//        Body: { crew_member_id, vessel_id, preferences: { ... } }
+//        Body: { preferences: { ... } }
 //        critical_notices is always forced to true.
 // ---------------------------------------------------------------------------
 
@@ -40,13 +41,14 @@ function rowToPreferences(row) {
 // ── GET ──────────────────────────────────────────────────────────────
 export async function GET(request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const crewMemberId = searchParams.get('crew_member_id');
-    const vesselId = searchParams.get('vessel_id');
+    const limited = apiLimiter(request);
+    if (limited) return limited;
 
-    if (!crewMemberId || !vesselId) {
-      return NextResponse.json({ error: 'crew_member_id and vessel_id are required' }, { status: 400 });
-    }
+    const auth = await requireAuth();
+    if (auth.response) return auth.response;
+
+    const crewMemberId = auth.crewMember.id;
+    const vesselId = auth.crewMember.vessel_id;
 
     // Try to fetch existing row
     const { data, error } = await supabase
@@ -56,10 +58,7 @@ export async function GET(request) {
       .eq('vessel_id', vesselId)
       .maybeSingle();
 
-    if (error) {
-      console.error('[notification-preferences] GET fetch failed', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+    if (error) throw error;
 
     if (data) {
       return NextResponse.json({ preferences: rowToPreferences(data) });
@@ -87,24 +86,30 @@ export async function GET(request) {
           .single();
         return NextResponse.json({ preferences: existing ? rowToPreferences(existing) : DEFAULT_PREFERENCES });
       }
-      console.error('[notification-preferences] GET insert failed', insertError);
-      return NextResponse.json({ error: insertError.message }, { status: 500 });
+      throw insertError;
     }
 
     return NextResponse.json({ preferences: rowToPreferences(inserted) });
   } catch (err) {
-    console.error('[notification-preferences] GET unhandled', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return handleApiError(err, 'notifications/preferences/GET');
   }
 }
 
 // ── PUT ──────────────────────────────────────────────────────────────
 export async function PUT(request) {
   try {
-    const { crew_member_id, vessel_id, preferences } = await request.json();
+    const limited = writeLimiter(request);
+    if (limited) return limited;
 
-    if (!crew_member_id || !vessel_id || !preferences) {
-      return NextResponse.json({ error: 'crew_member_id, vessel_id, and preferences are required' }, { status: 400 });
+    const auth = await requireAuth();
+    if (auth.response) return auth.response;
+
+    const { preferences } = await request.json();
+    const crew_member_id = auth.crewMember.id;
+    const vessel_id = auth.crewMember.vessel_id;
+
+    if (!preferences) {
+      return NextResponse.json({ error: 'preferences is required' }, { status: 400 });
     }
 
     // Build the update payload — only allow known columns, force critical on
@@ -143,20 +148,15 @@ export async function PUT(request) {
           .select('*')
           .single();
 
-        if (upsertError) {
-          console.error('[notification-preferences] PUT upsert failed', upsertError);
-          return NextResponse.json({ error: upsertError.message }, { status: 500 });
-        }
+        if (upsertError) throw upsertError;
         return NextResponse.json({ preferences: rowToPreferences(upserted) });
       }
 
-      console.error('[notification-preferences] PUT update failed', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      throw error;
     }
 
     return NextResponse.json({ preferences: rowToPreferences(data) });
   } catch (err) {
-    console.error('[notification-preferences] PUT unhandled', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return handleApiError(err, 'notifications/preferences/PUT');
   }
 }

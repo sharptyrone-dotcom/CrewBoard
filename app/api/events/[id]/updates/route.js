@@ -1,17 +1,26 @@
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/authCheck';
+import { apiLimiter, writeLimiter } from '@/lib/rateLimit';
+import { handleApiError } from '@/lib/apiError';
 
 // ---------------------------------------------------------------------------
 // /api/events/[id]/updates
 //
 // GET  — List live updates for an event, newest first.
 // POST — Post a real-time update (e.g. "ETA changed to 1400").
-//        Body: { crew_member_id, content }
+//        Body: { content }
 // ---------------------------------------------------------------------------
 
 // ── GET ─────────────────────────────────────────────────────────────────────
 export async function GET(request, { params }) {
   try {
+    const limited = apiLimiter(request);
+    if (limited) return limited;
+
+    const auth = await requireAuth();
+    if (auth.response) return auth.response;
+
     const eventId = params.id;
 
     const { data: updates, error } = await supabase
@@ -33,21 +42,27 @@ export async function GET(request, { params }) {
 
     return NextResponse.json({ updates: result });
   } catch (err) {
-    console.error('[events/updates] GET failed', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return handleApiError(err, 'events/updates/GET');
   }
 }
 
 // ── POST ────────────────────────────────────────────────────────────────────
 export async function POST(request, { params }) {
   try {
+    const limited = writeLimiter(request);
+    if (limited) return limited;
+
+    const auth = await requireAuth();
+    if (auth.response) return auth.response;
+
     const eventId = params.id;
     const body = await request.json();
-    const { crew_member_id, content } = body;
+    const { content } = body;
+    const crew_member_id = auth.crewMember.id;
 
-    if (!crew_member_id || !content?.trim()) {
+    if (!content?.trim()) {
       return NextResponse.json(
-        { error: 'Missing required fields: crew_member_id, content' },
+        { error: 'Missing required field: content' },
         { status: 400 },
       );
     }
@@ -116,7 +131,6 @@ export async function POST(request, { params }) {
       { status: 201 },
     );
   } catch (err) {
-    console.error('[events/updates] POST failed', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return handleApiError(err, 'events/updates/POST');
   }
 }

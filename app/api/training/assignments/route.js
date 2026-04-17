@@ -1,5 +1,8 @@
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/authCheck';
+import { apiLimiter } from '@/lib/rateLimit';
+import { handleApiError } from '@/lib/apiError';
 
 // ---------------------------------------------------------------------------
 // GET /api/training/assignments
@@ -9,22 +12,20 @@ import { NextResponse } from 'next/server';
 // quiz score. Ordered by deadline (soonest first), then assigned_at.
 //
 // Query params:
-//   crew_member_id — UUID of the crew member (required)
-//   status         — optional filter: assigned | in_progress | completed | overdue
+//   status — optional filter: assigned | in_progress | completed | overdue
 // ---------------------------------------------------------------------------
 
 export async function GET(request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const crewMemberId = searchParams.get('crew_member_id');
-    const statusFilter = searchParams.get('status');
+    const limited = apiLimiter(request);
+    if (limited) return limited;
 
-    if (!crewMemberId) {
-      return NextResponse.json(
-        { error: 'Missing required param: crew_member_id' },
-        { status: 400 },
-      );
-    }
+    const auth = await requireAuth();
+    if (auth.response) return auth.response;
+
+    const { searchParams } = new URL(request.url);
+    const crewMemberId = auth.crewMember.id;
+    const statusFilter = searchParams.get('status');
 
     // Build query — joins module info and quiz attempts.
     let query = supabase
@@ -100,7 +101,6 @@ export async function GET(request) {
 
     return NextResponse.json({ assignments });
   } catch (err) {
-    console.error('[training/assignments] GET failed', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return handleApiError(err, 'training/assignments');
   }
 }

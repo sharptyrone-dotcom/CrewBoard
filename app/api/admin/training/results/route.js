@@ -1,5 +1,8 @@
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/authCheck';
+import { apiLimiter } from '@/lib/rateLimit';
+import { handleApiError } from '@/lib/apiError';
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/training/results
@@ -8,8 +11,6 @@ import { NextResponse } from 'next/server';
 // per-module stats and per-crew breakdowns with optional filters.
 //
 // Query params:
-//   crew_member_id — UUID of the calling admin (required for auth check)
-//   vessel_id      — UUID of the vessel (required)
 //   module_id      — optional: filter to a single module
 //   department     — optional: filter crew by department
 //   crew_filter    — optional: filter to a specific crew member UUID
@@ -17,19 +18,17 @@ import { NextResponse } from 'next/server';
 
 export async function GET(request) {
   try {
+    const limited = apiLimiter(request);
+    if (limited) return limited;
+
+    const auth = await requireAdmin();
+    if (auth.response) return auth.response;
+
     const { searchParams } = new URL(request.url);
-    const crewMemberId = searchParams.get('crew_member_id');
-    const vesselId = searchParams.get('vessel_id');
+    const vesselId = auth.crewMember.vessel_id;
     const moduleFilter = searchParams.get('module_id');
     const deptFilter = searchParams.get('department');
     const crewFilter = searchParams.get('crew_filter');
-
-    if (!crewMemberId || !vesselId) {
-      return NextResponse.json(
-        { error: 'Missing required params: crew_member_id, vessel_id' },
-        { status: 400 },
-      );
-    }
 
     // ── Parallel data fetches ──
     const [modulesRes, assignmentsRes, crewRes] = await Promise.all([
@@ -207,7 +206,6 @@ export async function GET(request) {
       departments,
     });
   } catch (err) {
-    console.error('[admin/training/results] GET failed', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return handleApiError(err, 'admin/training/results');
   }
 }

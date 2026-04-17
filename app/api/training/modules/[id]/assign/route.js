@@ -1,5 +1,8 @@
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/authCheck';
+import { writeLimiter } from '@/lib/rateLimit';
+import { handleApiError } from '@/lib/apiError';
 
 // ---------------------------------------------------------------------------
 // POST /api/training/modules/[id]/assign
@@ -13,7 +16,6 @@ import { NextResponse } from 'next/server';
 //   { crew_member_ids: 'department:Deck' }       — everyone in a department
 //
 // Body: {
-//   crew_member_id   — UUID of the admin performing the assignment
 //   crew_member_ids  — target specifier (array | 'all' | 'department:X')
 //   deadline         — ISO date string or null
 // }
@@ -21,23 +23,25 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request, { params }) {
   try {
+    const limited = writeLimiter(request);
+    if (limited) return limited;
+
+    const auth = await requireAdmin();
+    if (auth.response) return auth.response;
+
     const moduleId = params.id;
     const body = await request.json();
-    const { crew_member_id, crew_member_ids, deadline, vessel_id } = body;
+    const { crew_member_ids, deadline } = body;
 
-    if (!crew_member_id || !crew_member_ids) {
+    const crew_member_id = auth.crewMember.id;
+    const vesselId = auth.crewMember.vessel_id;
+
+    if (!crew_member_ids) {
       return NextResponse.json(
-        { error: 'Missing required fields: crew_member_id, crew_member_ids' },
+        { error: 'Missing required field: crew_member_ids' },
         { status: 400 },
       );
     }
-
-    // Get caller vessel scope for crew lookups.
-    const { data: caller } = await supabase
-      .from('crew_members')
-      .select('id, vessel_id')
-      .eq('id', crew_member_id)
-      .maybeSingle();
 
     // Verify module exists.
     const { data: mod } = await supabase
@@ -49,8 +53,6 @@ export async function POST(request, { params }) {
     if (!mod) {
       return NextResponse.json({ error: 'Module not found' }, { status: 404 });
     }
-
-    const vesselId = vessel_id || caller?.vessel_id || mod.vessel_id;
 
     // ── Resolve target crew list ──
     let targetIds = [];
@@ -145,6 +147,8 @@ export async function POST(request, { params }) {
       }
 
       // Fire-and-forget push/email via the send-reminder endpoint.
+      // Note: This internal call may fail if the endpoint requires cookie auth.
+      // In-app notifications above are the primary delivery mechanism.
       try {
         const origin = new URL(request.url).origin;
         fetch(`${origin}/api/notifications/send-reminder`, {
@@ -171,7 +175,6 @@ export async function POST(request, { params }) {
       moduleId,
     });
   } catch (err) {
-    console.error('[training/assign] POST failed', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return handleApiError(err, 'training/assign');
   }
 }

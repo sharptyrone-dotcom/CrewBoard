@@ -1,39 +1,30 @@
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
+import { requireAuth, requireAdmin } from '@/lib/authCheck';
+import { apiLimiter, writeLimiter } from '@/lib/rateLimit';
+import { handleApiError } from '@/lib/apiError';
 
 // ---------------------------------------------------------------------------
 // /api/events/[id]
 //
 // GET    — Full event detail with briefings, updates, and read receipts.
-//          Admin: everything including restricted fields and read-receipt list.
-//          Crew:  description, briefings filtered/ordered by department,
-//                 updates, and their read status. Restricted fields are
-//                 hidden unless the crew member's role is in the allowed list.
-//
 // PUT    — Update event (admin only). Partial update — only sent fields change.
-//
 // DELETE — Delete event (admin only). Hard delete for upcoming, soft archive
 //          for completed.
-//
-// Query params (GET / DELETE):
-//   crew_member_id — UUID of the calling user (required)
-//   role           — 'admin' for admin view
 // ---------------------------------------------------------------------------
 
 // ── GET ─────────────────────────────────────────────────────────────────────
 export async function GET(request, { params }) {
   try {
-    const eventId = params.id;
-    const { searchParams } = new URL(request.url);
-    const crewMemberId = searchParams.get('crew_member_id');
-    const isAdmin = searchParams.get('role') === 'admin';
+    const limited = apiLimiter(request);
+    if (limited) return limited;
 
-    if (!crewMemberId) {
-      return NextResponse.json(
-        { error: 'Missing required param: crew_member_id' },
-        { status: 400 },
-      );
-    }
+    const auth = await requireAuth();
+    if (auth.response) return auth.response;
+
+    const eventId = params.id;
+    const crewMemberId = auth.crewMember.id;
+    const isAdmin = auth.crewMember.is_admin;
 
     // Fetch event with all related data.
     const { data: event, error: eventErr } = await supabase
@@ -146,24 +137,22 @@ export async function GET(request, { params }) {
 
     return NextResponse.json({ event: result });
   } catch (err) {
-    console.error('[events/[id]] GET failed', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return handleApiError(err, 'events/[id]/GET');
   }
 }
 
 // ── PUT ─────────────────────────────────────────────────────────────────────
 export async function PUT(request, { params }) {
   try {
+    const limited = writeLimiter(request);
+    if (limited) return limited;
+
+    const auth = await requireAdmin();
+    if (auth.response) return auth.response;
+
     const eventId = params.id;
     const body = await request.json();
-    const { crew_member_id, briefings, ...updates } = body;
-
-    if (!crew_member_id) {
-      return NextResponse.json(
-        { error: 'Missing required field: crew_member_id' },
-        { status: 400 },
-      );
-    }
+    const { briefings, ...updates } = body;
 
     // Build update payload — only include fields that were sent.
     const updatePayload = { updated_at: new Date().toISOString() };
@@ -220,24 +209,20 @@ export async function PUT(request, { params }) {
       },
     });
   } catch (err) {
-    console.error('[events/[id]] PUT failed', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return handleApiError(err, 'events/[id]/PUT');
   }
 }
 
 // ── DELETE ───────────────────────────────────────────────────────────────────
 export async function DELETE(request, { params }) {
   try {
-    const eventId = params.id;
-    const { searchParams } = new URL(request.url);
-    const crewMemberId = searchParams.get('crew_member_id');
+    const limited = writeLimiter(request);
+    if (limited) return limited;
 
-    if (!crewMemberId) {
-      return NextResponse.json(
-        { error: 'Missing required param: crew_member_id' },
-        { status: 400 },
-      );
-    }
+    const auth = await requireAdmin();
+    if (auth.response) return auth.response;
+
+    const eventId = params.id;
 
     // Check current status — archive completed events, delete upcoming.
     const { data: existing } = await supabase
@@ -273,7 +258,6 @@ export async function DELETE(request, { params }) {
       event: { id: existing.id, title: existing.title },
     });
   } catch (err) {
-    console.error('[events/[id]] DELETE failed', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return handleApiError(err, 'events/[id]/DELETE');
   }
 }

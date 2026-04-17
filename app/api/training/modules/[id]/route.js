@@ -1,38 +1,29 @@
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
+import { requireAuth, requireAdmin } from '@/lib/authCheck';
+import { apiLimiter, writeLimiter } from '@/lib/rateLimit';
+import { handleApiError } from '@/lib/apiError';
 
 // ---------------------------------------------------------------------------
 // /api/training/modules/[id]
 //
 // GET    — Full module detail.
-//          Admin: module content + all assignments with crew names + stats.
-//          Crew:  module content + their assignment status + best quiz score.
-//
-// PUT    — Update module (admin only). Replaces content, settings, and
-//          questions. If the module is published and content changed, sends
-//          notifications to assigned crew.
-//
-// DELETE — Soft delete (admin only). Unpublishes and marks the module so it
-//          disappears from crew views while keeping data intact.
-//
-// Query params (GET / DELETE):
-//   crew_member_id — UUID of the calling user (required)
+// PUT    — Update module (admin only).
+// DELETE — Soft delete (admin only).
 // ---------------------------------------------------------------------------
 
 // ── GET ─────────────────────────────────────────────────────────────────────
 export async function GET(request, { params }) {
   try {
-    const moduleId = params.id;
-    const { searchParams } = new URL(request.url);
-    const crewMemberId = searchParams.get('crew_member_id');
-    const isAdmin = searchParams.get('role') === 'admin';
+    const limited = apiLimiter(request);
+    if (limited) return limited;
 
-    if (!crewMemberId) {
-      return NextResponse.json(
-        { error: 'Missing required param: crew_member_id' },
-        { status: 400 },
-      );
-    }
+    const auth = await requireAuth();
+    if (auth.response) return auth.response;
+
+    const moduleId = params.id;
+    const crewMemberId = auth.crewMember.id;
+    const isAdmin = auth.crewMember.is_admin;
 
     // Fetch the module with questions.
     const { data: mod, error: modErr } = await supabase
@@ -175,31 +166,24 @@ export async function GET(request, { params }) {
       },
     });
   } catch (err) {
-    console.error('[training/modules/[id]] GET failed', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return handleApiError(err, 'training/modules/[id]/GET');
   }
 }
 
 // ── PUT ─────────────────────────────────────────────────────────────────────
 export async function PUT(request, { params }) {
   try {
+    const limited = writeLimiter(request);
+    if (limited) return limited;
+
+    const auth = await requireAdmin();
+    if (auth.response) return auth.response;
+
     const moduleId = params.id;
     const body = await request.json();
-    const { crew_member_id, questions, ...updates } = body;
+    const { questions, ...updates } = body;
 
-    if (!crew_member_id) {
-      return NextResponse.json(
-        { error: 'Missing required field: crew_member_id' },
-        { status: 400 },
-      );
-    }
-
-    // Look up caller vessel for notification scoping.
-    const { data: caller } = await supabase
-      .from('crew_members')
-      .select('id, vessel_id')
-      .eq('id', crew_member_id)
-      .maybeSingle();
+    const caller = { vessel_id: auth.crewMember.vessel_id };
 
     // Fetch the current module to detect content changes.
     const { data: existing } = await supabase
@@ -316,24 +300,20 @@ export async function PUT(request, { params }) {
       notifiedCount,
     });
   } catch (err) {
-    console.error('[training/modules/[id]] PUT failed', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return handleApiError(err, 'training/modules/[id]/PUT');
   }
 }
 
 // ── DELETE ───────────────────────────────────────────────────────────────────
 export async function DELETE(request, { params }) {
   try {
-    const moduleId = params.id;
-    const { searchParams } = new URL(request.url);
-    const crewMemberId = searchParams.get('crew_member_id');
+    const limited = writeLimiter(request);
+    if (limited) return limited;
 
-    if (!crewMemberId) {
-      return NextResponse.json(
-        { error: 'Missing required param: crew_member_id' },
-        { status: 400 },
-      );
-    }
+    const auth = await requireAdmin();
+    if (auth.response) return auth.response;
+
+    const moduleId = params.id;
 
     // Soft delete: unpublish and mark the updated_at so the admin can see
     // when it was "deleted". The module and its questions/assignments remain
@@ -358,7 +338,6 @@ export async function DELETE(request, { params }) {
       module: { id: mod.id, title: mod.title },
     });
   } catch (err) {
-    console.error('[training/modules/[id]] DELETE failed', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return handleApiError(err, 'training/modules/[id]/DELETE');
   }
 }

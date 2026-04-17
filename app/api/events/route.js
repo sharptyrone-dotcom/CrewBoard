@@ -1,5 +1,8 @@
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
+import { requireAuth, requireAdmin } from '@/lib/authCheck';
+import { apiLimiter, writeLimiter } from '@/lib/rateLimit';
+import { handleApiError } from '@/lib/apiError';
 
 // ---------------------------------------------------------------------------
 // /api/events
@@ -9,14 +12,10 @@ import { NextResponse } from 'next/server';
 //        Crew get their own read status + department briefing preview.
 //
 // POST — Create a new event (admin only).
-//        Body: { crew_member_id, vessel_id, event_type, title, description,
-//                start_date, end_date, status, attachments,
-//                restricted_fields, notification_schedule, briefings[] }
+//        Body: { event_type, title, description, start_date, end_date, status,
+//                attachments, restricted_fields, notification_schedule, briefings[] }
 //
 // Query params (GET):
-//   crew_member_id — UUID of the calling user (required)
-//   vessel_id      — UUID of the vessel (required)
-//   role           — 'admin' for admin view
 //   status         — filter by status (default: upcoming,active)
 //   include_past   — 'true' to include completed/cancelled
 // ---------------------------------------------------------------------------
@@ -24,19 +23,18 @@ import { NextResponse } from 'next/server';
 // ── GET ─────────────────────────────────────────────────────────────────────
 export async function GET(request) {
   try {
+    const limited = apiLimiter(request);
+    if (limited) return limited;
+
+    const auth = await requireAuth();
+    if (auth.response) return auth.response;
+
     const { searchParams } = new URL(request.url);
-    const crewMemberId = searchParams.get('crew_member_id');
-    const vesselId = searchParams.get('vessel_id');
-    const isAdmin = searchParams.get('role') === 'admin';
+    const crewMemberId = auth.crewMember.id;
+    const vesselId = auth.crewMember.vessel_id;
+    const isAdmin = auth.crewMember.is_admin;
     const statusFilter = searchParams.get('status');
     const includePast = searchParams.get('include_past') === 'true';
-
-    if (!crewMemberId || !vesselId) {
-      return NextResponse.json(
-        { error: 'Missing required params: crew_member_id, vessel_id' },
-        { status: 400 },
-      );
-    }
 
     // Build the query.
     let query = supabase
@@ -119,18 +117,21 @@ export async function GET(request) {
 
     return NextResponse.json({ events: result });
   } catch (err) {
-    console.error('[events] GET failed', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return handleApiError(err, 'events/GET');
   }
 }
 
 // ── POST ────────────────────────────────────────────────────────────────────
 export async function POST(request) {
   try {
+    const limited = writeLimiter(request);
+    if (limited) return limited;
+
+    const auth = await requireAdmin();
+    if (auth.response) return auth.response;
+
     const body = await request.json();
     const {
-      crew_member_id,
-      vessel_id,
       event_type,
       title,
       description,
@@ -143,9 +144,12 @@ export async function POST(request) {
       briefings,
     } = body;
 
-    if (!crew_member_id || !vessel_id || !title || !start_date) {
+    const crew_member_id = auth.crewMember.id;
+    const vessel_id = auth.crewMember.vessel_id;
+
+    if (!title || !start_date) {
       return NextResponse.json(
-        { error: 'Missing required fields: crew_member_id, vessel_id, title, start_date' },
+        { error: 'Missing required fields: title, start_date' },
         { status: 400 },
       );
     }
@@ -264,7 +268,6 @@ export async function POST(request) {
       { status: 201 },
     );
   } catch (err) {
-    console.error('[events] POST failed', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return handleApiError(err, 'events/POST');
   }
 }

@@ -1,5 +1,8 @@
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
+import { requireAuth, requireAdmin } from '@/lib/authCheck';
+import { apiLimiter, writeLimiter } from '@/lib/rateLimit';
+import { handleApiError } from '@/lib/apiError';
 
 // ---------------------------------------------------------------------------
 // /api/taxonomies/departments
@@ -7,20 +10,17 @@ import { NextResponse } from 'next/server';
 // GET    — List custom departments for a vessel
 // POST   — Create a new custom department (admin only)
 // DELETE — Remove a custom department (admin only)
-//
-// Query params:
-//   vessel_id      — UUID (required)
-//   crew_member_id — UUID (required for POST / DELETE)
-//   id             — UUID (required for DELETE)
 // ---------------------------------------------------------------------------
 
 export async function GET(request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const vesselId = searchParams.get('vessel_id');
-    if (!vesselId) {
-      return NextResponse.json({ error: 'Missing vessel_id' }, { status: 400 });
-    }
+    const limited = apiLimiter(request);
+    if (limited) return limited;
+
+    const auth = await requireAuth();
+    if (auth.response) return auth.response;
+
+    const vesselId = auth.crewMember.vessel_id;
 
     const { data, error } = await supabase
       .from('custom_departments')
@@ -31,19 +31,26 @@ export async function GET(request) {
     if (error) throw error;
     return NextResponse.json({ items: data || [] });
   } catch (err) {
-    console.error('[taxonomies/departments] GET failed', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return handleApiError(err, 'taxonomies/departments/GET');
   }
 }
 
 export async function POST(request) {
   try {
-    const body = await request.json();
-    const { vessel_id, crew_member_id, label } = body;
+    const limited = writeLimiter(request);
+    if (limited) return limited;
 
-    if (!vessel_id || !crew_member_id || !label?.trim()) {
+    const auth = await requireAdmin();
+    if (auth.response) return auth.response;
+
+    const body = await request.json();
+    const { label } = body;
+    const vessel_id = auth.crewMember.vessel_id;
+    const crew_member_id = auth.crewMember.id;
+
+    if (!label?.trim()) {
       return NextResponse.json(
-        { error: 'Missing required fields: vessel_id, crew_member_id, label' },
+        { error: 'Missing required field: label' },
         { status: 400 },
       );
     }
@@ -51,18 +58,6 @@ export async function POST(request) {
     const trimmed = label.trim();
     if (trimmed.length > 50) {
       return NextResponse.json({ error: 'Label must be 50 characters or fewer' }, { status: 400 });
-    }
-
-    // Check admin status
-    const { data: caller } = await supabase
-      .from('crew_members')
-      .select('role')
-      .eq('id', crew_member_id)
-      .eq('vessel_id', vessel_id)
-      .maybeSingle();
-
-    if (!caller || caller.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
     // Case-insensitive duplicate check against built-in + custom
@@ -103,32 +98,25 @@ export async function POST(request) {
 
     return NextResponse.json({ item: data }, { status: 201 });
   } catch (err) {
-    console.error('[taxonomies/departments] POST failed', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return handleApiError(err, 'taxonomies/departments/POST');
   }
 }
 
 export async function DELETE(request) {
   try {
+    const limited = writeLimiter(request);
+    if (limited) return limited;
+
+    const auth = await requireAdmin();
+    if (auth.response) return auth.response;
+
     const { searchParams } = new URL(request.url);
-    const vesselId = searchParams.get('vessel_id');
-    const crewMemberId = searchParams.get('crew_member_id');
     const id = searchParams.get('id');
+    const vesselId = auth.crewMember.vessel_id;
+    const crewMemberId = auth.crewMember.id;
 
-    if (!vesselId || !crewMemberId || !id) {
-      return NextResponse.json({ error: 'Missing required params: vessel_id, crew_member_id, id' }, { status: 400 });
-    }
-
-    // Check admin
-    const { data: caller } = await supabase
-      .from('crew_members')
-      .select('role')
-      .eq('id', crewMemberId)
-      .eq('vessel_id', vesselId)
-      .maybeSingle();
-
-    if (!caller || caller.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    if (!id) {
+      return NextResponse.json({ error: 'Missing required param: id' }, { status: 400 });
     }
 
     // Fetch before delete for activity log
@@ -161,7 +149,6 @@ export async function DELETE(request) {
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error('[taxonomies/departments] DELETE failed', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return handleApiError(err, 'taxonomies/departments/DELETE');
   }
 }
