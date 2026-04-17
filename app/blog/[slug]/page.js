@@ -39,7 +39,7 @@ export default function BlogArticlePage({ params }) {
   if (!article) notFound();
 
   return (
-    <div className="lp-root">
+    <div className="lp-root blog-page">
       <MarketingNav />
 
       {/* Article Hero */}

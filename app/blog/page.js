@@ -101,7 +101,7 @@ function BlogCard({ article }) {
 
 export default function BlogPage() {
   return (
-    <div className="lp-root">
+    <div className="lp-root blog-page">
       <MarketingNav />
 
       {/* Page Hero */}
