@@ -1625,30 +1625,110 @@
   border-radius: 999px;
 }
 
-/* ───── FAQ ───── */
+/* ───── FAQ accordion ─────
+ * Collapsible accordion rendered by <FAQAccordion />. Rows share a thin
+ * separator line (no outer card chrome) so the component drops cleanly
+ * into any section without fighting the container. The max-height
+ * transition on .faq-acc-panel is what animates the expand/collapse —
+ * the JS measures the real content height and sets it inline. Styles
+ * also still apply the legacy .faq-wrap / .faq-item selectors so any
+ * stray markup degrades to the old card layout. */
+.lp-root .faq-acc-wrap,
 .lp-root .faq-wrap {
   max-width: 760px; margin: 0 auto;
-  display: flex; flex-direction: column; gap: 14px;
+  border-top: 1px solid var(--line);
 }
-.lp-root .faq-item {
-  padding: 24px 28px;
-  background: #fff; border: 1px solid var(--line);
-  border-radius: 14px; box-shadow: var(--shadow-sm);
-  transition: box-shadow .2s, border-color .2s;
+.lp-root .faq-acc-item {
+  border-bottom: 1px solid var(--line);
 }
-.lp-root .faq-item:hover {
-  box-shadow: var(--shadow-md);
-  border-color: rgba(59,130,246,.2);
+.lp-root .faq-acc-trigger {
+  width: 100%;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px;
+  padding: 20px 8px;
+  min-height: 48px;
+  background: transparent; border: none; cursor: pointer;
+  text-align: left;
+  font: inherit; color: var(--ink);
+  transition: background-color .15s ease;
 }
-.lp-root .faq-item h3 {
-  font-size: 16px; font-weight: 600; color: var(--ink);
-  margin: 0 0 8px; letter-spacing: -0.005em;
+.lp-root .faq-acc-trigger:hover {
+  background: var(--bg-soft);
 }
-.lp-root .faq-item p {
-  font-size: 14px; color: var(--slate); line-height: 1.7; margin: 0;
+.lp-root .faq-acc-trigger:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: -2px;
+  border-radius: 6px;
 }
-.lp-root .faq-item p a { color: var(--blue); font-weight: 600; }
-.lp-root .faq-item p a:hover { text-decoration: underline; }
+.lp-root .faq-acc-question {
+  font-size: 16px; font-weight: 700; color: var(--ink);
+  letter-spacing: -0.005em; line-height: 1.4;
+  flex: 1;
+}
+.lp-root .faq-acc-chevron {
+  flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--slate);
+  transition: transform .2s ease, color .2s ease;
+}
+.lp-root .faq-acc-chevron.is-open {
+  transform: rotate(180deg);
+  color: var(--blue);
+}
+.lp-root .faq-acc-panel {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height .2s ease;
+}
+.lp-root .faq-acc-answer {
+  padding: 12px 8px 20px;
+  font-size: 15px; color: var(--slate); line-height: 1.65;
+}
+.lp-root .faq-acc-answer p {
+  margin: 0 0 12px;
+  font-size: 15px; color: var(--slate); line-height: 1.65;
+}
+.lp-root .faq-acc-answer p:last-child { margin-bottom: 0; }
+.lp-root .faq-acc-answer a { color: var(--blue); font-weight: 600; }
+.lp-root .faq-acc-answer a:hover { text-decoration: underline; }
+
+/* Dark mode — matches the globals.css [data-theme="dark"] palette used
+ * by the app shell. The marketing site is light by default but if a
+ * user opts into dark mode the FAQ should follow. */
+[data-theme="dark"] .lp-root .faq-acc-wrap,
+[data-theme="dark"] .lp-root .faq-wrap {
+  border-top-color: rgba(255,255,255,0.1);
+}
+[data-theme="dark"] .lp-root .faq-acc-item {
+  border-bottom-color: rgba(255,255,255,0.1);
+}
+[data-theme="dark"] .lp-root .faq-acc-question {
+  color: #f1f5f9;
+}
+[data-theme="dark"] .lp-root .faq-acc-trigger:hover {
+  background: rgba(255,255,255,0.04);
+}
+[data-theme="dark"] .lp-root .faq-acc-answer,
+[data-theme="dark"] .lp-root .faq-acc-answer p {
+  color: #cbd5e1;
+}
+
+/* Mobile — full-width tap targets, slightly tighter padding */
+@media (max-width: 520px) {
+  .lp-root .faq-acc-wrap,
+  .lp-root .faq-wrap {
+    max-width: 100%;
+    padding: 0 16px;
+    box-sizing: border-box;
+  }
+  .lp-root .faq-acc-trigger {
+    padding: 16px 4px;
+    min-height: 52px;
+  }
+  .lp-root .faq-acc-question { font-size: 15px; }
+  .lp-root .faq-acc-answer,
+  .lp-root .faq-acc-answer p { font-size: 14px; line-height: 1.6; }
+}
 
 /* ───── Product pages ───── */
 .lp-root .product-hero {
