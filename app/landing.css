@@ -976,16 +976,6 @@
   .lp-root .api-form-row { grid-template-columns: 1fr; }
   .lp-root .product-hero { padding: 56px 0 64px; }
   .lp-root .additional-features-list { grid-template-columns: 1fr; gap: 14px; }
-  /* Detailed product pages */
-  .lp-root .pd-hero-split { flex-direction: column; }
-  .lp-root .pd-hero-text { text-align: center; }
-  .lp-root .pd-hero-text .hero-cta { justify-content: center; }
-  .lp-root .pd-hero-text .product-hero-sub { margin-left: auto; margin-right: auto; }
-  .lp-root .pd-feature-row,
-  .lp-root .pd-feature-row-reversed { flex-direction: column; gap: 36px; }
-  .lp-root .pd-capabilities-grid { grid-template-columns: 1fr 1fr; }
-  .lp-root .pd-standards-grid { grid-template-columns: 1fr; max-width: 480px; }
-  .lp-root .pd-scenario { padding: 36px 32px; }
 }
 @media (max-width: 560px) {
   .lp-root .problem-grid { grid-template-columns: 1fr; }
@@ -1016,13 +1006,6 @@
   .lp-root .product-hero { padding: 48px 0 52px; }
   .lp-root .product-hero-sub { font-size: 17px; }
   .lp-root .breadcrumbs { margin-bottom: 20px; flex-wrap: wrap; }
-  /* Detailed product pages */
-  .lp-root .pd-section { padding: 48px 0; }
-  .lp-root .pd-feature-text h2 { font-size: 22px; }
-  .lp-root .pd-capabilities-grid { grid-template-columns: 1fr; }
-  .lp-root .pd-screenshot { max-width: 100% !important; }
-  .lp-root .pd-scenario { padding: 28px 22px; }
-  .lp-root .pd-compliance h2 { font-size: 22px; }
   .lp-root .article-body .article-steps li { padding: 20px 20px 20px 70px; }
   .lp-root .article-body .article-steps li::before { left: 18px; top: 20px; width: 34px; height: 34px; font-size: 14px; }
   .lp-root .article-body h2 { font-size: 21px; margin: 40px 0 14px; }
@@ -1667,7 +1650,7 @@
 }
 
 /* ───── Detailed product pages (pd-*) ───── */
-.lp-root .pd-section { padding: 72px 0; }
+.lp-root .pd-section { padding: 72px 0; overflow: hidden; }
 .lp-root .pd-section-alt {
   background: var(--bg-soft);
   border-top: 1px solid var(--line-soft);
@@ -1835,6 +1818,42 @@
 .lp-root .pd-standard-card p {
   font-size: 14px; color: var(--slate);
   line-height: 1.6; margin: 0;
+}
+
+/* ───── Product page responsive (placed after base pd-* rules for specificity) ───── */
+@media (max-width: 960px) {
+  .lp-root .pd-hero-split { flex-direction: column; align-items: center; }
+  .lp-root .pd-hero-text { text-align: center; }
+  .lp-root .pd-hero-text .hero-cta { justify-content: center; }
+  .lp-root .pd-hero-text .product-hero-sub { margin-left: auto; margin-right: auto; }
+  .lp-root .pd-screenshot-img { max-width: 100% !important; }
+  .lp-root .pd-feature-row,
+  .lp-root .pd-feature-row-reversed { flex-direction: column; gap: 36px; align-items: stretch; }
+  .lp-root .pd-capabilities-grid { grid-template-columns: 1fr 1fr; }
+  .lp-root .pd-standards-grid { grid-template-columns: 1fr; max-width: 480px; margin-left: auto; margin-right: auto; }
+  .lp-root .pd-scenario { padding: 36px 32px; }
+}
+@media (max-width: 560px) {
+  .lp-root .pd-section { padding: 48px 0; }
+  .lp-root .pd-feature-text h2 { font-size: 22px; }
+  .lp-root .pd-feature-text > p { font-size: 15px; }
+  .lp-root .pd-feature-bullets li { font-size: 14px; }
+  .lp-root .pd-capabilities-grid { grid-template-columns: 1fr; }
+  .lp-root .pd-capability { padding: 22px 20px; }
+  .lp-root .pd-screenshot { max-width: 100% !important; }
+  .lp-root .pd-screenshot-img { max-width: 100% !important; }
+  .lp-root .pd-scenario { padding: 28px 22px; }
+  .lp-root .pd-scenario p { font-size: 15px; }
+  .lp-root .pd-compliance h2 { font-size: 22px; }
+  .lp-root .pd-compliance p { font-size: 15px; }
+  .lp-root .pd-intro { font-size: 15px; }
+  .lp-root .pd-standard-card { padding: 24px 22px; }
+  .lp-root .pd-standard-card h3 { font-size: 16px; }
+  .lp-root .pd-standard-card p { font-size: 13px; }
+  .lp-root .product-hero .hero-cta { flex-direction: column; }
+  .lp-root .product-hero .hero-cta .btn { width: 100%; justify-content: center; }
+  .lp-root .cta-box .hero-cta { flex-direction: column; align-items: stretch; }
+  .lp-root .cta-box .hero-cta .btn { width: 100%; justify-content: center; }
 }
 
 /* ───── Help article body ───── */
