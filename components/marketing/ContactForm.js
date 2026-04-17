@@ -84,7 +84,7 @@ export default function ContactForm() {
           onChange={set('size')}
         >
           <option value="">Select vessel size…</option>
-          <option value="under30">Under 30m</option>
+          <option value="24-30">24–30m</option>
           <option value="30-40">30–40m</option>
           <option value="40-60">40–60m</option>
           <option value="60+">60m+</option>

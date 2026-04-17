@@ -9,6 +9,12 @@ export const metadata = {
     'CrewNotice is built by an active superyacht Officer of the Watch. A product of Sharp Digital Solutions Ltd, London.',
 };
 
+const ChevronRight = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="9 18 15 12 9 6" />
+  </svg>
+);
+
 const ShieldIcon = () => (
   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -35,8 +41,13 @@ export default function AboutPage() {
       <MarketingNav />
 
       {/* Page Hero */}
-      <section className="page-hero">
+      <section className="product-hero">
         <div className="wrap">
+          <nav className="breadcrumbs" aria-label="Breadcrumb">
+            <Link href="/">Home</Link>
+            <ChevronRight />
+            <span className="crumb-current">About</span>
+          </nav>
           <div className="section-eyebrow">About Us</div>
           <h1>Built by Crew, for Crew</h1>
         </div>

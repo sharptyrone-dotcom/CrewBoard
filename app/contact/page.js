@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import '../landing.css';
 import MarketingNav from '@/components/marketing/MarketingNav';
 import MarketingFooter from '@/components/marketing/MarketingFooter';
@@ -8,6 +9,12 @@ export const metadata = {
   description:
     'Get in touch for a free trial, fleet pricing, or questions about crew communications and compliance tracking for superyachts.',
 };
+
+const ChevronRight = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="9 18 15 12 9 6" />
+  </svg>
+);
 
 const MailIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -43,8 +50,13 @@ export default function ContactPage() {
       <MarketingNav />
 
       {/* Page Hero */}
-      <section className="page-hero">
+      <section className="product-hero">
         <div className="wrap">
+          <nav className="breadcrumbs" aria-label="Breadcrumb">
+            <Link href="/">Home</Link>
+            <ChevronRight />
+            <span className="crumb-current">Contact</span>
+          </nav>
           <div className="section-eyebrow">Contact</div>
           <h1>Get in Touch</h1>
           <p className="page-subtitle">

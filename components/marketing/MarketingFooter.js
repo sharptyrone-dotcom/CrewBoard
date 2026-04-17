@@ -71,7 +71,7 @@ export default function MarketingFooter() {
               <li><Link href="/privacy">Privacy</Link></li>
               <li><Link href="/terms">Terms</Link></li>
               <li><Link href="/cookies">Cookies</Link></li>
-              <li><a href="#">DPA</a></li>
+              <li><Link href="/dpa">DPA</Link></li>
             </ul>
           </div>
 
@@ -80,19 +80,19 @@ export default function MarketingFooter() {
         <div className="footer-bottom">
           <div>© 2026 Sharp Digital Solutions Ltd. Made for the crew who keep vessels running.</div>
           <div className="socials">
-            <a href="#" aria-label="LinkedIn">
+            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.063 2.063 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452z" />
               </svg>
             </a>
-            <a href="#" aria-label="Instagram">
+            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
                 <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
                 <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
               </svg>
             </a>
-            <a href="#" aria-label="Twitter/X">
+            <a href="https://x.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter/X">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z" />
               </svg>

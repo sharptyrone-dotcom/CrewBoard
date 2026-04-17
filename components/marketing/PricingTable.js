@@ -44,7 +44,7 @@ export default function PricingTable() {
               <li key={f}><Check /> {f}</li>
             ))}
           </ul>
-          <Link href="/app" className="tier-btn">Start 30-day free trial</Link>
+          <Link href="/join" className="tier-btn">Start 30-day free trial</Link>
         </div>
 
         {/* Fleet card */}

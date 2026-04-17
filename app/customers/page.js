@@ -9,6 +9,12 @@ export const metadata = {
     'How superyacht captains use CrewNotice to keep crew informed, track compliance, and streamline ISM audit preparation.',
 };
 
+const ChevronRight = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="9 18 15 12 9 6" />
+  </svg>
+);
+
 const Arrow = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
     <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
@@ -43,8 +49,13 @@ export default function CustomersPage() {
       <MarketingNav />
 
       {/* Page Hero */}
-      <section className="page-hero">
+      <section className="product-hero">
         <div className="wrap">
+          <nav className="breadcrumbs" aria-label="Breadcrumb">
+            <Link href="/">Home</Link>
+            <ChevronRight />
+            <span className="crumb-current">Customers</span>
+          </nav>
           <div className="section-eyebrow">Customers</div>
           <h1>Trusted by Forward-Thinking Vessels</h1>
           <p className="page-subtitle">
@@ -111,8 +122,8 @@ export default function CustomersPage() {
                 dashboard alone saved us hours before our last ISM audit.
               </p>
               <div className="tq-author">
-                <div className="tq-name">Placeholder Captain</div>
-                <div className="tq-role">Captain, 72m Motor Yacht</div>
+                <div className="tq-name">Captain</div>
+                <div className="tq-role">72m Motor Yacht</div>
                 <span className="tq-badge">Early adopter feedback</span>
               </div>
             </div>
@@ -124,8 +135,8 @@ export default function CustomersPage() {
                 the board and I know it&apos;s been read.
               </p>
               <div className="tq-author">
-                <div className="tq-name">Placeholder Chief Officer</div>
-                <div className="tq-role">Chief Officer, 55m Motor Yacht</div>
+                <div className="tq-name">Chief Officer</div>
+                <div className="tq-role">55m Motor Yacht</div>
                 <span className="tq-badge">Early adopter feedback</span>
               </div>
             </div>
@@ -137,8 +148,8 @@ export default function CustomersPage() {
                 every crew member gets notified and has to re-acknowledge. No more guessing.
               </p>
               <div className="tq-author">
-                <div className="tq-name">Placeholder Bosun</div>
-                <div className="tq-role">Bosun, 48m Sailing Yacht</div>
+                <div className="tq-name">Bosun</div>
+                <div className="tq-role">48m Sailing Yacht</div>
                 <span className="tq-badge">Early adopter feedback</span>
               </div>
             </div>
@@ -158,7 +169,7 @@ export default function CustomersPage() {
                 compliant, and audit-ready.
               </p>
               <div className="hero-cta" style={{ justifyContent: 'center' }}>
-                <Link href="/app" className="btn btn-primary btn-lg">
+                <Link href="/join" className="btn btn-primary btn-lg">
                   Start Free Trial <Arrow />
                 </Link>
                 <Link href="/contact" className="btn btn-ghost btn-lg">Contact Us</Link>

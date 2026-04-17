@@ -9,6 +9,12 @@ export const metadata = {
     'Join Sharp Digital Solutions Ltd. We build purpose-built tools for specialist industries.',
 };
 
+const ChevronRight = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="9 18 15 12 9 6" />
+  </svg>
+);
+
 const BriefcaseIcon = () => (
   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
@@ -29,8 +35,13 @@ export default function CareersPage() {
       <MarketingNav />
 
       {/* Page Hero */}
-      <section className="page-hero">
+      <section className="product-hero">
         <div className="wrap">
+          <nav className="breadcrumbs" aria-label="Breadcrumb">
+            <Link href="/">Home</Link>
+            <ChevronRight />
+            <span className="crumb-current">Careers</span>
+          </nav>
           <div className="section-eyebrow">Careers</div>
           <h1>Careers at Sharp Digital Solutions</h1>
           <p className="page-subtitle">

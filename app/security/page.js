@@ -9,6 +9,12 @@ export const metadata = {
     'Enterprise-grade security. TLS 1.3 encryption, row-level database isolation, GDPR compliant. SOC 2 Type II certified infrastructure.',
 };
 
+const ChevronRight = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="9 18 15 12 9 6" />
+  </svg>
+);
+
 const LockIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
@@ -76,8 +82,13 @@ export default function SecurityPage() {
       <MarketingNav />
 
       {/* Page Hero */}
-      <section className="page-hero">
+      <section className="product-hero">
         <div className="wrap">
+          <nav className="breadcrumbs" aria-label="Breadcrumb">
+            <Link href="/">Home</Link>
+            <ChevronRight />
+            <span className="crumb-current">Security</span>
+          </nav>
           <div className="section-eyebrow">Security</div>
           <h1>Security &amp; Data Protection</h1>
           <p className="page-subtitle">

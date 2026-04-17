@@ -121,7 +121,7 @@ export default function MlcChecklistPage() {
                 captured automatically.
               </p>
               <div className="hero-cta" style={{ justifyContent: 'center' }}>
-                <Link href="/app" className="btn btn-primary btn-lg">
+                <Link href="/join" className="btn btn-primary btn-lg">
                   Start Free Trial <Arrow />
                 </Link>
                 <Link href="/contact" className="btn btn-ghost btn-lg">Talk to Us</Link>

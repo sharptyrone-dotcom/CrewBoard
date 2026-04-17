@@ -123,7 +123,7 @@ export default function DocumentLibraryPage() {
                 acknowledged. End the binder problem for good.
               </p>
               <div className="hero-cta">
-                <Link href="/app" className="btn btn-primary btn-lg">
+                <Link href="/join" className="btn btn-primary btn-lg">
                   Start free trial <Arrow />
                 </Link>
                 <a href="#scenario" className="btn btn-ghost btn-lg">Learn more</a>
@@ -314,7 +314,7 @@ export default function DocumentLibraryPage() {
                 an hour.
               </p>
               <div className="hero-cta" style={{ justifyContent: 'center' }}>
-                <Link href="/app" className="btn btn-primary btn-lg">
+                <Link href="/join" className="btn btn-primary btn-lg">
                   Start free trial <Arrow />
                 </Link>
                 <Link href="/pricing" className="btn btn-ghost btn-lg">View pricing</Link>
