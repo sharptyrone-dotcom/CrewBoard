@@ -24,34 +24,39 @@ import { consumeInvite, validateInviteCode } from '@/lib/invites';
 // would be blocked by RLS since there's no auth.uid() yet).
 // ---------------------------------------------------------------------------
 
-// Inline theme object — matches the landing page palette (blue accent,
-// light surfaces) rather than the teal login screen.
+// Palette reads from the globals.css CSS variables so the page picks up
+// dark mode automatically via the [data-theme="dark"] attribute, matching
+// the redesigned login screen.
 const T = {
-  bg: '#f8fafc',
-  bgCard: '#ffffff',
-  text: '#0f172a',
-  textMuted: '#475569',
-  textDim: '#94a3b8',
-  border: '#e2e8f0',
+  bg: 'var(--bg)',
+  bgCard: 'var(--bg-card)',
+  bgInput: 'var(--bg-input)',
+  text: 'var(--text)',
+  textMuted: 'var(--text-muted)',
+  textDim: 'var(--text-dim)',
+  border: 'var(--border)',
   accent: '#3b82f6',
   accentDark: '#2563eb',
-  accentTint: '#f0f7ff',
+  accentTint: 'var(--accent-tint)',
   critical: '#ef4444',
   success: '#10b981',
-  shadow: '0 1px 3px rgba(15,23,42,0.05), 0 4px 12px rgba(15,23,42,0.04)',
-  shadowLg: '0 10px 30px rgba(15,23,42,0.08)',
+  shadow: 'var(--shadow)',
+  shadowLg: 'var(--shadow-lg)',
 };
 
 const DEPARTMENTS = ['Bridge', 'Deck', 'Engine', 'Interior', 'Safety', 'General'];
 
+// Inputs bumped to 16px / 48px min-height so iOS doesn't zoom on focus
+// and so the tap target is comfortable. Matches the login screen.
 const input = {
   width: '100%',
-  padding: 12,
-  borderRadius: 10,
+  minHeight: 48,
+  padding: '12px 16px',
+  borderRadius: 8,
   border: `1px solid ${T.border}`,
-  background: T.bgCard,
+  background: T.bgInput,
   color: T.text,
-  fontSize: 14,
+  fontSize: 16,
   outline: 'none',
   boxSizing: 'border-box',
   fontFamily: 'inherit',
@@ -59,10 +64,10 @@ const input = {
 
 const label = {
   display: 'block',
-  fontSize: 12,
+  fontSize: 14,
   fontWeight: 600,
-  color: T.textMuted,
-  marginBottom: 6,
+  color: T.text,
+  marginBottom: 8,
 };
 
 // Derives two-letter initials for the avatar_initials column so the new
@@ -278,7 +283,7 @@ export default function JoinPage() {
             <button
               type="submit"
               disabled={verifying || !code.trim()}
-              style={{ width: '100%', padding: '14px 16px', borderRadius: 10, border: 'none', background: verifying || !code.trim() ? T.textDim : T.accent, color: '#fff', fontSize: 14, fontWeight: 700, cursor: verifying || !code.trim() ? 'default' : 'pointer' }}
+              style={{ width: '100%', minHeight: 48, padding: '12px 20px', borderRadius: 10, border: 'none', background: verifying || !code.trim() ? T.textDim : T.accent, color: '#fff', fontSize: 16, fontWeight: 700, cursor: verifying || !code.trim() ? 'default' : 'pointer', boxShadow: verifying || !code.trim() ? 'none' : '0 4px 10px rgba(59,130,246,0.25)' }}
             >
               {verifying ? 'Verifying…' : 'Verify code'}
             </button>
@@ -417,7 +422,7 @@ export default function JoinPage() {
             <button
               type="submit"
               disabled={submitting}
-              style={{ width: '100%', padding: '14px 16px', borderRadius: 10, border: 'none', background: submitting ? T.textDim : T.accent, color: '#fff', fontSize: 14, fontWeight: 700, cursor: submitting ? 'default' : 'pointer' }}
+              style={{ width: '100%', minHeight: 48, padding: '12px 20px', borderRadius: 10, border: 'none', background: submitting ? T.textDim : T.accent, color: '#fff', fontSize: 16, fontWeight: 700, cursor: submitting ? 'default' : 'pointer', boxShadow: submitting ? 'none' : '0 4px 10px rgba(59,130,246,0.25)' }}
             >
               {submitting ? 'Joining…' : 'Join Vessel'}
             </button>
