@@ -73,7 +73,7 @@ export default function PricingPage() {
               <tbody>
                 {[
                   ['Notice Board & Acknowledgements', true, true],
-                  ['Document Library (100GB)', true, 'Unlimited'],
+                  ['Document Library — reads, acknowledgements & version control (100GB)', true, 'Unlimited'],
                   ['Training & Quiz Engine', true, true],
                   ['Events & Guest Briefings', true, true],
                   ['Compliance Dashboard & Exports', true, true],

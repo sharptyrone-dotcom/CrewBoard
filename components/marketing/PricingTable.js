@@ -8,7 +8,7 @@ const Check = ({ size = 16, strokeWidth = 3 }) => (
 
 const VESSEL_FEATURES = [
   'Digital Notice Board with read tracking & acknowledgements',
-  'Document Library with version control (100GB storage)',
+  'Document Library with read tracking, acknowledgements & version control (100GB)',
   'Training & Quiz Engine',
   'Events & Guest Briefings',
   'Compliance Dashboard & audit exports',

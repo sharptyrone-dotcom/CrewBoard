@@ -4,9 +4,9 @@ import MarketingNav from '@/components/marketing/MarketingNav';
 import MarketingFooter from '@/components/marketing/MarketingFooter';
 
 export const metadata = {
-  title: 'Yacht Document Library with Version Control & Acknowledgements',
+  title: 'Yacht Document Library with Read Tracking, Acknowledgements & Version Control',
   description:
-    'Upload SOPs, risk assessments, and manuals with automatic version control. Track crew acknowledgements per version. Offline access for passages. 100GB storage included.',
+    'Upload SOPs, risk assessments, and manuals with automatic version control. See who has read each document and track crew acknowledgements per version. Offline access for passages. 100GB storage included.',
 };
 
 const Arrow = () => (

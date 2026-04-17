@@ -480,6 +480,37 @@ export default function CrewNotice({ user }) {
     }
   };
 
+  // Fired by DocDetail *after* a fresh read row is successfully inserted
+  // on the server. The network write already happened — this handler's
+  // only job is to push the current user into the local docs/selectedDoc
+  // state so the UI reflects the new read without a refetch. If the
+  // upsert collapsed (row already existed) DocDetail won't call us.
+  const handleDocumentRead = (docId) => {
+    if (!currentUser?.id) return;
+    setDocs(prev => prev.map(d => {
+      if (d.id !== docId) return d;
+      const existing = Array.isArray(d.readBy) ? d.readBy : [];
+      if (existing.includes(currentUser.id)) return d;
+      const existingReceipts = Array.isArray(d.readReceipts) ? d.readReceipts : [];
+      return {
+        ...d,
+        readBy: [...existing, currentUser.id],
+        readReceipts: [...existingReceipts, { crewMemberId: currentUser.id, readAt: new Date().toISOString() }],
+      };
+    }));
+    setSelectedDoc(prev => {
+      if (!prev || prev.id !== docId) return prev;
+      const existing = Array.isArray(prev.readBy) ? prev.readBy : [];
+      if (existing.includes(currentUser.id)) return prev;
+      const existingReceipts = Array.isArray(prev.readReceipts) ? prev.readReceipts : [];
+      return {
+        ...prev,
+        readBy: [...existing, currentUser.id],
+        readReceipts: [...existingReceipts, { crewMemberId: currentUser.id, readAt: new Date().toISOString() }],
+      };
+    });
+  };
+
   const handleMarkRead = async (noticeId) => {
     const notice = notices.find(n => n.id === noticeId);
     setNotices(prev => prev.map(n => n.id === noticeId ? { ...n, readBy: [...new Set([...n.readBy, currentUser.id])] } : n));
@@ -1596,7 +1627,7 @@ export default function CrewNotice({ user }) {
       switch (tab) {
         case 'home': return <AdminDashboard notices={notices} docs={docs} liveCrew={liveCrew} isDesktop={isDesktop} setSelectedCrewMember={setSelectedCrewMember} setShowNewNotice={setShowNewNotice} setShowNewDoc={setShowNewDoc} setShowExportReport={setShowExportReport} dashReminderState={dashReminderState} setDashReminderState={setDashReminderState} dashReminderSentCount={dashReminderSentCount} setDashReminderSentCount={setDashReminderSentCount} handleSendDashboardReminder={handleSendDashboardReminder} trainingModules={trainingModules} events={events} setTab={setTab} setAdminNoticeView={setAdminNoticeView} setSelectedDoc={setSelectedDoc} setTrainingView={setTrainingView} setSelectedModule={setSelectedModule} setAdminEventView={setAdminEventView} handleLoadEventDetail={handleLoadEventDetail} />;
         case 'notices': return <NoticesScreen selectedNotice={selectedNotice} currentUser={currentUser} notices={notices} noticeFilter={noticeFilter} searchQuery={searchQuery} setSearchQuery={setSearchQuery} setNoticeFilter={setNoticeFilter} setSelectedNotice={setSelectedNotice} setAdminNoticeView={setAdminNoticeView} handleAcknowledge={handleAcknowledge} handleMarkRead={handleMarkRead} handlePollVote={handlePollVote} handleBulkNoticeAction={handleBulkNoticeAction} role={role} crew={crew} isDesktop={isDesktop} noticesLoading={noticesLoading} noticesError={noticesError} categoryOptions={taxonomies.categoriesWithAll} />;
-        case 'docs': return <DocsScreen selectedDoc={selectedDoc} setSelectedDoc={setSelectedDoc} currentUser={currentUser} docs={docs} docDeptFilter={docDeptFilter} docTypeFilter={docTypeFilter} setDocDeptFilter={setDocDeptFilter} setDocTypeFilter={setDocTypeFilter} quickAccessIds={quickAccessIds} toggleQuickAccess={toggleQuickAccess} handleAckDoc={handleAckDoc} handleDeleteDoc={handleDeleteDoc} handleReplaceDoc={handleReplaceDoc} role={role} isDesktop={isDesktop} crew={crew} setReplaceDocState={setReplaceDocState} setShowReplaceDoc={setShowReplaceDoc} isDocCached={isDocCached} cachingDocId={cachingDocId} setCachingDocId={setCachingDocId} cacheDocument={cacheDocument} getDocumentSignedUrl={getDocumentSignedUrl} departmentOptions={taxonomies.departmentsWithAll} docTypeOptions={taxonomies.docTypesWithAll} docSearchQuery={docSearchQuery} setDocSearchQuery={setDocSearchQuery} />;
+        case 'docs': return <DocsScreen selectedDoc={selectedDoc} setSelectedDoc={setSelectedDoc} currentUser={currentUser} docs={docs} docDeptFilter={docDeptFilter} docTypeFilter={docTypeFilter} setDocDeptFilter={setDocDeptFilter} setDocTypeFilter={setDocTypeFilter} quickAccessIds={quickAccessIds} toggleQuickAccess={toggleQuickAccess} handleAckDoc={handleAckDoc} handleDeleteDoc={handleDeleteDoc} handleReplaceDoc={handleReplaceDoc} role={role} isDesktop={isDesktop} crew={crew} setReplaceDocState={setReplaceDocState} setShowReplaceDoc={setShowReplaceDoc} isDocCached={isDocCached} cachingDocId={cachingDocId} setCachingDocId={setCachingDocId} cacheDocument={cacheDocument} getDocumentSignedUrl={getDocumentSignedUrl} departmentOptions={taxonomies.departmentsWithAll} docTypeOptions={taxonomies.docTypesWithAll} docSearchQuery={docSearchQuery} setDocSearchQuery={setDocSearchQuery} onDocumentRead={handleDocumentRead} />;
         case 'training': return <AdminTrainingScreen trainingView={trainingView} setTrainingView={setTrainingView} selectedModule={selectedModule} setSelectedModule={setSelectedModule} adminTrainingResults={adminTrainingResults} setAdminTrainingResults={setAdminTrainingResults} trainingModules={trainingModules} trainingLoading={trainingLoading} adminTrainDeptFilter={adminTrainDeptFilter} setAdminTrainDeptFilter={setAdminTrainDeptFilter} trainingReminderState={trainingReminderState} setTrainingReminderState={setTrainingReminderState} handleLoadAdminModuleResults={handleLoadAdminModuleResults} handleEditModule={handleEditModule} handleSendTrainingReminder={handleSendTrainingReminder} isDesktop={isDesktop} currentUser={currentUser} />;
         case 'events': return <AdminEventsScreen adminEventView={adminEventView} setAdminEventView={setAdminEventView} adminEventDetail={adminEventDetail} setAdminEventDetail={setAdminEventDetail} adminEventDetailLoading={adminEventDetailLoading} events={events} eventsLoading={eventsLoading} eventFilter={eventFilter} setEventFilter={setEventFilter} isDesktop={isDesktop} handleLoadEventDetail={handleLoadEventDetail} handleArchiveEvent={handleArchiveEvent} handleDeleteEvent={handleDeleteEvent} handlePostEventUpdate={handlePostEventUpdate} newUpdateText={newUpdateText} setNewUpdateText={setNewUpdateText} postingUpdate={postingUpdate} setShowNewEvent={setShowNewEvent} getCountdown={getCountdown} EVENT_TYPE_ICONS={EVENT_TYPE_ICONS} EVENT_TYPE_COLORS={EVENT_TYPE_COLORS} EVENT_TYPE_LABELS={EVENT_TYPE_LABELS} />;
         case 'crew': return <CrewManagement liveCrew={liveCrew} selectedCrewMember={selectedCrewMember} setSelectedCrewMember={setSelectedCrewMember} notices={notices} docs={docs} trainingModules={trainingModules} isDesktop={isDesktop} handleBulkCrewAction={handleBulkCrewAction} categoryOptions={taxonomies.categoriesWithAll} />;
@@ -1608,7 +1639,7 @@ export default function CrewNotice({ user }) {
     switch (tab) {
       case 'home': return <CrewHome currentUser={currentUser} unreadNotices={unreadNotices} pendingAcks={pendingAcks} pendingDocAcks={pendingDocAcks} notices={notices} docs={docs} trainingModules={trainingModules} quickAccessIds={quickAccessIds} setSelectedNotice={setSelectedNotice} setSelectedDoc={setSelectedDoc} setTab={setTab} />;
       case 'notices': return <NoticesScreen selectedNotice={selectedNotice} currentUser={currentUser} notices={notices} noticeFilter={noticeFilter} searchQuery={searchQuery} setSearchQuery={setSearchQuery} setNoticeFilter={setNoticeFilter} setSelectedNotice={setSelectedNotice} setAdminNoticeView={setAdminNoticeView} handleAcknowledge={handleAcknowledge} handleMarkRead={handleMarkRead} handlePollVote={handlePollVote} handleBulkNoticeAction={handleBulkNoticeAction} role={role} crew={crew} isDesktop={isDesktop} noticesLoading={noticesLoading} noticesError={noticesError} categoryOptions={taxonomies.categoriesWithAll} />;
-      case 'docs': return <DocsScreen selectedDoc={selectedDoc} setSelectedDoc={setSelectedDoc} currentUser={currentUser} docs={docs} docDeptFilter={docDeptFilter} docTypeFilter={docTypeFilter} setDocDeptFilter={setDocDeptFilter} setDocTypeFilter={setDocTypeFilter} quickAccessIds={quickAccessIds} toggleQuickAccess={toggleQuickAccess} handleAckDoc={handleAckDoc} handleDeleteDoc={handleDeleteDoc} handleReplaceDoc={handleReplaceDoc} role={role} isDesktop={isDesktop} crew={crew} setReplaceDocState={setReplaceDocState} setShowReplaceDoc={setShowReplaceDoc} isDocCached={isDocCached} cachingDocId={cachingDocId} setCachingDocId={setCachingDocId} cacheDocument={cacheDocument} getDocumentSignedUrl={getDocumentSignedUrl} departmentOptions={taxonomies.departmentsWithAll} docTypeOptions={taxonomies.docTypesWithAll} docSearchQuery={docSearchQuery} setDocSearchQuery={setDocSearchQuery} />;
+      case 'docs': return <DocsScreen selectedDoc={selectedDoc} setSelectedDoc={setSelectedDoc} currentUser={currentUser} docs={docs} docDeptFilter={docDeptFilter} docTypeFilter={docTypeFilter} setDocDeptFilter={setDocDeptFilter} setDocTypeFilter={setDocTypeFilter} quickAccessIds={quickAccessIds} toggleQuickAccess={toggleQuickAccess} handleAckDoc={handleAckDoc} handleDeleteDoc={handleDeleteDoc} handleReplaceDoc={handleReplaceDoc} role={role} isDesktop={isDesktop} crew={crew} setReplaceDocState={setReplaceDocState} setShowReplaceDoc={setShowReplaceDoc} isDocCached={isDocCached} cachingDocId={cachingDocId} setCachingDocId={setCachingDocId} cacheDocument={cacheDocument} getDocumentSignedUrl={getDocumentSignedUrl} departmentOptions={taxonomies.departmentsWithAll} docTypeOptions={taxonomies.docTypesWithAll} docSearchQuery={docSearchQuery} setDocSearchQuery={setDocSearchQuery} onDocumentRead={handleDocumentRead} />;
       case 'training': return <CrewTrainingScreen trainingView={trainingView} selectedModule={selectedModule} setTrainingView={setTrainingView} setSelectedModule={setSelectedModule} quizQuestions={quizQuestions} quizCurrent={quizCurrent} quizAnswers={quizAnswers} setQuizAnswers={setQuizAnswers} setQuizCurrent={setQuizCurrent} quizResults={quizResults} setQuizResults={setQuizResults} quizSubmitting={quizSubmitting} quizTimerLeft={quizTimerLeft} handleStartQuiz={handleStartQuiz} handleSubmitQuiz={handleSubmitQuiz} trainingModules={trainingModules} trainingLoading={trainingLoading} currentUser={currentUser} resolveContentUrls={resolveContentUrls} isDesktop={isDesktop} />;
       case 'events': return <CrewEventsScreen selectedEvent={selectedEvent} setSelectedEvent={setSelectedEvent} eventDetail={eventDetail} setEventDetail={setEventDetail} eventDetailLoading={eventDetailLoading} events={events} eventsLoading={eventsLoading} eventFilter={eventFilter} setEventFilter={setEventFilter} handleLoadEventDetail={handleLoadEventDetail} handleMarkEventRead={handleMarkEventRead} getCountdown={getCountdown} EVENT_TYPE_ICONS={EVENT_TYPE_ICONS} EVENT_TYPE_COLORS={EVENT_TYPE_COLORS} EVENT_TYPE_LABELS={EVENT_TYPE_LABELS} />;
       case 'profile': return showNotifPrefs

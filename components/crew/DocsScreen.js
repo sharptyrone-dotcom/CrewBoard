@@ -5,7 +5,7 @@ import FilterChips from '../shared/FilterChips';
 import ComplianceBar from '../shared/ComplianceBar';
 import DocDetail from '../documents/DocDetail';
 
-export default function DocsScreen({ selectedDoc, setSelectedDoc, currentUser, docs, docDeptFilter, docTypeFilter, setDocDeptFilter, setDocTypeFilter, quickAccessIds, toggleQuickAccess, handleAckDoc, handleDeleteDoc, handleReplaceDoc, role, isDesktop, crew, setReplaceDocState, setShowReplaceDoc, isDocCached, cachingDocId, setCachingDocId, cacheDocument, getDocumentSignedUrl, departmentOptions, docTypeOptions, docSearchQuery = '', setDocSearchQuery }) {
+export default function DocsScreen({ selectedDoc, setSelectedDoc, currentUser, docs, docDeptFilter, docTypeFilter, setDocDeptFilter, setDocTypeFilter, quickAccessIds, toggleQuickAccess, handleAckDoc, handleDeleteDoc, handleReplaceDoc, role, isDesktop, crew = [], setReplaceDocState, setShowReplaceDoc, isDocCached, cachingDocId, setCachingDocId, cacheDocument, getDocumentSignedUrl, departmentOptions, docTypeOptions, docSearchQuery = '', setDocSearchQuery, onDocumentRead }) {
   // Local input state mirrors the parent's debounced value so the field
   // stays responsive while typing. A 300ms debounce pushes the value up
   // to the parent, which is where the filter actually reads from — that
@@ -51,6 +51,8 @@ export default function DocsScreen({ selectedDoc, setSelectedDoc, currentUser, d
       onAcknowledge={handleAckDoc}
       role={role}
       isDesktop={isDesktop}
+      crew={crew}
+      onReadRecorded={onDocumentRead}
       isQuickAccess={quickAccessIds.includes(selectedDoc.id)}
       onToggleQuickAccess={toggleQuickAccess}
       onDelete={role === 'admin' ? () => handleDeleteDoc(selectedDoc.id) : undefined}
@@ -177,8 +179,17 @@ export default function DocsScreen({ selectedDoc, setSelectedDoc, currentUser, d
         <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(2, 1fr)' : '1fr', gap: isDesktop ? 12 : 8 }}>
           {filtered.map(d => {
             const isAcked = d.acknowledgedBy.includes(currentUser.id);
+            // Reads are a superset of acks (acknowledging implies reading),
+            // so union them for the "has seen this" tally the admin sees.
+            const readBy = Array.isArray(d.readBy) ? d.readBy : [];
+            const seenIds = new Set([...readBy, ...d.acknowledgedBy]);
+            const readCount = seenIds.size;
+            const readRatio = `${readCount}/${crew.length}`;
+            const readPercent = crew.length > 0 ? (readCount / crew.length) * 100 : 0;
             const ackRatio = `${d.acknowledgedBy.length}/${crew.length}`;
-            const ackPercent = crew.length > 0 ? (d.acknowledgedBy.length / crew.length) * 100 : 0;
+            // Crew card badge: acknowledged (green) trumps read (blue dot)
+            // so the higher-commitment state always wins visually.
+            const isRead = readBy.includes(currentUser.id) || isAcked;
             return (
               <button key={d.id} onClick={() => setSelectedDoc(d)} className="cb-card" style={{ display: 'flex', gap: 14, padding: isDesktop ? '18px 22px' : '18px 20px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: isDesktop ? 14 : 16, cursor: 'pointer', textAlign: 'left', width: '100%', boxShadow: T.shadow }}>
                 <div style={{ width: 44, height: 50, borderRadius: 10, background: T.accentTint, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.accentDark, flexShrink: 0 }}>{Icons.file}</div>
@@ -189,8 +200,10 @@ export default function DocsScreen({ selectedDoc, setSelectedDoc, currentUser, d
                   </div>
                   {role === 'admin' && (
                     <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ flex: 1 }}><ComplianceBar value={ackPercent} /></div>
-                      <span style={{ fontSize: 11, color: T.textMuted, flexShrink: 0 }}>{ackRatio}</span>
+                      <div style={{ flex: 1 }}><ComplianceBar value={readPercent} /></div>
+                      <span style={{ fontSize: 11, color: T.textMuted, flexShrink: 0 }}>
+                        {readRatio} read{d.required ? ` · ${ackRatio} ack` : ''}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -215,7 +228,12 @@ export default function DocsScreen({ selectedDoc, setSelectedDoc, currentUser, d
                         <Icon d={<><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></>} size={16} />
                       </button>
                     )}
-                    {d.required && (isAcked ? <span style={{ color: T.success }}>{Icons.checkCircle}</span> : <span style={{ fontSize: 10, fontWeight: 700, color: T.gold, background: `${T.gold}18`, padding: '4px 8px', borderRadius: 4 }}>ACK</span>)}
+                    {d.required
+                      ? (isAcked
+                          ? <span style={{ color: T.success }}>{Icons.checkCircle}</span>
+                          : <span style={{ fontSize: 10, fontWeight: 700, color: T.gold, background: `${T.gold}18`, padding: '4px 8px', borderRadius: 4 }}>ACK</span>)
+                      : (isRead && <span style={{ fontSize: 10, fontWeight: 700, color: T.accent, background: T.accentTint, padding: '4px 8px', borderRadius: 4 }}>READ</span>)
+                    }
                   </div>
                 )}
               </button>

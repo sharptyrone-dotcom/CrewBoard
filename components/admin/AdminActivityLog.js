@@ -93,6 +93,13 @@ const AdminActivityLog = ({ activity, activityLoading, crew, isDesktop }) => {
           icon: Icons.file,
           color: T.gold,
         };
+      case ACTIVITY_ACTIONS.DOCUMENT_READ:
+        return {
+          verb: 'read',
+          detail: row.metadata?.version ? `${title} (v${row.metadata.version})` : (title || 'a document'),
+          icon: Icons.eye || Icons.file,
+          color: T.accent,
+        };
       default:
         return { verb: row.action, detail: '', icon: Icons.bell, color: T.textMuted };
     }

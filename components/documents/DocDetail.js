@@ -3,9 +3,11 @@ import T from '../shared/theme';
 import Icons, { Icon } from '../shared/Icons';
 import { CategoryBadge } from '../shared/Badge';
 import BackButton from '../shared/BackButton';
-import { getDocumentSignedUrl } from '@/lib/documents';
+import { getDocumentSignedUrl, recordDocumentRead } from '@/lib/documents';
+import { logActivity, ACTIVITY_ACTIONS } from '@/lib/activity';
+import ReadByPanel from './ReadByPanel';
 
-export default function DocDetail({ doc, currentUser, onBack, onAcknowledge, role, onDelete, onReplace, isDesktop, isQuickAccess, onToggleQuickAccess, isOfflineCached, onCacheOffline, cachingOffline }) {
+export default function DocDetail({ doc, currentUser, onBack, onAcknowledge, role, onDelete, onReplace, isDesktop, isQuickAccess, onToggleQuickAccess, isOfflineCached, onCacheOffline, cachingOffline, crew = [], onReadRecorded }) {
   const isAcked = doc.acknowledgedBy.includes(currentUser.id);
   const isRealFile = !!doc.fileUrl && !/^https?:\/\//i.test(doc.fileUrl);
   const isAdmin = role === 'admin';
@@ -38,6 +40,48 @@ export default function DocDetail({ doc, currentUser, onBack, onAcknowledge, rol
       });
     return () => { cancelled = true; };
   }, [doc.fileUrl, isRealFile]);
+
+  // Record an implicit read the first time a crew member opens a
+  // document. Admins are skipped — they'd pollute "who has read this"
+  // stats by just reviewing the library. Best-effort: errors are
+  // swallowed inside recordDocumentRead, and the upsert is idempotent
+  // so re-opening the same document costs exactly one no-op write.
+  useEffect(() => {
+    if (isAdmin) return;
+    if (!doc?.id || !currentUser?.id) return;
+    // If we already have them in readBy we've logged this session — no
+    // point firing another round-trip.
+    const alreadyRead = Array.isArray(doc.readBy) && doc.readBy.includes(currentUser.id);
+    if (alreadyRead) return;
+
+    let cancelled = false;
+    recordDocumentRead({
+      documentId: doc.id,
+      crewMemberId: currentUser.id,
+      vesselId: currentUser.vesselId,
+    }).then(result => {
+      if (cancelled) return;
+      // `result` is null when the row already existed (ignoreDuplicates
+      // collapsed the insert) — in that case the activity_log row was
+      // already written on the first read, so skip the duplicate log.
+      // If a fresh read was inserted, notify the parent so the docs
+      // state can be optimistically updated AND write the activity row.
+      if (result) {
+        if (typeof onReadRecorded === 'function') {
+          try { onReadRecorded(doc.id); } catch (_) { /* non-fatal */ }
+        }
+        logActivity({
+          crewMemberId: currentUser.id,
+          action: ACTIVITY_ACTIONS.DOCUMENT_READ,
+          targetType: 'document',
+          targetId: doc.id,
+          metadata: { title: doc.title, version: doc.version || null },
+        }).catch(() => { /* non-fatal */ });
+      }
+    }).catch(() => { /* non-fatal — read tracking never blocks viewing */ });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doc?.id, currentUser?.id, isAdmin]);
 
   return (
     <div style={{ padding: 20 }}>
@@ -86,6 +130,11 @@ export default function DocDetail({ doc, currentUser, onBack, onAcknowledge, rol
           </p>
         </div>
       )}
+      {/* Admin-only read tracking. Placed between the doc metadata and the
+          PDF viewer so the admin can see who has engaged with the doc at
+          a glance before scrolling into the content itself. Hidden from
+          crew — they don't need to see colleagues' read status. */}
+      {isAdmin && <ReadByPanel doc={doc} crew={crew} />}
       {isRealFile ? (
         <div
           onContextMenu={e => e.preventDefault()}
