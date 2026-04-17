@@ -67,19 +67,83 @@ function mapActivity(row) {
   };
 }
 
+// Map a training_assignment row (with joined module + attempts) into the
+// flat shape the report generator consumes. Status is recomputed here so
+// a stale DB value doesn't mask a missed deadline.
+function mapTrainingAssignment(row) {
+  const attempts = Array.isArray(row.quiz_attempts) ? row.quiz_attempts : [];
+  // Best score wins (latest tie-breaker). Passed if any attempt passed.
+  let bestScore = null;
+  let passed = false;
+  let latestCompleted = null;
+  for (const a of attempts) {
+    if (typeof a.score === 'number' && (bestScore === null || a.score > bestScore)) {
+      bestScore = a.score;
+    }
+    if (a.passed) passed = true;
+    if (a.completed_at && (!latestCompleted || a.completed_at > latestCompleted)) {
+      latestCompleted = a.completed_at;
+    }
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const isCompleted = row.status === 'completed';
+  const isOverdue = !isCompleted && row.deadline && row.deadline < today;
+
+  let status;
+  if (isCompleted) status = 'Completed';
+  else if (isOverdue) status = 'Overdue';
+  else if (row.status === 'in_progress') status = 'In Progress';
+  else status = 'Not Started';
+
+  return {
+    id: row.id,
+    moduleId: row.module_id,
+    moduleTitle: row.training_modules?.title || '—',
+    passMark: row.training_modules?.pass_mark ?? 80,
+    crewMemberId: row.crew_member_id,
+    status,
+    rawStatus: row.status,
+    score: bestScore,
+    passed: attempts.length > 0 ? passed : null,
+    attempts: attempts.length,
+    assignedAt: row.assigned_at,
+    startedAt: row.started_at,
+    completedAt: row.completed_at || latestCompleted,
+    deadline: row.deadline,
+  };
+}
+
 async function fetchReportData(vesselId) {
-  const [crewRes, noticeRes, docRes, activityRes] = await Promise.all([
+  const [crewRes, noticeRes, docRes, activityRes, moduleRes] = await Promise.all([
     supabaseServer.from('crew_members').select('*').eq('vessel_id', vesselId),
     supabaseServer.from('notices').select('*, notice_reads(crew_member_id, acknowledged_at)').eq('vessel_id', vesselId).order('created_at', { ascending: false }),
     supabaseServer.from('documents').select('*, document_acknowledgements(crew_member_id)').eq('vessel_id', vesselId).order('updated_at', { ascending: false }),
     supabaseServer.from('activity_log').select('*').eq('vessel_id', vesselId).order('created_at', { ascending: false }).limit(200),
+    supabaseServer.from('training_modules').select('id, title, pass_mark').eq('vessel_id', vesselId),
   ]);
+
+  // Fetch training assignments + quiz attempts in a second step so we
+  // can scope strictly to the vessel's modules (nested-join filtering
+  // on joined-table columns is not supported via PostgREST).
+  const moduleIds = (moduleRes.data || []).map(m => m.id);
+  let assignmentRows = [];
+  if (moduleIds.length > 0) {
+    const { data } = await supabaseServer
+      .from('training_assignments')
+      .select('*, training_modules(id, title, pass_mark), quiz_attempts(score, passed, completed_at)')
+      .in('module_id', moduleIds)
+      .order('assigned_at', { ascending: false });
+    assignmentRows = data || [];
+  }
 
   return {
     crew: (crewRes.data || []).map(mapCrew),
     notices: (noticeRes.data || []).map(mapNotice),
     docs: (docRes.data || []).map(mapDoc),
     activity: (activityRes.data || []).map(mapActivity),
+    training: assignmentRows.map(mapTrainingAssignment),
+    trainingModules: moduleRes.data || [],
   };
 }
 
@@ -121,6 +185,7 @@ export async function GET(request) {
         notices: data.notices,
         docs: data.docs,
         activity: data.activity,
+        training: data.training,
         dateRange,
       });
       const pdfBuffer = Buffer.from(doc.output('arraybuffer'));

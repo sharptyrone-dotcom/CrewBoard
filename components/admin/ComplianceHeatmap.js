@@ -29,9 +29,12 @@ const ComplianceHeatmap = ({ liveCrew = [], notices = [], docs = [], trainingMod
       return Math.round((acked / required.length) * 100);
     }
     if (col.type === 'training') {
-      const assigned = trainingModules.filter(m => !m.assigned || m.assigned.includes(cm.id) || m.assigned.length === 0);
+      // Only count modules this crew member is actually assigned to. If
+      // they have no assignments, return null so the cell shows "—"
+      // rather than a misleading 0% or 100%.
+      const assigned = trainingModules.filter(m => (m.assignedCrewIds || []).includes(cm.id));
       if (assigned.length === 0) return null;
-      const completed = assigned.filter(m => (m.completedBy || m.completed_by || []).includes(cm.id)).length;
+      const completed = assigned.filter(m => (m.completedCrewIds || []).includes(cm.id)).length;
       return Math.round((completed / assigned.length) * 100);
     }
     return null;

@@ -1610,7 +1610,7 @@ export default function CrewNotice({ user }) {
       case 'events': return <CrewEventsScreen selectedEvent={selectedEvent} setSelectedEvent={setSelectedEvent} eventDetail={eventDetail} setEventDetail={setEventDetail} eventDetailLoading={eventDetailLoading} events={events} eventsLoading={eventsLoading} eventFilter={eventFilter} setEventFilter={setEventFilter} handleLoadEventDetail={handleLoadEventDetail} handleMarkEventRead={handleMarkEventRead} getCountdown={getCountdown} EVENT_TYPE_ICONS={EVENT_TYPE_ICONS} EVENT_TYPE_COLORS={EVENT_TYPE_COLORS} EVENT_TYPE_LABELS={EVENT_TYPE_LABELS} />;
       case 'profile': return showNotifPrefs
             ? <NotificationPreferences currentUser={currentUser} onBack={() => setShowNotifPrefs(false)} />
-            : <CrewProfile currentUser={currentUser} notices={notices} docs={docs} handleLogout={handleLogout} offlineCachedIds={offlineCachedIds} offlineCacheSize={offlineCacheSize} clearCachedDoc={clearCachedDoc} clearAllCachedDocs={clearAllCachedDocs} onOpenNotifPrefs={() => setShowNotifPrefs(true)} />;
+            : <CrewProfile currentUser={currentUser} notices={notices} docs={docs} trainingModules={trainingModules} handleLogout={handleLogout} offlineCachedIds={offlineCachedIds} offlineCacheSize={offlineCacheSize} clearCachedDoc={clearCachedDoc} clearAllCachedDocs={clearAllCachedDocs} onOpenNotifPrefs={() => setShowNotifPrefs(true)} />;
       default: return <CrewHome currentUser={currentUser} unreadNotices={unreadNotices} pendingAcks={pendingAcks} pendingDocAcks={pendingDocAcks} notices={notices} docs={docs} trainingModules={trainingModules} quickAccessIds={quickAccessIds} setSelectedNotice={setSelectedNotice} setSelectedDoc={setSelectedDoc} setTab={setTab} />;
     }
   };

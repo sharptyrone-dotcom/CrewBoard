@@ -51,6 +51,13 @@ export async function GET(request) {
           questionCount: (m.quiz_questions || []).length,
           createdAt: m.created_at,
           updatedAt: m.updated_at,
+          // Per-crew assignment arrays so the dashboard + heatmap can
+          // compute individual training compliance without a second
+          // roundtrip. Each is an array of crew_member_id strings.
+          assignedCrewIds: assignments.map((a) => a.crew_member_id),
+          completedCrewIds: completed.map((a) => a.crew_member_id),
+          overdueCrewIds: assignments.filter((a) => a.status === 'overdue').map((a) => a.crew_member_id),
+          inProgressCrewIds: assignments.filter((a) => a.status === 'in_progress').map((a) => a.crew_member_id),
           stats: {
             totalAssigned: assignments.length,
             completed: completed.length,

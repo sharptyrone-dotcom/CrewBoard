@@ -17,17 +17,22 @@ function useDarkMode() {
   return [dark, toggle];
 }
 
-export default function CrewProfile({ currentUser, notices, docs, handleLogout, offlineCachedIds, offlineCacheSize, clearCachedDoc, clearAllCachedDocs, onOpenNotifPrefs }) {
+export default function CrewProfile({ currentUser, notices, docs, trainingModules = [], handleLogout, offlineCachedIds, offlineCacheSize, clearCachedDoc, clearAllCachedDocs, onOpenNotifPrefs }) {
   const [isDark, toggleDark] = useDarkMode();
-  // Compliance score = (notices read + required docs acked) / (total notices
-  // + total required docs). Matches the per-crew formula used in
-  // AdminDashboard so the numbers line up across screens.
+  // Compliance score = (notices read + required docs acked + training
+  // completed) / (total notices + total required docs + total assigned
+  // training). Matches the per-crew formula used in AdminDashboard so
+  // the numbers line up across screens.
   const requiredDocs = docs.filter(d => d.required);
   const noticesRead = notices.filter(n => n.readBy.includes(currentUser.id)).length;
   const docsAcked = requiredDocs.filter(d => d.acknowledgedBy.includes(currentUser.id)).length;
-  const totalItems = notices.length + requiredDocs.length;
+  // Crew see their own assignments as flat module rows with a `status`
+  // field (see /api/training/modules crew branch).
+  const assignedTraining = trainingModules.length;
+  const completedTraining = trainingModules.filter(m => m.status === 'completed').length;
+  const totalItems = notices.length + requiredDocs.length + assignedTraining;
   const complianceScore = totalItems > 0
-    ? Math.round(((noticesRead + docsAcked) / totalItems) * 100)
+    ? Math.round(((noticesRead + docsAcked + completedTraining) / totalItems) * 100)
     : 0;
   const myInitials = (currentUser.name || '')
     .split(' ')
@@ -46,10 +51,15 @@ export default function CrewProfile({ currentUser, notices, docs, handleLogout, 
         <p style={{ fontSize: 12, color: T.textDim, margin: '4px 0 0' }}>M/Y Serenity</p>
       </div>
       <div style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 16, overflow: 'hidden', boxShadow: T.shadow, marginBottom: 20 }}>
-        {[['Notices Read', `${noticesRead}/${notices.length}`], ['Documents Acknowledged', `${docsAcked}/${requiredDocs.length}`], ['Compliance Score', `${complianceScore}%`]].map(([label, val], i) => (
-          <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: i < 2 ? `1px solid ${T.border}` : 'none' }}>
+        {[
+          ['Notices Read', `${noticesRead}/${notices.length}`],
+          ['Documents Acknowledged', `${docsAcked}/${requiredDocs.length}`],
+          ['Training Completed', `${completedTraining}/${assignedTraining}`],
+          ['Compliance Score', `${complianceScore}%`],
+        ].map(([label, val], i, arr) => (
+          <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: i < arr.length - 1 ? `1px solid ${T.border}` : 'none' }}>
             <span style={{ fontSize: 14, color: T.textMuted }}>{label}</span>
-            <span style={{ fontSize: 14, color: i === 2 ? (complianceScore >= 70 ? T.success : T.gold) : T.text, fontWeight: 700, fontFamily: i === 2 ? "'JetBrains Mono', monospace" : undefined }}>{val}</span>
+            <span style={{ fontSize: 14, color: i === arr.length - 1 ? (complianceScore >= 70 ? T.success : T.gold) : T.text, fontWeight: 700, fontFamily: i === arr.length - 1 ? "'JetBrains Mono', monospace" : undefined }}>{val}</span>
           </div>
         ))}
       </div>

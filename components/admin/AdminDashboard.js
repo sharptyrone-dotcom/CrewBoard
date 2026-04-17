@@ -8,26 +8,38 @@ import NeedsAttention from './NeedsAttention';
 const AdminDashboard = ({ notices, docs, liveCrew, isDesktop, setSelectedCrewMember, setShowNewNotice, setShowNewDoc, setShowExportReport, dashReminderState, setDashReminderState, dashReminderSentCount, setDashReminderSentCount, handleSendDashboardReminder, trainingModules = [], events = [], setTab, setAdminNoticeView, setSelectedDoc, setTrainingView, setSelectedModule, setAdminEventView, handleLoadEventDetail }) => {
   const criticalUnacked = notices.filter(n => n.priority === 'critical').reduce((sum, n) => sum + (liveCrew.length - n.acknowledgedBy.length), 0);
   const docsUnacked = docs.filter(d => d.required).reduce((sum, d) => sum + (liveCrew.length - d.acknowledgedBy.length), 0);
-  const overallCompliance = Math.round(
-    liveCrew.reduce((sum, cm) => {
-      const read = notices.filter(n => n.readBy.includes(cm.id)).length;
-      const acked = docs.filter(d => d.required && d.acknowledgedBy.includes(cm.id)).length;
-      const total = notices.length + docs.filter(d => d.required).length;
-      return sum + (total > 0 ? ((read + acked) / total) * 100 : 0);
-    }, 0) / (liveCrew.length || 1)
-  );
 
   const requiredDocs = docs.filter(d => d.required);
 
+  // Training aggregates across the vessel. assignedCrewIds /
+  // completedCrewIds come from the /api/training/modules admin response.
+  const trainingTotalAssignments = trainingModules.reduce(
+    (sum, m) => sum + (m.assignedCrewIds?.length || 0), 0);
+  const trainingTotalCompleted = trainingModules.reduce(
+    (sum, m) => sum + (m.completedCrewIds?.length || 0), 0);
+  const trainingTotalOverdue = trainingModules.reduce(
+    (sum, m) => sum + (m.overdueCrewIds?.length || 0), 0);
+  const trainingCompletionRate = trainingTotalAssignments > 0
+    ? Math.round((trainingTotalCompleted / trainingTotalAssignments) * 100)
+    : 0;
+
   // Per-crew compliance rows, computed once and shared between the
-  // mobile card list and the desktop table.
+  // mobile card list and the desktop table. Training is folded into
+  // the overall score so an uncompleted training drags it down just
+  // like an unread notice or unacked doc.
   const crewRows = liveCrew.map(cm => {
     const read = notices.filter(n => n.readBy.includes(cm.id)).length;
     const acked = docs.filter(d => d.required && d.acknowledgedBy.includes(cm.id)).length;
-    const total = notices.length + requiredDocs.length;
-    const score = total > 0 ? Math.round(((read + acked) / total) * 100) : 0;
-    return { cm, read, acked, total, score };
+    const assignedTraining = trainingModules.filter(m => (m.assignedCrewIds || []).includes(cm.id)).length;
+    const completedTraining = trainingModules.filter(m => (m.completedCrewIds || []).includes(cm.id)).length;
+    const total = notices.length + requiredDocs.length + assignedTraining;
+    const score = total > 0 ? Math.round(((read + acked + completedTraining) / total) * 100) : 0;
+    return { cm, read, acked, assignedTraining, completedTraining, total, score };
   });
+
+  const overallCompliance = Math.round(
+    crewRows.reduce((sum, r) => sum + r.score, 0) / (crewRows.length || 1)
+  );
 
   return (
     <div style={{ padding: isDesktop ? '28px 36px' : 20 }}>
@@ -49,12 +61,13 @@ const AdminDashboard = ({ notices, docs, liveCrew, isDesktop, setSelectedCrewMem
         setAdminEventView={setAdminEventView}
         handleLoadEventDetail={handleLoadEventDetail}
       />
-      {/* Stat cards: 2x2 mobile, 4-column desktop */}
-      <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(4, 1fr)' : '1fr 1fr', gap: isDesktop ? 16 : 10, marginBottom: isDesktop ? 24 : 20 }}>
+      {/* Stat cards: 2x2/3x2 mobile, responsive desktop */}
+      <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(5, 1fr)' : '1fr 1fr', gap: isDesktop ? 16 : 10, marginBottom: isDesktop ? 24 : 20 }}>
         <StatCard label="Active Notices" value={notices.length} icon={Icons.notices} />
         <StatCard label="Crew Online" value={liveCrew.filter(c => c.online).length} color={T.success} icon={Icons.crew} />
         <StatCard label="Critical Unack." value={criticalUnacked} color={T.critical} icon={Icons.alert} />
         <StatCard label="Doc. Pending Ack." value={docsUnacked} color={T.gold} icon={Icons.docs} />
+        <StatCard label="Training Overdue" value={trainingTotalOverdue} color={T.critical} icon={Icons.training || Icons.award || Icons.alert} />
       </div>
       {/* Compliance + Quick Actions: stacked mobile, side-by-side desktop */}
       <div style={{ display: isDesktop ? 'grid' : 'block', gridTemplateColumns: isDesktop ? '1fr 1fr' : undefined, gap: isDesktop ? 20 : undefined, marginBottom: isDesktop ? 28 : 20 }}>
@@ -64,7 +77,23 @@ const AdminDashboard = ({ notices, docs, liveCrew, isDesktop, setSelectedCrewMem
             <span style={{ fontSize: 20, fontWeight: 800, color: overallCompliance > 70 ? T.success : T.gold, fontFamily: "'JetBrains Mono', monospace" }}>{overallCompliance}%</span>
           </div>
           <ComplianceBar value={overallCompliance} />
-          <p style={{ fontSize: 11, color: T.textMuted, margin: '8px 0 0' }}>Based on notice reads and document acknowledgements across all crew</p>
+          <p style={{ fontSize: 11, color: T.textMuted, margin: '8px 0 0' }}>Based on notice reads, document acknowledgements, and training completion across all crew</p>
+          {trainingTotalAssignments > 0 && (
+            <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${T.border}` }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: T.textMuted }}>Training Completion</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: trainingCompletionRate > 70 ? T.success : trainingCompletionRate > 40 ? T.gold : T.critical, fontFamily: "'JetBrains Mono', monospace" }}>
+                  {trainingCompletionRate}%
+                </span>
+              </div>
+              <div style={{ fontSize: 11, color: T.textMuted }}>
+                {trainingTotalCompleted}/{trainingTotalAssignments} assignments completed
+                {trainingTotalOverdue > 0 && (
+                  <span style={{ color: T.critical, fontWeight: 700 }}> — {trainingTotalOverdue} overdue</span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
         <div>
           <div style={{ marginBottom: 12 }}>
@@ -127,13 +156,13 @@ const AdminDashboard = ({ notices, docs, liveCrew, isDesktop, setSelectedCrewMem
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${T.border}`, background: T.bg }}>
-                {['Name', 'Role', 'Department', 'Notices Read', 'Docs Ack.', 'Compliance'].map(h => (
+                {['Name', 'Role', 'Department', 'Notices Read', 'Docs Ack.', 'Training', 'Compliance'].map(h => (
                   <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 0.8 }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {crewRows.map(({ cm, read, acked, score }) => (
+              {crewRows.map(({ cm, read, acked, assignedTraining, completedTraining, score }) => (
                 <tr key={cm.id} onClick={() => setSelectedCrewMember(cm)} className="cb-table-row" style={{ borderBottom: `1px solid ${T.border}`, cursor: 'pointer', transition: 'background 0.15s' }}
                   onMouseEnter={e => e.currentTarget.style.background = T.bg}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -148,6 +177,9 @@ const AdminDashboard = ({ notices, docs, liveCrew, isDesktop, setSelectedCrewMem
                   <td style={{ padding: '14px 16px', color: T.textMuted }}>{cm.dept}</td>
                   <td style={{ padding: '14px 16px', color: T.accent, fontWeight: 600 }}>{read}/{notices.length}</td>
                   <td style={{ padding: '14px 16px', color: T.gold, fontWeight: 600 }}>{acked}/{requiredDocs.length}</td>
+                  <td style={{ padding: '14px 16px', color: assignedTraining === 0 ? T.textDim : completedTraining === assignedTraining ? T.success : T.accent, fontWeight: 600 }}>
+                    {assignedTraining === 0 ? '—' : `${completedTraining}/${assignedTraining}`}
+                  </td>
                   <td style={{ padding: '14px 16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{ flex: 1 }}><ComplianceBar value={score} /></div>

@@ -48,6 +48,32 @@ const CrewManagement = ({ liveCrew, selectedCrewMember, setSelectedCrewMember, n
         </div>
       </div>
     );
+    const assignedModulesForCrew = trainingModules.filter(m => (m.assignedCrewIds || []).includes(cm.id));
+    const trainingCol = (
+      <div>
+        <h3 style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 10px' }}>Training Status</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {assignedModulesForCrew.length === 0 && (
+            <div style={{ padding: '14px 18px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 12, boxShadow: T.shadow, fontSize: 13, color: T.textMuted }}>
+              No training assigned.
+            </div>
+          )}
+          {assignedModulesForCrew.map(m => {
+            const completed = (m.completedCrewIds || []).includes(cm.id);
+            const overdue = (m.overdueCrewIds || []).includes(cm.id);
+            const inProgress = (m.inProgressCrewIds || []).includes(cm.id);
+            const status = completed ? 'Completed' : overdue ? 'Overdue' : inProgress ? 'In Progress' : 'Not Started';
+            const color = completed ? T.success : overdue ? T.critical : inProgress ? T.gold : T.textDim;
+            return (
+              <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 12, boxShadow: T.shadow }}>
+                <span style={{ fontSize: 13, color: T.text, flex: 1 }}>{m.title}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color, flexShrink: 0, marginLeft: 8 }}>{status}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
     return (
       <div style={{ padding: isDesktop ? '28px 36px' : 20 }}>
         <BackButton onClick={() => setSelectedCrewMember(null)} />
@@ -58,16 +84,18 @@ const CrewManagement = ({ liveCrew, selectedCrewMember, setSelectedCrewMember, n
             <p style={{ fontSize: 13, color: T.textMuted, margin: '2px 0 0' }}>{cm.role} — {cm.dept}</p>
           </div>
         </div>
-        {/* Desktop: notice + doc columns side by side. Mobile: stacked. */}
+        {/* Desktop: notice + doc + training columns side by side. Mobile: stacked. */}
         {isDesktop ? (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, alignItems: 'start' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 24, alignItems: 'start' }}>
             {noticeCol}
             {docCol}
+            {trainingCol}
           </div>
         ) : (
           <>
             <div style={{ marginBottom: 20 }}>{noticeCol}</div>
-            {docCol}
+            <div style={{ marginBottom: 20 }}>{docCol}</div>
+            {trainingCol}
           </>
         )}
       </div>
@@ -168,8 +196,10 @@ const CrewManagement = ({ liveCrew, selectedCrewMember, setSelectedCrewMember, n
               {liveCrew.map(cm => {
                 const read = notices.filter(n => n.readBy.includes(cm.id)).length;
                 const acked = docs.filter(d => d.required && d.acknowledgedBy.includes(cm.id)).length;
-                const total = notices.length + requiredDocs.length;
-                const score = total > 0 ? Math.round(((read + acked) / total) * 100) : 0;
+                const assignedTraining = trainingModules.filter(m => (m.assignedCrewIds || []).includes(cm.id)).length;
+                const completedTraining = trainingModules.filter(m => (m.completedCrewIds || []).includes(cm.id)).length;
+                const total = notices.length + requiredDocs.length + assignedTraining;
+                const score = total > 0 ? Math.round(((read + acked + completedTraining) / total) * 100) : 0;
                 return (
                   <tr key={cm.id} style={{ borderBottom: `1px solid ${T.border}`, transition: 'background 0.15s' }}
                     onMouseEnter={e => e.currentTarget.style.background = T.bg}

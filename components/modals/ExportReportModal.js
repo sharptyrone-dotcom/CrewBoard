@@ -3,10 +3,10 @@ import Icons from '../shared/Icons';
 
 const ExportReportModal = ({ exportType, setExportType, exportDateFrom, setExportDateFrom, exportDateTo, setExportDateTo, exporting, handleExport, setShowExportReport, isDesktop }) => {
   const reportTypes = [
-    { value: 'compliance_pdf', label: 'Full Compliance Report (PDF)', desc: 'Crew roster, notice & document compliance, individual summaries, activity log' },
+    { value: 'compliance_pdf', label: 'Full Compliance Report (PDF)', desc: 'Crew roster, notice & document compliance, training completion records, individual summaries, activity log' },
     { value: 'notice_csv', label: 'Notice Read Receipts (CSV)', desc: 'All notices with read/acknowledged status per crew member' },
     { value: 'document_csv', label: 'Document Acknowledgements (CSV)', desc: 'All documents with acknowledgement status per crew member' },
-    { value: 'training_csv', label: 'Training Records (CSV)', desc: 'Training module completion and scores' },
+    { value: 'training_csv', label: 'Training Records (CSV)', desc: 'Module, crew member, status, score, pass/fail, completion + deadline dates' },
     { value: 'activity_csv', label: 'Activity Log (CSV)', desc: 'Timestamped log of all crew actions' },
   ];
   return (
