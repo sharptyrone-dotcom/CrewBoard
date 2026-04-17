@@ -158,7 +158,7 @@ export const ARTICLES = {
       {
         type: 'p',
         text:
-          'Tap your avatar in the top right to open profile settings. This is where you manage your personal details, cached offline documents, and notification preferences.',
+          'Tap your avatar in the top right to open profile settings. This is where you see your personal details, manage cached offline documents, and toggle dark mode.',
       },
       { type: 'h2', text: 'Notifications bell' },
       {
@@ -215,38 +215,33 @@ export const ARTICLES = {
           'Reminders sent by your admin',
         ],
       },
-      { type: 'h2', text: 'Notification preferences' },
+      { type: 'h2', text: 'Notifications cannot be muted' },
       {
         type: 'p',
         text:
-          'Go to Profile > Notification Preferences to customise what you receive. You can mute routine categories while keeping the important ones loud.',
+          "CrewNotice notifications cannot be muted. This is by design — the platform exists to ensure every crew member receives every relevant update, with auditable proof. Every crew member on a vessel receives every notification targeted at them, with the only exception being department targeting (e.g. a deck-only notice only notifies deck crew).",
       },
       {
         type: 'callout',
         variant: 'note',
-        title: 'Note',
+        title: 'Why no opt-out?',
         text:
-          'Critical safety notices cannot be muted — this is a safety policy that applies to every vessel on CrewNotice.',
+          "Compliance tracking — the core reason CrewNotice exists — depends on guaranteed delivery. If a crew member could mute a category of notification, admins would lose the audit trail that proves a notice was delivered. So there is no in-app mute switch.",
       },
       { type: 'h2', text: 'Troubleshooting' },
       {
         type: 'p',
         text:
-          "If you're not receiving notifications, check the following:",
+          "If you're not receiving notifications, check your phone's system notification settings for your browser. Specifically:",
       },
       {
         type: 'list',
         items: [
-          "Your phone's notification settings for your browser are set to Allow",
-          'CrewNotice is not in a restricted battery-saving mode',
-          'You have WiFi connectivity when the notice is sent',
+          "Your phone's notification settings for your browser (Safari / Chrome / etc.) are set to Allow",
+          "CrewNotice is not in a restricted battery-saving mode",
+          "You have connectivity when the notice is sent",
+          "You granted notification permission the first time you opened CrewNotice — if you declined, you can re-enable it in your browser's site settings",
         ],
-      },
-      { type: 'h2', text: 'Quiet hours' },
-      {
-        type: 'p',
-        text:
-          "When your admin has configured off-watch times, notifications respect them — you won't be woken up by non-critical alerts during your sleep watch.",
       },
     ],
   },

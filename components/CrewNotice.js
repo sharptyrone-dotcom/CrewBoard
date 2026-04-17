@@ -16,7 +16,6 @@ import { trackNoticeRead, trackDocumentAcknowledged, trackQuizCompleted, trackEv
 import OfflineIndicator from '@/components/OfflineIndicator';
 import { isPushSupported, getPushPermission, subscribeToPush, isSubscribed as checkPushSubscribed } from '@/lib/push';
 import { sendReminderChannels } from '@/lib/send-reminder';
-import { filterByPreference, getPreferenceKey } from '@/lib/notification-preferences';
 
 // ─── Extracted component imports ────────────────────────────────────
 import T from './shared/theme';
@@ -27,7 +26,6 @@ import CrewHome from './crew/CrewHome';
 import NoticesScreen from './crew/NoticesScreen';
 import DocsScreen from './crew/DocsScreen';
 import CrewProfile from './crew/CrewProfile';
-import NotificationPreferences from './crew/NotificationPreferences';
 import CrewTrainingScreen from './crew/CrewTrainingScreen';
 import CrewEventsScreen from './crew/CrewEventsScreen';
 
@@ -116,7 +114,6 @@ export default function CrewNotice({ user }) {
   // Push notification state
   const [pushState, setPushState] = useState('loading');
   const [pushDismissed, setPushDismissed] = useState(false);
-  const [showNotifPrefs, setShowNotifPrefs] = useState(false);
 
   // ── Training system state ──
   const [trainingModules, setTrainingModules] = useState([]);
@@ -753,14 +750,11 @@ export default function CrewNotice({ user }) {
     const reminderTitle = `Reminder: ${notice.priority === 'critical' ? 'CRITICAL — ' : ''}Please read "${notice.title}"`;
     const reminderBody = `You have an unread ${notice.priority} notice that requires your attention.`;
 
-    // Filter by notification preferences (critical always sends)
-    const prefKey = getPreferenceKey({ type: 'notice', priority: notice.priority, refType: 'notice' });
-    const eligibleIds = await filterByPreference(nonReaders.map(cm => cm.id), prefKey);
-    const eligibleCrew = nonReaders.filter(cm => eligibleIds.includes(cm.id));
-    if (eligibleCrew.length === 0) throw new Error('All targeted crew have muted this notification type.');
-
+    // Notifications are never opt-out on CrewNotice — every crew member
+    // who the notice is targeted at (here: everyone who hasn't read it)
+    // gets the reminder. Compliance tracking depends on it.
     const results = await Promise.allSettled(
-      eligibleCrew.map(cm =>
+      nonReaders.map(cm =>
         createTargetedNotification({
           targetCrewId: cm.id,
           type: 'reminder',
@@ -775,7 +769,7 @@ export default function CrewNotice({ user }) {
     if (sent === 0) throw new Error('All reminder sends failed — check your connection.');
 
     sendReminderChannels({
-      crewMemberIds: eligibleCrew.map(cm => cm.id),
+      crewMemberIds: nonReaders.map(cm => cm.id),
       title: reminderTitle,
       body: reminderBody,
       refType: 'notice',
@@ -796,11 +790,9 @@ export default function CrewNotice({ user }) {
     try {
       if (action === 'remind') {
         // Per-crew reminder rollup: find each target's outstanding items and
-        // send a single notification with the summary.
-        // Filter by admin_reminders preference
-        const eligibleIds = await filterByPreference(targets.map(c => c.id), 'admin_reminders');
-        const eligibleTargets = targets.filter(c => eligibleIds.includes(c.id));
-        const results = await Promise.allSettled(eligibleTargets.map(async (cm) => {
+        // send a single notification with the summary. Every targeted crew
+        // member receives the reminder — notifications are not opt-out.
+        const results = await Promise.allSettled(targets.map(async (cm) => {
           const unreadCritical = notices.filter(n => n.priority === 'critical' && !n.readBy.includes(cm.id));
           const unackedDocs = docs.filter(d => d.required && !d.acknowledgedBy.includes(cm.id));
           if (unreadCritical.length === 0 && unackedDocs.length === 0) return;
@@ -893,13 +885,9 @@ export default function CrewNotice({ user }) {
     }
     if (targetData.length === 0) return { targeted: 0, sent: 0 };
 
-    // Filter by admin_reminders preference
-    const eligibleIds = await filterByPreference(targetData.map(({ cm }) => cm.id), 'admin_reminders');
-    const eligibleData = targetData.filter(({ cm }) => eligibleIds.includes(cm.id));
-    if (eligibleData.length === 0) return { targeted: targetData.length, sent: 0 };
-
+    // Every crew member with outstanding items gets a reminder — no opt-out.
     const results = await Promise.allSettled(
-      eligibleData.map(({ cm, body }) =>
+      targetData.map(({ cm, body }) =>
         createTargetedNotification({
           targetCrewId: cm.id,
           type: 'reminder',
@@ -913,7 +901,7 @@ export default function CrewNotice({ user }) {
     const sent = results.filter(r => r.status === 'fulfilled').length;
 
     sendReminderChannels({
-      crewMemberIds: eligibleData.map(({ cm }) => cm.id),
+      crewMemberIds: targetData.map(({ cm }) => cm.id),
       title: 'Compliance Reminder',
       body: 'You have outstanding notices or documents requiring your attention. Please open CrewNotice to review.',
       refType: null,
@@ -1059,7 +1047,6 @@ export default function CrewNotice({ user }) {
     setAdminEventView(null);
     setAdminEventDetail(null);
     setNewUpdateText('');
-    setShowNotifPrefs(false);
   };
 
   const pendingTraining = role === 'crew'
@@ -1642,9 +1629,7 @@ export default function CrewNotice({ user }) {
       case 'docs': return <DocsScreen selectedDoc={selectedDoc} setSelectedDoc={setSelectedDoc} currentUser={currentUser} docs={docs} docDeptFilter={docDeptFilter} docTypeFilter={docTypeFilter} setDocDeptFilter={setDocDeptFilter} setDocTypeFilter={setDocTypeFilter} quickAccessIds={quickAccessIds} toggleQuickAccess={toggleQuickAccess} handleAckDoc={handleAckDoc} handleDeleteDoc={handleDeleteDoc} handleReplaceDoc={handleReplaceDoc} role={role} isDesktop={isDesktop} crew={crew} setReplaceDocState={setReplaceDocState} setShowReplaceDoc={setShowReplaceDoc} isDocCached={isDocCached} cachingDocId={cachingDocId} setCachingDocId={setCachingDocId} cacheDocument={cacheDocument} getDocumentSignedUrl={getDocumentSignedUrl} departmentOptions={taxonomies.departmentsWithAll} docTypeOptions={taxonomies.docTypesWithAll} docSearchQuery={docSearchQuery} setDocSearchQuery={setDocSearchQuery} onDocumentRead={handleDocumentRead} />;
       case 'training': return <CrewTrainingScreen trainingView={trainingView} selectedModule={selectedModule} setTrainingView={setTrainingView} setSelectedModule={setSelectedModule} quizQuestions={quizQuestions} quizCurrent={quizCurrent} quizAnswers={quizAnswers} setQuizAnswers={setQuizAnswers} setQuizCurrent={setQuizCurrent} quizResults={quizResults} setQuizResults={setQuizResults} quizSubmitting={quizSubmitting} quizTimerLeft={quizTimerLeft} handleStartQuiz={handleStartQuiz} handleSubmitQuiz={handleSubmitQuiz} trainingModules={trainingModules} trainingLoading={trainingLoading} currentUser={currentUser} resolveContentUrls={resolveContentUrls} isDesktop={isDesktop} />;
       case 'events': return <CrewEventsScreen selectedEvent={selectedEvent} setSelectedEvent={setSelectedEvent} eventDetail={eventDetail} setEventDetail={setEventDetail} eventDetailLoading={eventDetailLoading} events={events} eventsLoading={eventsLoading} eventFilter={eventFilter} setEventFilter={setEventFilter} handleLoadEventDetail={handleLoadEventDetail} handleMarkEventRead={handleMarkEventRead} getCountdown={getCountdown} EVENT_TYPE_ICONS={EVENT_TYPE_ICONS} EVENT_TYPE_COLORS={EVENT_TYPE_COLORS} EVENT_TYPE_LABELS={EVENT_TYPE_LABELS} />;
-      case 'profile': return showNotifPrefs
-            ? <NotificationPreferences currentUser={currentUser} onBack={() => setShowNotifPrefs(false)} />
-            : <CrewProfile currentUser={currentUser} notices={notices} docs={docs} trainingModules={trainingModules} handleLogout={handleLogout} offlineCachedIds={offlineCachedIds} offlineCacheSize={offlineCacheSize} clearCachedDoc={clearCachedDoc} clearAllCachedDocs={clearAllCachedDocs} onOpenNotifPrefs={() => setShowNotifPrefs(true)} />;
+      case 'profile': return <CrewProfile currentUser={currentUser} notices={notices} docs={docs} trainingModules={trainingModules} handleLogout={handleLogout} offlineCachedIds={offlineCachedIds} offlineCacheSize={offlineCacheSize} clearCachedDoc={clearCachedDoc} clearAllCachedDocs={clearAllCachedDocs} />;
       default: return <CrewHome currentUser={currentUser} unreadNotices={unreadNotices} pendingAcks={pendingAcks} pendingDocAcks={pendingDocAcks} notices={notices} docs={docs} trainingModules={trainingModules} quickAccessIds={quickAccessIds} setSelectedNotice={setSelectedNotice} setSelectedDoc={setSelectedDoc} setTab={setTab} />;
     }
   };

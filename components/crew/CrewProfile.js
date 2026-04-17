@@ -17,7 +17,7 @@ function useDarkMode() {
   return [dark, toggle];
 }
 
-export default function CrewProfile({ currentUser, notices, docs, trainingModules = [], handleLogout, offlineCachedIds, offlineCacheSize, clearCachedDoc, clearAllCachedDocs, onOpenNotifPrefs }) {
+export default function CrewProfile({ currentUser, notices, docs, trainingModules = [], handleLogout, offlineCachedIds, offlineCacheSize, clearCachedDoc, clearAllCachedDocs }) {
   const [isDark, toggleDark] = useDarkMode();
   // Compliance score = (notices read + required docs acked + training
   // completed) / (total notices + total required docs + total assigned
@@ -101,16 +101,6 @@ export default function CrewProfile({ currentUser, notices, docs, trainingModule
       </div>
 
       <div style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 16, overflow: 'hidden', boxShadow: T.shadow }}>
-        <button
-          onClick={onOpenNotifPrefs}
-          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: `1px solid ${T.border}`, width: '100%', background: 'none', border: 'none', cursor: 'pointer', color: T.text, fontSize: 14 }}
-        >
-          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {Icons.bell}
-            Notification Preferences
-          </span>
-          <span style={{ color: T.textDim, fontSize: 18 }}>&rsaquo;</span>
-        </button>
         <button
           onClick={toggleDark}
           style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: `1px solid ${T.border}`, width: '100%', background: 'none', border: 'none', cursor: 'pointer', color: T.text, fontSize: 14 }}
