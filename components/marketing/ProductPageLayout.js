@@ -49,7 +49,7 @@ export default function ProductPageLayout({
             <h1>{title}</h1>
             <p className="product-hero-sub">{subtitle}</p>
             <div className="hero-cta">
-              <Link href="/join" className="btn btn-primary btn-lg">
+              <Link href="/signup" className="btn btn-primary btn-lg">
                 Start your free trial <Arrow />
               </Link>
               <Link href="/pricing" className="btn btn-ghost btn-lg">See pricing</Link>
@@ -102,7 +102,7 @@ export default function ProductPageLayout({
                 an hour.
               </p>
               <div className="hero-cta" style={{ justifyContent: 'center' }}>
-                <Link href="/join" className="btn btn-primary btn-lg">
+                <Link href="/signup" className="btn btn-primary btn-lg">
                   Start your free trial <Arrow />
                 </Link>
                 <Link href="/contact" className="btn btn-ghost btn-lg">Talk to us</Link>

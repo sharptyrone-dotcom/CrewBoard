@@ -159,7 +159,7 @@ export default function IsmGuidePage() {
                 auditor steps aboard.
               </p>
               <div className="hero-cta" style={{ justifyContent: 'center' }}>
-                <Link href="/join" className="btn btn-primary btn-lg">
+                <Link href="/signup" className="btn btn-primary btn-lg">
                   Start Free Trial <Arrow />
                 </Link>
                 <Link href="/contact" className="btn btn-ghost btn-lg">Talk to Us</Link>

@@ -169,7 +169,7 @@ export default function CustomersPage() {
                 compliant, and audit-ready.
               </p>
               <div className="hero-cta" style={{ justifyContent: 'center' }}>
-                <Link href="/join" className="btn btn-primary btn-lg">
+                <Link href="/signup" className="btn btn-primary btn-lg">
                   Start Free Trial <Arrow />
                 </Link>
                 <Link href="/contact" className="btn btn-ghost btn-lg">Contact Us</Link>

@@ -33,7 +33,7 @@ export default function LandingPage() {
             <h1>Your vessel&apos;s notice board. <span className="accent">Reimagined.</span></h1>
             <p className="hero-sub">Digital notices, document management, and compliance tracking — every read tracked, every acknowledgement timestamped, every audit ready.</p>
             <div className="hero-cta">
-              <Link href="/join" className="btn btn-primary btn-lg">
+              <Link href="/signup" className="btn btn-primary btn-lg">
                 Start free trial <Arrow />
               </Link>
               <a href="#features" className="btn btn-ghost btn-lg">See how it works</a>
@@ -409,7 +409,7 @@ export default function LandingPage() {
             <h2>Ready to go?</h2>
             <p>Join the vessels already using CrewNotice to prove compliance, protect crew, and sleep better at anchor.</p>
             <div className="hero-cta">
-              <Link href="/join" className="btn btn-primary btn-lg">
+              <Link href="/signup" className="btn btn-primary btn-lg">
                 Start free trial <Arrow />
               </Link>
               <Link href="/pricing" className="btn btn-ghost btn-lg">View pricing</Link>

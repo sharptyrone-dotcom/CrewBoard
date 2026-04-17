@@ -165,7 +165,7 @@ export default function CompliancePage() {
                 state inspections. Audit preparation that takes minutes, not days.
               </p>
               <div className="hero-cta">
-                <Link href="/join" className="btn btn-primary btn-lg">
+                <Link href="/signup" className="btn btn-primary btn-lg">
                   Start free trial <Arrow />
                 </Link>
                 <a href="#scenario" className="btn btn-ghost btn-lg">Learn more</a>
@@ -362,7 +362,7 @@ export default function CompliancePage() {
                 your first crew member logs in.
               </p>
               <div className="hero-cta" style={{ justifyContent: 'center' }}>
-                <Link href="/join" className="btn btn-primary btn-lg">
+                <Link href="/signup" className="btn btn-primary btn-lg">
                   Start free trial <Arrow />
                 </Link>
                 <Link href="/pricing" className="btn btn-ghost btn-lg">View pricing</Link>

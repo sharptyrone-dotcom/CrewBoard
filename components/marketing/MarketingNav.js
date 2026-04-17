@@ -63,7 +63,7 @@ export default function MarketingNav() {
 
         <div className="nav-cta">
           <Link href="/app" className="login">Log in</Link>
-          <Link href="/join" className="btn btn-primary">Get Started</Link>
+          <Link href="/signup" className="btn btn-primary">Get Started</Link>
           <button className="hamburger" aria-label="Menu">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <line x1="3" y1="6" x2="21" y2="6" />

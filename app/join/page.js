@@ -462,11 +462,17 @@ export default function JoinPage() {
           </div>
         )}
 
-        {/* Existing-user link */}
+        {/* Existing-user / new-vessel links */}
         <div style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: T.textMuted }}>
           Already have an account?{' '}
           <Link href="/app" style={{ color: T.accent, fontWeight: 700, textDecoration: 'none' }}>
-            Sign in
+            Log in
+          </Link>
+        </div>
+        <div style={{ textAlign: 'center', marginTop: 8, fontSize: 13, color: T.textMuted }}>
+          Setting up a new vessel?{' '}
+          <Link href="/signup/vessel" style={{ color: T.accent, fontWeight: 700, textDecoration: 'none' }}>
+            Create your vessel instead
           </Link>
         </div>
 
