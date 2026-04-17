@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/authCheck';
 import { writeLimiter } from '@/lib/rateLimit';
 import { handleApiError } from '@/lib/apiError';
+import { sendCrewNotification } from '@/lib/notificationSender';
 
 // ---------------------------------------------------------------------------
 // POST /api/training/modules/[id]/assign
@@ -58,7 +59,13 @@ export async function POST(request, { params }) {
     let targetIds = [];
 
     if (Array.isArray(crew_member_ids)) {
-      targetIds = crew_member_ids;
+      // Vessel-verify explicit IDs so an admin can't assign across vessels.
+      const { data: verified } = await supabase
+        .from('crew_members')
+        .select('id')
+        .eq('vessel_id', vesselId)
+        .in('id', crew_member_ids);
+      targetIds = (verified || []).map((c) => c.id);
     } else if (crew_member_ids === 'all') {
       const { data: allCrew } = await supabase
         .from('crew_members')
@@ -146,26 +153,23 @@ export async function POST(request, { params }) {
         console.error('[training/assign] notification insert failed', notifErr);
       }
 
-      // Fire-and-forget push/email via the send-reminder endpoint.
-      // Note: This internal call may fail if the endpoint requires cookie auth.
-      // In-app notifications above are the primary delivery mechanism.
-      try {
-        const origin = new URL(request.url).origin;
-        fetch(`${origin}/api/notifications/send-reminder`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            crewMemberIds: newIds,
-            vesselId: vesselId,
-            title: 'New Training Assignment',
-            body: `You have been assigned "${mod.title}".${deadline ? ` Deadline: ${deadline}.` : ''}`,
-            refType: 'training_module',
-            refId: moduleId,
-          }),
-        }).catch(() => {}); // swallow — best-effort
-      } catch {
-        // Ignore send-reminder errors.
-      }
+      // Dispatch email + push directly via the shared dispatcher.
+      // We call the library function instead of fetch()-ing the
+      // /api/notifications/send-reminder route so cookie auth isn't lost
+      // on the internal hop. In-app notifications were already inserted
+      // above; sendCrewNotification just handles email + push here.
+      sendCrewNotification({
+        vesselId,
+        crewMemberIds: newIds,
+        title: 'New Training Assignment',
+        body: `You have been assigned "${mod.title}".${deadline ? ` Deadline: ${deadline}.` : ''}`,
+        refType: 'training_module',
+        refId: moduleId,
+      }).catch((err) => {
+        // Best-effort — assignments + in-app notifications are already
+        // committed, so a dispatcher failure should not fail the request.
+        console.error('[training/assign] send dispatch failed', err);
+      });
     }
 
     return NextResponse.json({
