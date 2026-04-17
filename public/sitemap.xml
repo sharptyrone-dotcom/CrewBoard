@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Core pages -->
+  <url><loc>https://crewnotice.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://crewnotice.com/pricing</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
+
+  <!-- Product pages -->
+  <url><loc>https://crewnotice.com/product/notice-board</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://crewnotice.com/product/document-library</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://crewnotice.com/product/training</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://crewnotice.com/product/compliance</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+
+  <!-- Company pages -->
+  <url><loc>https://crewnotice.com/about</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://crewnotice.com/customers</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://crewnotice.com/contact</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://crewnotice.com/security</loc><changefreq>yearly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://crewnotice.com/careers</loc><changefreq>yearly</changefreq><priority>0.4</priority></url>
+
+  <!-- Help centre -->
+  <url><loc>https://crewnotice.com/help</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://crewnotice.com/help/creating-your-vessel</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://crewnotice.com/help/joining-a-vessel</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://crewnotice.com/help/navigating-the-dashboard</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://crewnotice.com/help/setting-up-notifications</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://crewnotice.com/help/installing-on-your-phone</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://crewnotice.com/help/posting-notices</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://crewnotice.com/help/uploading-documents</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://crewnotice.com/help/creating-training</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://crewnotice.com/help/setting-up-events</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://crewnotice.com/help/reading-compliance-reports</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://crewnotice.com/help/managing-crew</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://crewnotice.com/help/reading-notices</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://crewnotice.com/help/accessing-documents</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://crewnotice.com/help/completing-training</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://crewnotice.com/help/viewing-events</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://crewnotice.com/help/offline-access</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+
+  <!-- Blog -->
+  <url><loc>https://crewnotice.com/blog</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://crewnotice.com/blog/why-physical-notice-boards-dont-work</loc><changefreq>yearly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://crewnotice.com/blog/ism-audit-preparation-checklist</loc><changefreq>yearly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://crewnotice.com/blog/how-to-manage-sops-on-superyachts</loc><changefreq>yearly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://crewnotice.com/blog/whatsapp-vs-crew-communication-system</loc><changefreq>yearly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://crewnotice.com/blog/training-delivery-on-board</loc><changefreq>yearly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://crewnotice.com/blog/guest-briefings-that-work</loc><changefreq>yearly</changefreq><priority>0.6</priority></url>
+
+  <!-- Resources -->
+  <url><loc>https://crewnotice.com/resources/ism-guide</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://crewnotice.com/resources/mlc-checklist</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://crewnotice.com/resources/api-docs</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+
+  <!-- Legal -->
+  <url><loc>https://crewnotice.com/privacy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://crewnotice.com/terms</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://crewnotice.com/cookies</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+</urlset>

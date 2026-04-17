@@ -4,9 +4,9 @@ import MarketingNav from '@/components/marketing/MarketingNav';
 import MarketingFooter from '@/components/marketing/MarketingFooter';
 
 export const metadata = {
-  title: 'Digital Notice Board with Read Tracking — CrewNotice',
+  title: 'Digital Notice Board with Read Tracking for Superyachts',
   description:
-    "Replace your physical notice board with a real-time digital system that tracks every read, requires acknowledgement for critical safety updates, and gives you auditable proof of crew awareness.",
+    'Post notices by priority, track who reads them with timestamps, and require acknowledgement for critical safety updates. Auditable proof of crew awareness for ISM and MLC compliance.',
 };
 
 const Arrow = () => (

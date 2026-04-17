@@ -5,8 +5,9 @@ import MarketingFooter from '@/components/marketing/MarketingFooter';
 import BlogSubscribe from './BlogSubscribe';
 
 export const metadata = {
-  title: 'Blog — CrewNotice',
-  description: 'Practical guides on crew compliance, vessel operations, and maritime safety.',
+  title: 'CrewNotice Blog — Insights for Superyacht Captains & Crew',
+  description:
+    'Practical guides on crew compliance, ISM audit preparation, SOP management, and yacht operations.',
 };
 
 const ArrowIcon = () => (

@@ -4,8 +4,9 @@ import MarketingNav from '@/components/marketing/MarketingNav';
 import MarketingFooter from '@/components/marketing/MarketingFooter';
 
 export const metadata = {
-  title: 'Security — CrewNotice',
-  description: 'How CrewNotice protects your vessel\'s operational data. Encryption, hosting, authentication, and GDPR compliance.',
+  title: 'Security & Data Protection',
+  description:
+    'Enterprise-grade security. TLS 1.3 encryption, row-level database isolation, GDPR compliant. SOC 2 Type II certified infrastructure.',
 };
 
 const LockIcon = () => (

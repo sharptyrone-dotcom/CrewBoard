@@ -1,8 +1,9 @@
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Privacy Policy — CrewNotice',
-  description: 'How CrewNotice collects, uses, and protects your personal data.',
+  title: 'Privacy Policy',
+  description:
+    'How Sharp Digital Solutions Ltd handles personal data in CrewNotice. UK GDPR compliant.',
 };
 
 const S = {

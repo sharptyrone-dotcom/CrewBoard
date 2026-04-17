@@ -1,8 +1,9 @@
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Cookie Policy — CrewNotice',
-  description: 'How CrewNotice uses cookies and local storage.',
+  title: 'Cookie Policy',
+  description:
+    'CrewNotice uses essential cookies only. No tracking or advertising cookies.',
 };
 
 const S = {

@@ -6,8 +6,9 @@ import PricingTable from '@/components/marketing/PricingTable';
 import PricingFaq from '@/components/marketing/PricingFaq';
 
 export const metadata = {
-  title: 'Pricing — CrewNotice',
-  description: 'Simple pricing for superyacht crew management. £2,400/year per vessel — every feature included. 30-day free trial, no credit card required.',
+  title: 'CrewNotice Pricing — £2,400/year per Vessel',
+  description:
+    'One plan, every feature. Notice board, document library, training, compliance dashboard, unlimited crew. £2,400/year or £249/month. 30-day free trial.',
 };
 
 const CheckMark = () => (

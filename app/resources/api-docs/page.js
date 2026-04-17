@@ -4,8 +4,9 @@ import MarketingFooter from '@/components/marketing/MarketingFooter';
 import ApiInterestForm from './ApiInterestForm';
 
 export const metadata = {
-  title: 'API Documentation — CrewNotice',
-  description: 'Integrate CrewNotice with your existing vessel systems. Planned API endpoints, authentication, and rate limits.',
+  title: 'API Documentation',
+  description:
+    'Integrate CrewNotice with your vessel management systems. REST API for notices, documents, training, and webhooks. Fleet plan.',
 };
 
 const CodeIcon = () => (

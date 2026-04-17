@@ -4,8 +4,9 @@ import MarketingNav from '@/components/marketing/MarketingNav';
 import MarketingFooter from '@/components/marketing/MarketingFooter';
 
 export const metadata = {
-  title: 'ISM Code Compliance Guide for Superyachts — CrewNotice',
-  description: 'A practical guide to how CrewNotice supports your ISM Code obligations. Element-by-element breakdown and audit preparation steps.',
+  title: 'ISM Code Compliance Guide for Superyachts',
+  description:
+    'How CrewNotice supports ISM Code Elements 6, 7, 8, 11, and 12. Digital compliance evidence for superyacht audits.',
 };
 
 const Arrow = () => (

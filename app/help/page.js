@@ -4,8 +4,9 @@ import MarketingFooter from '@/components/marketing/MarketingFooter';
 import HelpCategories from '@/components/marketing/HelpCategories';
 
 export const metadata = {
-  title: 'Help Centre — CrewNotice',
-  description: 'Everything you need to get started and get the most out of CrewNotice. Guides for captains, admins, and crew.',
+  title: 'Help Centre',
+  description:
+    'Guides for setting up CrewNotice. Getting started, admin guides, and crew tutorials.',
 };
 
 const HELP_CATEGORIES = [

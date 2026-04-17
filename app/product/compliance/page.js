@@ -4,9 +4,9 @@ import MarketingNav from '@/components/marketing/MarketingNav';
 import MarketingFooter from '@/components/marketing/MarketingFooter';
 
 export const metadata = {
-  title: 'Compliance Dashboard & Audit Reports — CrewNotice',
+  title: 'Yacht Compliance Dashboard & ISM Audit Reports',
   description:
-    'Real-time visibility into crew compliance. Exportable reports for ISM, MLC, and flag state inspections. Audit preparation that takes minutes, not days.',
+    'Real-time crew compliance scoring, exportable PDF and CSV audit reports, and a complete activity log. Prepare for ISM audits and flag state inspections in minutes.',
 };
 
 const Arrow = () => (

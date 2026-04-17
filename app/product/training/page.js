@@ -4,9 +4,9 @@ import MarketingNav from '@/components/marketing/MarketingNav';
 import MarketingFooter from '@/components/marketing/MarketingFooter';
 
 export const metadata = {
-  title: 'Crew Training & Quiz Engine — CrewNotice',
+  title: 'Crew Training & Quiz Engine for Superyachts',
   description:
-    'Deliver structured training between watches. Test knowledge with built-in quizzes. Track completion automatically.',
+    'Build training modules, test knowledge with scored quizzes, and track completion rates. Deliver crew training between watches. STCW and ISM compliant records.',
 };
 
 const Arrow = () => (

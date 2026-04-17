@@ -4,8 +4,9 @@ import MarketingFooter from '@/components/marketing/MarketingFooter';
 import ContactForm from '@/components/marketing/ContactForm';
 
 export const metadata = {
-  title: 'Contact — CrewNotice',
-  description: 'Get in touch with the CrewNotice team. We typically respond within 24 hours.',
+  title: 'Contact CrewNotice',
+  description:
+    'Get in touch for a free trial, fleet pricing, or questions about crew communications and compliance tracking for superyachts.',
 };
 
 const MailIcon = () => (

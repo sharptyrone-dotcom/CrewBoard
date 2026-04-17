@@ -4,8 +4,9 @@ import MarketingNav from '@/components/marketing/MarketingNav';
 import MarketingFooter from '@/components/marketing/MarketingFooter';
 
 export const metadata = {
-  title: 'MLC 2006 Compliance Checklist for Yacht Crew — CrewNotice',
-  description: 'How CrewNotice helps you meet Maritime Labour Convention 2006 requirements — a practical checklist for information, training, documentation, and crew welfare.',
+  title: 'MLC 2006 Compliance Checklist for Yacht Crew',
+  description:
+    'Maritime Labour Convention requirements that CrewNotice helps you meet. Crew information, training, and documentation compliance.',
 };
 
 const Arrow = () => (

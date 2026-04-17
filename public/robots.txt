@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /app
+Disallow: /api
+Disallow: /admin
+Disallow: /join
+Sitemap: https://crewnotice.com/sitemap.xml

@@ -4,8 +4,9 @@ import MarketingNav from '@/components/marketing/MarketingNav';
 import MarketingFooter from '@/components/marketing/MarketingFooter';
 
 export const metadata = {
-  title: 'About Us — CrewNotice',
-  description: 'Built by crew, for crew. The story behind CrewNotice and Sharp Digital Solutions Ltd.',
+  title: 'About CrewNotice — Built by Crew, for Crew',
+  description:
+    'CrewNotice is built by an active superyacht Officer of the Watch. A product of Sharp Digital Solutions Ltd, London.',
 };
 
 const ShieldIcon = () => (

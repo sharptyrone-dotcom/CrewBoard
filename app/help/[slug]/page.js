@@ -17,7 +17,7 @@ export function generateMetadata({ params }) {
     return { title: 'Article not found — CrewNotice' };
   }
   return {
-    title: `${article.title} — CrewNotice Help`,
+    title: `${article.title} — CrewNotice Help Centre`,
     description: article.description,
   };
 }

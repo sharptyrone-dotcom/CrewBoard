@@ -4,8 +4,9 @@ import MarketingNav from '@/components/marketing/MarketingNav';
 import MarketingFooter from '@/components/marketing/MarketingFooter';
 
 export const metadata = {
-  title: 'Customers — CrewNotice',
-  description: 'Trusted by captains and crew who believe every crew member deserves access to the information they need.',
+  title: 'CrewNotice Customers — Trusted by Forward-Thinking Vessels',
+  description:
+    'How superyacht captains use CrewNotice to keep crew informed, track compliance, and streamline ISM audit preparation.',
 };
 
 const Arrow = () => (

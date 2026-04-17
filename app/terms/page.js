@@ -1,8 +1,9 @@
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Terms of Service — CrewNotice',
-  description: 'Terms and conditions for using the CrewNotice platform.',
+  title: 'Terms of Service',
+  description:
+    'Terms and conditions for using CrewNotice. Subscription terms and governing law.',
 };
 
 const S = {

@@ -4,8 +4,9 @@ import MarketingNav from '@/components/marketing/MarketingNav';
 import MarketingFooter from '@/components/marketing/MarketingFooter';
 
 export const metadata = {
-  title: 'Careers — CrewNotice',
-  description: 'Join Sharp Digital Solutions Ltd. We build purpose-built tools for specialist industries.',
+  title: 'Careers at Sharp Digital Solutions',
+  description:
+    'Join Sharp Digital Solutions Ltd. We build purpose-built tools for specialist industries.',
 };
 
 const BriefcaseIcon = () => (
